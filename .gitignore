@@ -205,3 +205,32 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Weather data specific
+*.nc
+*.grib
+*.grb
+*.h5
+*.hdf5
+*.parquet
+data/era5/
+data/raw/
+data/processed/
+calibration_outputs/
+forecast_outputs/
+
+# Model files
+models/saved/
+*.pkl
+*.joblib
+*.pt
+*.pth
+
+# Azure/Databricks specific
+.azure/
+.databricks/
+
+# LCCC specific
+config/secrets.yaml
+.env.local
+.env.production
