@@ -1,6 +1,6 @@
 # Contributing to Weather Forecasting and Modelling
 
-Thank you for your interest in contributing to the LCCC Weather Forecasting and Modelling project! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to The Low Carbon Contracts Company Weather Forecasting and Modelling project! This document provides guidelines and instructions for contributing.
 
 ## Code of Conduct
 
@@ -214,4 +214,4 @@ Contributors will be recognized in:
 - Release notes
 - Project documentation
 
-Thank you for contributing to the LCCC Weather Forecasting project!
+Thank you for contributing to The Low Carbon Contracts Company Weather Forecasting project!

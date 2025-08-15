@@ -1,119 +1,48 @@
 # Weather Forecasting and Modelling
 
-An open-source repository for weather-related forecasting and modelling at LCCC (Low Carbon Contracts Company).
+An open-source Python library for renewable energy forecasting using ERA5 weather data and statistical sampling techniques.
 
 ## Overview
 
-This project provides tools and models for weather forecasting with a focus on renewable energy applications, including wind and solar power generation forecasting, demand prediction, and calibration utilities. It leverages ERA5 weather data and statistical sampling techniques to provide calibrated load factor predictions for wind and solar plants to support financial modelling and grid planning.
+This project provides Monte Carlo-based load factor forecasting for wind and solar plants to support financial modelling and grid planning. It uses statistical sampling of historical weather patterns with geographical correlation preservation.
 
-## Features
+## Status
 
-- **Wind Power Forecasting**: Advanced models for wind speed and power generation prediction
-- **Solar Power Forecasting**: Solar radiation and power output forecasting tools
-- **Demand Forecasting**: Energy demand prediction models
-- **Calibration Tools**: Comprehensive calibration utilities for renewable energy models
-- **Data Processing**: Robust data handling and preprocessing pipelines
+**Early Development**: Significant refactoring needed for production use. The codebase contains calibration scripts from The Low Carbon Contracts Company's internal systems that require adaptation.
+
+## Key Components
+
+- **Wind/Solar Models**: Monte Carlo generators using inverse distribution sampling (`WindData`, `SolarData`)
+- **Calibration Scripts**: The Low Carbon Contracts Company workflow scripts for wind/solar parameter calibration (requires Azure/Databricks)
+- **Data Loading**: Stub implementation for ERA5 NetCDF data (user must implement)
+- **Statistical Framework**: Time-bucketed sampling with correlation preservation
 
 ## Installation
 
-### Prerequisites
-
-- Python 3.8 or higher
-- pip or conda package manager
-
-### Basic Installation
-
 ```bash
-# Clone the repository
-git clone https://github.com/LCCC/weather.git
-cd weather
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install the package in development mode
 pip install -e .
-```
-
-### Conda Installation
-
-```bash
-# Create conda environment
-conda env create -f environment.yml
-conda activate weather-lccc
-
-# Install the package
-pip install -e .
+pip install -r requirements-dev.txt  # For development
 ```
 
 ## Quick Start
 
 ```python
-from weather.models import WindForecast, SolarForecast
-from weather.data import WindData, SolarData
+from weather.models import WindData, SolarData
 
-# Load wind data
-wind_data = WindData()
-wind_data.load('path/to/wind/data')
-
-# Create and train wind forecast model
-wind_model = WindForecast()
-wind_model.fit(wind_data)
-
-# Make predictions
-predictions = wind_model.predict(horizon=24)
+# Monte Carlo wind forecast (not a data loader despite the name)
+wind_model = WindData(connection, windstreams=["farm1", "farm2"], 
+                     desired_averages=[None, 0.35])
+forecast = wind_model.random_Sample(start_date, end_date)
 ```
 
-## Project Structure
+**Note**: ERA5 data loading must be implemented by users. See `weather.data.ERA5DataLoader` stub.
 
-```
-weather/
-├── calibration/      # Calibration scripts for renewable models
-│   ├── wind/        # Wind calibration utilities
-│   └── solar/       # Solar calibration utilities
-├── data/            # Data processing and handling
-├── models/          # Forecasting models
-├── scripts/         # Utility scripts
-└── tests/           # Test suite
-```
-
-## Documentation
-
-Comprehensive documentation is available in the [docs/](docs/) directory.
-
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on how to submit pull requests, report issues, and contribute to the project.
-
-## Testing
-
-Run the test suite with:
+## Development
 
 ```bash
-pytest tests/
+pytest                    # Run tests
+black weather/           # Format code
+mypy weather/           # Type checking
 ```
 
-## License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-This project builds upon research and methodologies developed at LCCC for renewable energy forecasting and grid management.
-
-## Contact
-
-For questions and support, please open an issue on GitHub or contact the LCCC technical team.
-
-## Citation
-
-If you use this software in your research, please cite:
-
-```bibtex
-@software{lccc_weather_2025,
-  title = {Weather Forecasting and Modelling for Renewable Energy},
-  author = {LCCC Technical Team},
-  year = {2025},
-  url = {https://github.com/LCCC/weather}
-}
-```
+See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
