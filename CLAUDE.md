@@ -2,9 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Code Style Guidelines
+
+- NEVER add emojis to code files, documentation, or README files
+- Keep documentation clean and professional without decorative elements
+
 ## Project Overview
 
-This is an open-source weather forecasting and modelling repository for renewable energy applications at LCCC (Low Carbon Contracts Company). The project provides tools for wind and solar power generation forecasting using ERA5 weather data and statistical sampling techniques.
+This is an open-source weather forecasting and modelling repository for renewable energy applications at The Low Carbon Contracts Company. The project provides tools for wind and solar power generation forecasting using ERA5 weather data and statistical sampling techniques.
 
 ## Development Commands
 
@@ -69,7 +74,7 @@ twine check dist/*
 **Calibration Layer (`weather.calibration`)**:
 - `wind/`: Contains numbered scripts (01-05) for wind turbine calibration workflows
 - `solar/`: Contains numbered scripts (01-03) for solar panel calibration workflows
-- Scripts copied directly from LCCC's internal "lego" project with original naming
+- Scripts copied directly from The Low Carbon Contracts Company's internal "lego" project with original naming
 - Includes Databricks/Azure dependencies and SQL queries
 
 **Common Utilities (`weather.common`)**:
@@ -86,17 +91,17 @@ twine check dist/*
 **Calibration Workflow**:
 - Scripts follow numbered sequence (01, 02, 03...)
 - Process: ERA5 data → Weibull parameters → Power curves → Load factor calibration
-- Integration with LCCC's Synapse database and Azure storage
+- Integration with The Low Carbon Contracts Company's Synapse database and Azure storage
 
 **Legacy Integration**:
 - Models inherit from QuantLib architecture (BucketedData, Bucketer classes)
 - Calibration scripts use Databricks notebook format with !pip installs
-- Database connections expect LCCC-specific infrastructure
+- Database connections expect The Low Carbon Contracts Company-specific infrastructure
 
 ## Important Development Notes
 
 ### File Naming Conventions
-- Calibration scripts maintain original LCCC naming with spaces (e.g., "01 Weibull Parameters.py")
+- Calibration scripts maintain original The Low Carbon Contracts Company naming with spaces (e.g., "01 Weibull Parameters.py")
 - Model files use PascalCase (e.g., WindData.py, SolarData.py)
 - Common utilities use lowercase (e.g., constants.py)
 

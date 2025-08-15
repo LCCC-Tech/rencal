@@ -7,7 +7,7 @@ wind and solar plants to support financial modelling and grid planning.
 """
 
 __version__ = "0.1.0"
-__author__ = "LCCC Technical Team"
+__author__ = "The Low Carbon Contracts Company"
 __email__ = "tech@lccc.gov.uk"
 
 # Import main classes for easy access

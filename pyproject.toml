@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "LCCC Technical Team", email = "analytics@lowcarboncontracts.uk"}
+    {name = "The Low Carbon Contracts Company", email = "analytics@lowcarboncontracts.uk"}
 ]
 maintainers = [
-    {name = "LCCC Technical Team", email = "analytics@lowcarboncontracts.uk"}
+    {name = "The Low Carbon Contracts Company", email = "analytics@lowcarboncontracts.uk"}
 ]
 keywords = [
     "weather",
