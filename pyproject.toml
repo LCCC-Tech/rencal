@@ -52,15 +52,14 @@ dependencies = [
     "requests>=2.25.0"
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=6.0",
     "pytest-cov>=2.0",
-    "black>=21.0",
-    "isort>=5.0",
-    "flake8>=3.8",
-    "mypy>=0.900",
-    "pre-commit>=2.15.0"
+    "ruff>=0.8.0",
+    "basedpyright>=1.0.0",
+    "pre-commit>=2.15.0",
+    "build>=1.0.0"
 ]
 docs = [
     "sphinx>=4.0",
@@ -71,10 +70,6 @@ docs = [
 azure = [
     "azure-storage-blob>=12.0.0",
     "azure-identity>=1.7.0"
-]
-databricks = [
-    "databricks-sql-connector>=2.0.0",
-    "pyspark>=3.2.0"
 ]
 notebook = [
     "jupyter>=1.0.0",
@@ -104,35 +99,50 @@ exclude = ["tests*", "docs*", "scripts*"]
 [tool.setuptools.package-data]
 weather = ["data/*.csv", "data/*.json", "calibration/templates/*"]
 
-# Black configuration
-[tool.black]
-line-length = 100
-target-version = ['py38', 'py39', 'py310', 'py311']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
+[tool.basedpyright]
+include = ["weather"]
+exclude = [".venv", "build", "dist"]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.8"
+typeCheckingMode = "strict"
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedClass = true
+reportUnusedFunction = true
+reportUnusedVariable = true
 
-# isort configuration
-[tool.isort]
-profile = "black"
-line_length = 100
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
+[tool.ruff]
+line-length = 100
+indent-width = 4
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "B008",  # Do not perform function calls in argument defaults
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint.isort]
+known-first-party = ["weather"]
 
 # pytest configuration
 [tool.pytest.ini_options]
@@ -176,31 +186,3 @@ exclude_lines = [
     "@(abc\\.)?abstractmethod",
 ]
 
-# MyPy configuration
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
-
-[[tool.mypy.overrides]]
-module = [
-    "torch.*",
-    "matplotlib.*",
-    "seaborn.*",
-    "scipy.*",
-    "sklearn.*",
-    "netCDF4.*",
-    "azure.*",
-    "databricks.*"
-]
-ignore_missing_imports = true
