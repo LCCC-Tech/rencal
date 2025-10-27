@@ -1,20 +1,23 @@
 # ==========================================
-# ERA5 Downloader (Windows / Python 3.13)
+# ERA5 Downloader (Windows / Python 3.12)
 # ==========================================
 # Downloads ERA5 reanalysis data for specified years,
 # confirms datetime coordinate is already UTC (GMT), and adds metadata.
 
 import os
 import ssl
+import certifi
 import cdsapi
 from dotenv import load_dotenv
 import xarray as xr
 
-# --- SSL workaround (for Python 3.13 certificate issue) ---
-ssl._create_default_https_context = ssl._create_unverified_context
+# --- SSL verification setup for Python 3.12 ---
+# Use certifi’s CA bundle to ensure correct certificate verification
+ssl._create_default_https_context = ssl.create_default_context
+ssl_context = ssl.create_default_context(cafile=certifi.where())
 # -----------------------------------------------------------
 
-# Load Copernicus CDS API key
+# Load Copernicus CDS API key from environment
 load_dotenv()
 CDS_API_KEY = os.getenv("CDS_API_KEY")
 
@@ -26,10 +29,11 @@ def download_era5_years_to_files(years, api_key=None, out_dir="C:/Repos/weather/
     os.makedirs(out_dir, exist_ok=True)
     print(f"Output directory: {os.path.abspath(out_dir)}")
 
+    # Initialize CDS API client with proper SSL verification
     client = cdsapi.Client(
         url="https://cds.climate.copernicus.eu/api",
         key=api_key,
-        verify=False,
+        verify=certifi.where(),  # explicitly use certifi bundle
     )
 
     dataset = "reanalysis-era5-single-levels"

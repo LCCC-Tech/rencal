@@ -1,0 +1,12 @@
+[project]
+name = "data-loader"
+version = "0.1.0"
+description = "ERA5 downloader for weather data"
+requires-python = "==3.12.*"
+
+dependencies = [
+    "cdsapi",
+    "xarray",
+    "python-dotenv",
+    "netcdf4"
+]
