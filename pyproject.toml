@@ -7,7 +7,7 @@ name = "weather-lccc"
 version = "0.1.0"
 description = "Weather forecasting and modelling for renewable energy applications"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12,<3.13"
 license = {text = "MIT"}
 authors = [
     {name = "The Low Carbon Contracts Company", email = "analytics@lowcarboncontracts.uk"}
