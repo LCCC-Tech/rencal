@@ -20,8 +20,14 @@ This project provides Monte Carlo-based load factor forecasting for wind and sol
 ## Installation
 
 ```bash
-pip install -e .
-pip install -r requirements-dev.txt  # For development
+# Install the package in development mode
+uv sync
+
+# Or install specific dependency groups
+uv sync --group dev          # Development dependencies
+uv sync --group docs         # Documentation dependencies
+uv sync --group azure        # Azure integration dependencies
+uv sync --group notebook     # Jupyter notebook dependencies
 ```
 
 ## Quick Start
@@ -40,9 +46,19 @@ forecast = wind_model.random_Sample(start_date, end_date)
 ## Development
 
 ```bash
-pytest                    # Run tests
-black weather/           # Format code
-mypy weather/           # Type checking
+# Run tests
+uv run pytest
+
+# Run tests with coverage
+uv run pytest --cov=weather --cov-report=html
+
+# Code formatting and linting
+uv run ruff format weather/     # Format code
+uv run ruff check weather/      # Lint code
+uv run basedpyright weather/    # Type checking
+
+# Run pre-commit hooks
+uv run pre-commit run --all-files
 ```
 
 See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
