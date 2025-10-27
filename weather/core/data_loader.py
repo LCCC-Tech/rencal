@@ -1,5 +1,6 @@
 import os
 from abc import ABC, abstractmethod
+
 import pandas as pd
 
 
@@ -35,23 +36,4 @@ class LocalDataLoader(DataLoader):
         self._base_path = path
 
     def load_era5_data(self) -> pd.DataFrame:
-        # Get a list of all files in the directory
-        directory = os.path.join(self._base_path, "era5")
-        files = os.listdir(self._base_path)
-
-        results = []
-
-        for file in files:
-            if file.endswith(".nc"):
-                file_path = os.path.join(directory, file)
-                data = process_file(file_path, wind_farm_df)
-                results.append(data)
-
-        final_results = pd.concat(results, ignore_index=True)
-
-        # Convert datetime to the specified format
-        final_results['Times'] = pd.to_datetime(final_results['Times']).dt.tz_localize('UTC').dt.tz_convert('GMT')
-
-        return final_results
-
-
+        pass
