@@ -26,9 +26,6 @@ from weather.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Use certifi’s CA bundle to ensure correct certificate verification
-ssl_context = ssl._create_default_https_context(cafile=certifi.where())
-
 def download_era5_years_to_files(
     years: list[int] = CALIBRATION_YEARS, out_dir: str = DOWNLOAD_DATA_DIR
 ):
