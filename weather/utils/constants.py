@@ -31,7 +31,7 @@ except yaml.YAMLError as e:
     run_config = {}
 
 # Absolute path to download data directory
-DOWNLOAD_DATA_DIR: str = run_config.get("DOWNLOAD_DATA_DIR", str(Path(__file__).parent / "data"))
+DOWNLOAD_DATA_DIR: str = run_config.get("DOWNLOAD_DATA_DIR", str(Path(__file__).parent.parent.parent / "data"))
 
 # Dates
 CALIBRATION_YEARS: list[int] = run_config.get("CALIBRATION_YEARS", [2023])
@@ -42,9 +42,10 @@ SIMULATION_END_DATE: str = run_config.get("END_DATE", "2025-06-30T00:00:00")
 RUNTIME_DATE = datetime.datetime.today()
 TIMEZONE = pytz.timezone("Europe/London")
 
-# ERA5 CDS API Credentials
-ERA5_DATASET = "reanalysis-era5-single-levels"
+# ERA5 API
 CDS_API_URL: str = "https://cds.climate.copernicus.eu/api"
 CDS_API_KEY: str | None = os.environ.get("CDS_API_KEY", None)
-
+ERA5_PRODUCT_TYPE = "reanalysis"
+ERA5_DATASET = "reanalysis-era5-single-levels"
+ERA_VARIABLES = ["100m_u_component_of_wind", "100m_v_component_of_wind"]
 AREA_BOUNDING_BOX_COORDINATES = [61, -12, 49, 5]  # [North, West, South, East] - UK bounding box
