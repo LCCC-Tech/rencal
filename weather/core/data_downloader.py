@@ -1,11 +1,4 @@
-# ==========================================
-# ERA5 Downloader (Windows / Python 3.12)
-# ==========================================
-# Downloads ERA5 reanalysis data for specified years,
-# confirms datetime coordinate is already UTC (GMT), and adds metadata.
-
 import os
-import ssl
 from pathlib import Path
 
 import cdsapi
@@ -75,8 +68,9 @@ def download_era5_years_to_files(
             # detect datetime coordinate
             datetime_coord = None
             for coord in ds.coords:
-                if "time" in coord.lower() or "date" in coord.lower():
-                    datetime_coord = coord
+                coord_str = str(coord)
+                if "time" in coord_str.lower() or "date" in coord_str.lower():
+                    datetime_coord = coord_str
                     break
 
             if not datetime_coord:
