@@ -6,11 +6,11 @@
 
 import os
 import ssl
+from pathlib import Path
 
 import cdsapi
 import certifi
 import xarray as xr
-from pathlib import Path
 
 from weather.utils.constants import (
     AREA_BOUNDING_BOX_COORDINATES,
@@ -19,16 +19,15 @@ from weather.utils.constants import (
     CDS_API_URL,
     DOWNLOAD_DATA_DIR,
     ERA5_DATASET,
+    ERA5_PRODUCT_TYPE,
+    ERA_VARIABLES,
 )
 from weather.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# --- SSL verification setup for Python 3.12 ---
 # Use certifi’s CA bundle to ensure correct certificate verification
 ssl_context = ssl._create_default_https_context(cafile=certifi.where())
-# -----------------------------------------------------------
-
 
 def download_era5_years_to_files(
     years: list[int] = CALIBRATION_YEARS, out_dir: str = DOWNLOAD_DATA_DIR
@@ -48,15 +47,15 @@ def download_era5_years_to_files(
     )
 
     for year in years:
-        file_path = str(Path(out_dir) / f"ERA5_UK_{year}.nc")
+        file_path = str(Path(out_dir) / "era5" / f"{year}.nc")
 
         if os.path.exists(file_path):
             logger.info(f"File already exists for {year}, verifying timestamps...")
         else:
             logger.info(f"Downloading ERA5 data for {year}...")
             request = {
-                "product_type": "reanalysis",
-                "variable": ["100m_u_component_of_wind", "100m_v_component_of_wind"],
+                "product_type": ERA5_PRODUCT_TYPE,
+                "variable": ERA_VARIABLES,
                 "year": str(year),
                 "month": [f"{m:02d}" for m in range(1, 13)],
                 "day": [f"{d:02d}" for d in range(1, 32)],
@@ -87,7 +86,9 @@ def download_era5_years_to_files(
                 logger.error(f"No datetime-like coordinate found in {file_path}.")
                 raise KeyError("No datetime-like coordinate found (expected 'time' or similar).")
 
-            logger.info(f"Date range: {ds[datetime_coord].values[0]}  →  {ds[datetime_coord].values[-1]}")
+            logger.info(
+                f"Date range: {ds[datetime_coord].values[0]}  →  {ds[datetime_coord].values[-1]}"
+            )
             logger.debug("ERA5 timestamps are already in UTC (GMT). No conversion needed.")
 
             # Add metadata note
