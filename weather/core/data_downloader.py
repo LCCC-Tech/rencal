@@ -1,4 +1,3 @@
-import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -26,13 +25,13 @@ class DataDownloader(ABC):
     """Abstract base class for data downloaders."""
 
     def __init__(self, output_dir: str = DOWNLOAD_DATA_DIR):
-        self.output_dir = output_dir
+        self.output_dir = Path(output_dir)
         self.logger = get_logger(self.__class__.__name__)
 
     def _setup_output_directory(self, stem: str | None = None) -> None:
         """Create output directory if it doesn't exist."""
-        self.output_dir = str(Path(self.output_dir) / stem) if stem else self.output_dir
-        os.makedirs(self.output_dir, exist_ok=True)
+        self.output_dir = self.output_dir / stem if stem else self.output_dir
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.logger.info(f"Data will be saved to: {self.output_dir}")
 
     @abstractmethod
@@ -78,14 +77,14 @@ class ERA5DataDownloader(DataDownloader):
         self._setup_output_directory(stem="era5")
 
         for year in years:
-            file_path = str(Path(self.output_dir) / f"{year}.nc")
+            file_path = self.output_dir / f"{year}.nc"
 
-            if os.path.exists(file_path):
+            if file_path.exists():
                 self.logger.info(f"File already exists for {year}, verifying timestamps...")
             else:
-                self._download_year(year, file_path)
+                self._download_year(year, str(file_path))
 
-            self._verify_and_update_metadata(year, file_path)
+            self._verify_and_update_metadata(year, str(file_path))
 
         self.logger.info("Completed all downloads and verifications.")
 
