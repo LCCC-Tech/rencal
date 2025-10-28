@@ -6,46 +6,54 @@
 
 import os
 import ssl
-import certifi
+
 import cdsapi
-from dotenv import load_dotenv
+import certifi
 import xarray as xr
+from pathlib import Path
+
+from weather.utils.constants import (
+    AREA_BOUNDING_BOX_COORDINATES,
+    CALIBRATION_YEARS,
+    CDS_API_KEY,
+    CDS_API_URL,
+    DOWNLOAD_DATA_DIR,
+    ERA5_DATASET,
+)
+from weather.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 # --- SSL verification setup for Python 3.12 ---
 # Use certifi’s CA bundle to ensure correct certificate verification
-ssl._create_default_https_context = ssl.create_default_context
-ssl_context = ssl.create_default_context(cafile=certifi.where())
+ssl_context = ssl._create_default_https_context(cafile=certifi.where())
 # -----------------------------------------------------------
 
-# Load Copernicus CDS API key from environment
-load_dotenv()
-CDS_API_KEY = os.getenv("CDS_API_KEY")
 
-
-def download_era5_years_to_files(years, api_key=None, out_dir="C:/Repos/weather/weather/data"):
-    if not api_key:
+def download_era5_years_to_files(
+    years: list[int] = CALIBRATION_YEARS, out_dir: str = DOWNLOAD_DATA_DIR
+):
+    if not CDS_API_KEY:
+        logger.error("CDS API key not found in environment variables.")
         raise ValueError("Provide your Copernicus CDS API key string.")
 
     os.makedirs(out_dir, exist_ok=True)
-    print(f"Output directory: {os.path.abspath(out_dir)}")
+    logger.info(f"Data will be saved to: {out_dir}")
 
     # Initialize CDS API client with proper SSL verification
     client = cdsapi.Client(
-        url="https://cds.climate.copernicus.eu/api",
-        key=api_key,
-        verify=certifi.where(),  # explicitly use certifi bundle
+        url=CDS_API_URL,
+        key=CDS_API_KEY,
+        verify=certifi.where(),
     )
 
-    dataset = "reanalysis-era5-single-levels"
-    area = [61, -12, 49, 5]  # [North, West, South, East] - UK bounding box
-
     for year in years:
-        file_path = os.path.join(out_dir, f"ERA5_UK_{year}.nc")
+        file_path = str(Path(out_dir) / f"ERA5_UK_{year}.nc")
 
         if os.path.exists(file_path):
-            print(f"\nFile already exists for {year}, verifying timestamps...")
+            logger.info(f"File already exists for {year}, verifying timestamps...")
         else:
-            print(f"\nDownloading ERA5 data for {year}...")
+            logger.info(f"Downloading ERA5 data for {year}...")
             request = {
                 "product_type": "reanalysis",
                 "variable": ["100m_u_component_of_wind", "100m_v_component_of_wind"],
@@ -54,15 +62,15 @@ def download_era5_years_to_files(years, api_key=None, out_dir="C:/Repos/weather/
                 "day": [f"{d:02d}" for d in range(1, 32)],
                 "time": [f"{h:02d}:00" for h in range(24)],
                 "format": "netcdf",
-                "area": area,
+                "area": AREA_BOUNDING_BOX_COORDINATES,
             }
 
             try:
-                result = client.retrieve(dataset, request)
+                result = client.retrieve(ERA5_DATASET, request)
                 result.download(target=file_path)
-                print(f"Download complete: {file_path}")
+                logger.info(f"Download complete: {file_path}")
             except Exception as e:
-                print(f"Error downloading {year}: {e}")
+                logger.error(f"Error downloading {year}: {e}")
                 continue
 
         try:
@@ -76,11 +84,11 @@ def download_era5_years_to_files(years, api_key=None, out_dir="C:/Repos/weather/
                     break
 
             if not datetime_coord:
+                logger.error(f"No datetime-like coordinate found in {file_path}.")
                 raise KeyError("No datetime-like coordinate found (expected 'time' or similar).")
 
-            print(f"Detected datetime coordinate: '{datetime_coord}'")
-            print(f"Date range: {ds[datetime_coord].values[0]}  →  {ds[datetime_coord].values[-1]}")
-            print("ERA5 timestamps are already in UTC (GMT). No conversion needed.")
+            logger.info(f"Date range: {ds[datetime_coord].values[0]}  →  {ds[datetime_coord].values[-1]}")
+            logger.debug("ERA5 timestamps are already in UTC (GMT). No conversion needed.")
 
             # Add metadata note
             ds.attrs["time_reference"] = f"Coordinate '{datetime_coord}' is already in UTC (GMT)."
@@ -89,13 +97,9 @@ def download_era5_years_to_files(years, api_key=None, out_dir="C:/Repos/weather/
             ds.load()
             ds.close()
             ds.to_netcdf(file_path, mode="w")
-            print(f"File verified and metadata updated: {file_path}")
+            logger.info(f"File verified and metadata updated: {file_path}")
 
         except Exception as e:
-            print(f"Error verifying {year}: {e}")
+            logger.error(f"Error verifying {year}: {e}")
 
-    print("\nAll requested years processed successfully.")
-
-
-# Runs immediately
-download_era5_years_to_files(years=[2023], api_key=CDS_API_KEY)
+    logger.info("Completed all downloads and verifications.")
