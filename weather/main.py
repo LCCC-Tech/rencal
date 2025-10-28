@@ -1,8 +1,9 @@
-from weather.core.data_downloader import download_era5_years_to_files
+from weather.core.data_downloader import DownloadManager
 
 
 def main():
-    download_era5_years_to_files()
+    downloader = DownloadManager()
+    downloader.download_era5()
 
 
 if __name__ == "__main__":
