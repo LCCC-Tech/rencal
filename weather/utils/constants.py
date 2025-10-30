@@ -41,6 +41,7 @@ SIMULATION_END_DATE: str = run_config.get("END_DATE", "2025-06-30T00:00:00")
 # Runtime timestamp
 RUNTIME_DATE = datetime.datetime.today()
 TIMEZONE = pytz.timezone("Europe/London")
+DAYS_IN_YEAR: int = 365
 
 # ERA5 API
 CDS_API_URL: str = "https://cds.climate.copernicus.eu/api"
@@ -49,3 +50,8 @@ ERA5_PRODUCT_TYPE = "reanalysis"
 ERA5_DATASET = "reanalysis-era5-single-levels"
 ERA_VARIABLES = ["100m_u_component_of_wind", "100m_v_component_of_wind"]
 AREA_BOUNDING_BOX_COORDINATES = [61, -12, 49, 5]  # [North, West, South, East] - UK bounding box
+
+# CFD API
+CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?format=json"
+CFD_BMU_CSV_URL =  "https://dp.lowcarboncontracts.uk/dataset/be8c542a-c66c-4a06-a3df-bc46db7416c0/resource/9316f493-365c-4abc-a40e-3a5e67119a0a/download/cfd_to_bm_unit_mapping.csv"
+CFD_WIND_TECHNOLOGIES = {"Onshore Wind", "Offshore Wind"}

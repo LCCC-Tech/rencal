@@ -123,6 +123,8 @@ reportUnusedVariable = true
 reportUnknownMemberType = false
 reportUnknownVariableType = false
 reportUnknownArgumentType = false
+# Disable overly strict argument type checking for third-party libraries
+reportArgumentType = false
 
 [tool.ruff]
 line-length = 100
