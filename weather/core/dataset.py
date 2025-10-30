@@ -1,178 +1,289 @@
-from typing import Union, Dict, Any, Optional
-from pydantic import BaseModel, Field, validator
+from abc import ABC, abstractmethod
+from typing import Any
+
 import pandas as pd
 import xarray as xr
-from datetime import datetime
-from pathlib import Path
+from pydantic import BaseModel, Field, field_validator
 
 
-class Dataset(BaseModel):
-    """Wrapper for weather/energy datasets with validation and format conversion"""
-    
-    data: pd.DataFrame = Field(..., description="Main dataset")
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    data_type: str = Field(..., description="Type: 'cfd_register', 'bmu_mapping', 'generation', 'era5'")
-    
+class BaseDataset(BaseModel, ABC):
+    """Abstract base class for weather/energy datasets"""
+
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    data_type: str = Field(
+        ..., description="Type: 'cfd_register', 'bmu_mapping', 'generation', 'era5'"
+    )
+
     class Config:
         arbitrary_types_allowed = True
-    
-    @validator('data')
-    def validate_data_structure(cls, v, values):
-        """Validate required columns based on data type"""
-        data_type = values.get('data_type')
-        
-        if data_type == 'cfd_register':
-            required_cols = {'CFD_Id', 'Latitude', 'Longitude', 'Technology'}
-            if not required_cols.issubset(set(v.columns)):
-                raise ValueError(f"Missing required columns for CfD register data: {required_cols - set(v.columns)}")
-                
-        elif data_type == 'bmu_mapping':
-            required_cols = {'CFD_Id', 'BMU_Id'}
-            if not required_cols.issubset(set(v.columns)):
-                raise ValueError(f"Missing required columns for BMU mapping data: {required_cols - set(v.columns)}")
-                
-        elif data_type == 'generation':
-            required_cols = {'CFD_Id', 'settlementDate', 'quantity'}
-            if not required_cols.issubset(set(v.columns)):
-                raise ValueError(f"Missing required columns for generation data: {required_cols - set(v.columns)}")
-                
-        elif data_type == 'era5':
-            # ERA5 validation can be more flexible since variables vary
-            if 'time' not in v.columns and 'Times' not in v.columns:
-                raise ValueError("ERA5 data must contain a time dimension ('time' or 'Times')")
-                
-        return v
-    
+
+    @abstractmethod
+    def get_columns(self) -> list[str]:
+        """Return list of column/variable names"""
+        pass
+
+    @abstractmethod
+    def get_datatypes(self) -> dict[str, str]:
+        """Return mapping of column/variable names to their datatypes"""
+        pass
+
+    @abstractmethod
+    def get_shape(self) -> tuple[int, ...]:
+        """Return shape of the dataset"""
+        pass
+
+    @abstractmethod
+    def filter_by_date_range(
+        self, start_date: str, end_date: str, date_col: str | None = None
+    ) -> "BaseDataset":
+        """Filter dataset by date range"""
+        pass
+
+    @abstractmethod
+    def to_pandas(self) -> pd.DataFrame:
+        """Convert to pandas DataFrame"""
+        pass
+
+    @abstractmethod
     def to_xarray(self) -> xr.Dataset:
-        """Convert to xarray for time series operations and n-dimensional data"""
-        if self.data_type == 'generation':
-            # For generation data, create time series with CFD_Id as coordinate
-            df = self.data.copy()
-            if 'settlementDate' in df.columns:
-                df['settlementDate'] = pd.to_datetime(df['settlementDate'])
-                return df.set_index(['CFD_Id', 'settlementDate']).to_xarray()
-            elif 'Times' in df.columns:
-                df['Times'] = pd.to_datetime(df['Times'])
-                return df.set_index(['CFD_Id', 'Times']).to_xarray()
-                
-        elif self.data_type == 'era5':
-            # For ERA5 data, preserve spatial and temporal dimensions
-            df = self.data.copy()
-            if 'time' in df.columns:
-                df['time'] = pd.to_datetime(df['time'])
-                if all(col in df.columns for col in ['latitude', 'longitude', 'time']):
-                    return df.set_index(['latitude', 'longitude', 'time']).to_xarray()
-                elif 'time' in df.columns:
-                    return df.set_index('time').to_xarray()
-                    
-        # Default conversion for other data types
-        return xr.Dataset.from_dataframe(self.data)
-    
-    def to_parquet(self, path: Union[str, Path]):
-        """Save to efficient parquet format"""
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self.data.to_parquet(path)
-        
-        # Save metadata separately
-        metadata_path = path.with_suffix('.metadata.json')
-        import json
-        with open(metadata_path, 'w') as f:
-            json.dump({
-                'data_type': self.data_type,
-                'metadata': self.metadata,
-                'columns': list(self.data.columns),
-                'shape': list(self.data.shape)
-            }, f, indent=2, default=str)
-    
-    def to_zarr(self, path: Union[str, Path]):
-        """Convert to zarr format for cloud storage and large datasets"""
-        xr_dataset = self.to_xarray()
-        xr_dataset.to_zarr(path)
-    
+        """Convert to xarray Dataset"""
+        pass
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(type='{self.data_type}', shape={self.get_shape()}, columns={len(self.get_columns())})"
+
+
+class DatasetSchema(BaseModel):
+    """Schema definition for dataset validation"""
+
+    required_columns: list[str] = Field(default_factory=list)
+    optional_columns: list[str] = Field(default_factory=list)
+    required_datatypes: dict[str, str] = Field(default_factory=dict)
+    date_columns: list[str] = Field(default_factory=list)
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+# Schema definitions for different dataset types
+DATASET_SCHEMAS = {
+    "cfd_register": DatasetSchema(
+        required_columns=["CFD_Id", "Latitude", "Longitude", "Technology"],
+        optional_columns=["Capacity", "Commission_Date", "Status"],
+        required_datatypes={
+            "CFD_Id": "object",
+            "Latitude": "float64",
+            "Longitude": "float64",
+            "Technology": "object",
+        },
+        date_columns=["Commission_Date"],
+    ),
+    "bmu_mapping": DatasetSchema(
+        required_columns=["CFD_Id", "BMU_Id"],
+        optional_columns=["mapping_date", "status"],
+        required_datatypes={"CFD_Id": "object", "BMU_Id": "object"},
+        date_columns=["mapping_date"],
+    ),
+    "generation": DatasetSchema(
+        required_columns=["CFD_Id", "settlementDate", "quantity"],
+        optional_columns=["forecast", "actual"],
+        required_datatypes={"CFD_Id": "object", "quantity": "float64"},
+        date_columns=["settlementDate"],
+    ),
+    "era5": DatasetSchema(
+        required_columns=[],  # ERA5 variables vary, so we'll check for time dimension
+        optional_columns=["u100", "v100", "ssrd", "t2m", "sp", "tp"],
+        required_datatypes={},
+        date_columns=["time", "Times"],
+    ),
+}
+
+
+class PandasDataset(BaseDataset):
+    """Pandas DataFrame wrapper with validation"""
+
+    data: pd.DataFrame = Field(..., description="Pandas DataFrame")
+
+    @field_validator("data")
     @classmethod
-    def from_parquet(cls, path: Union[str, Path]) -> 'Dataset':
-        """Load Dataset from parquet file with metadata"""
-        path = Path(path)
-        data = pd.read_parquet(path)
-        
-        # Load metadata if available
-        metadata_path = path.with_suffix('.metadata.json')
-        if metadata_path.exists():
-            import json
-            with open(metadata_path, 'r') as f:
-                meta_info = json.load(f)
-            data_type = meta_info.get('data_type', 'unknown')
-            metadata = meta_info.get('metadata', {})
-        else:
-            data_type = 'unknown'
-            metadata = {}
-            
-        return cls(data=data, data_type=data_type, metadata=metadata)
-    
-    @classmethod
-    def from_zarr(cls, path: Union[str, Path], data_type: str) -> 'Dataset':
-        """Load Dataset from zarr format"""
-        xr_dataset = xr.open_zarr(path)
-        data = xr_dataset.to_dataframe().reset_index()
-        return cls(data=data, data_type=data_type, metadata={'source': 'zarr', 'path': str(path)})
-    
-    def filter_by_date_range(self, start_date: str, end_date: str, date_col: Optional[str] = None) -> 'Dataset':
+    def validate_data_structure(cls, v, info):
+        """Validate required columns based on data type"""
+        data_type = info.data.get("data_type")
+        if not data_type or data_type not in DATASET_SCHEMAS:
+            return v
+
+        schema = DATASET_SCHEMAS[data_type]
+
+        # Check required columns
+        missing_cols = set(schema.required_columns) - set(v.columns)
+        if missing_cols:
+            raise ValueError(f"Missing required columns for {data_type} data: {missing_cols}")
+
+        # Validate datatypes for required columns
+        for col, expected_dtype in schema.required_datatypes.items():
+            if col in v.columns and str(v[col].dtype) != expected_dtype:
+                # Try to convert if possible
+                try:
+                    if expected_dtype == "float64":
+                        v.loc[:, col] = pd.to_numeric(v[col], errors="coerce")
+                    elif expected_dtype == "object":
+                        v.loc[:, col] = v[col].astype(str)
+                except:
+                    raise ValueError(
+                        f"Column '{col}' has dtype {v[col].dtype}, expected {expected_dtype}"
+                    )
+
+        # Special validation for ERA5 data
+        if data_type == "era5":
+            time_cols = [col for col in schema.date_columns if col in v.columns]
+            if not time_cols:
+                raise ValueError("ERA5 data must contain a time dimension ('time' or 'Times')")
+
+        return v
+
+    def get_columns(self) -> list[str]:
+        """Return list of column names"""
+        return list(self.data.columns)
+
+    def get_datatypes(self) -> dict[str, str]:
+        """Return mapping of column names to their datatypes"""
+        return {col: str(dtype) for col, dtype in self.data.dtypes.items()}
+
+    def get_shape(self) -> tuple[int, ...]:
+        """Return shape of the DataFrame"""
+        return self.data.shape
+
+    def filter_by_date_range(
+        self, start_date: str, end_date: str, date_col: str | None = None
+    ) -> "PandasDataset":
         """Filter dataset by date range"""
         df = self.data.copy()
-        
+
         # Auto-detect date column if not specified
         if date_col is None:
-            date_cols = ['settlementDate', 'time', 'Times', 'date']
-            date_col = next((col for col in date_cols if col in df.columns), None)
+            schema = DATASET_SCHEMAS.get(self.data_type)
+            if schema:
+                date_cols = [col for col in schema.date_columns if col in df.columns]
+                date_col = date_cols[0] if date_cols else None
+
             if date_col is None:
                 raise ValueError("No date column found in dataset")
-        
+
         df[date_col] = pd.to_datetime(df[date_col])
         mask = (df[date_col] >= start_date) & (df[date_col] <= end_date)
-        filtered_data = df[mask]
-        
+        filtered_data = df[mask].copy()
+        assert isinstance(filtered_data, pd.DataFrame), "Filtered data must be a DataFrame"
+
         new_metadata = self.metadata.copy()
-        new_metadata['filtered_date_range'] = {'start': start_date, 'end': end_date}
-        
-        return Dataset(
-            data=filtered_data,
-            data_type=self.data_type,
-            metadata=new_metadata
-        )
-    
-    def merge_with(self, other: 'Dataset', on: Union[str, list], how: str = 'inner') -> 'Dataset':
-        """Merge with another Dataset"""
-        merged_data = self.data.merge(other.data, on=on, how=how)
-        
+        new_metadata["filtered_date_range"] = {"start": start_date, "end": end_date}
+
+        return PandasDataset(data=filtered_data, data_type=self.data_type, metadata=new_metadata)
+
+    def to_pandas(self) -> pd.DataFrame:
+        """Return the pandas DataFrame"""
+        return self.data.copy()
+
+    def to_xarray(self) -> xr.Dataset:
+        """Convert to xarray Dataset"""
+        return xr.Dataset.from_dataframe(self.data)
+
+
+class XarrayDataset(BaseDataset):
+    """Xarray Dataset wrapper with validation"""
+
+    data: xr.Dataset = Field(..., description="Xarray Dataset")
+
+    @field_validator("data")
+    @classmethod
+    def validate_data_structure(cls, v, info):
+        """Validate required variables based on data type"""
+        data_type = info.data.get("data_type")
+        if not data_type or data_type not in DATASET_SCHEMAS:
+            return v
+
+        schema = DATASET_SCHEMAS[data_type]
+
+        # For xarray, check data variables and coordinates
+        all_vars = set(v.data_vars.keys()) | set(v.coords.keys())
+
+        # Check required variables (treat as data variables or coordinates)
+        missing_vars = set(schema.required_columns) - all_vars
+        if missing_vars and data_type != "era5":  # ERA5 is more flexible
+            raise ValueError(f"Missing required variables for {data_type} data: {missing_vars}")
+
+        # Special validation for ERA5 data
+        if data_type == "era5":
+            time_dims = [dim for dim in schema.date_columns if dim in v.dims]
+            if not time_dims:
+                raise ValueError("ERA5 data must contain a time dimension ('time' or 'Times')")
+
+        return v
+
+    def get_columns(self) -> list[str]:
+        """Return list of variable and coordinate names"""
+        return list(self.data.data_vars.keys()) + list(self.data.coords.keys())
+
+    def get_datatypes(self) -> dict[str, str]:
+        """Return mapping of variable names to their datatypes"""
+        dtypes = {}
+        for var in self.data.data_vars:
+            dtypes[var] = str(self.data[var].dtype)
+        for coord in self.data.coords:
+            dtypes[coord] = str(self.data[coord].dtype)
+        return dtypes
+
+    def get_shape(self) -> tuple[int, ...]:
+        """Return shape of the Dataset"""
+        if self.data.data_vars:
+            # Return shape of first data variable
+            first_var = list(self.data.data_vars.keys())[0]
+            return self.data[first_var].shape
+        return tuple(self.data.sizes.values())
+
+    def filter_by_date_range(
+        self, start_date: str, end_date: str, date_col: str | None = None
+    ) -> "XarrayDataset":
+        """Filter dataset by date range"""
+        ds = self.data.copy()
+
+        # Auto-detect date dimension if not specified
+        if date_col is None:
+            schema = DATASET_SCHEMAS.get(self.data_type)
+            if schema:
+                date_dims = [dim for dim in schema.date_columns if dim in ds.dims]
+                date_col = date_dims[0] if date_dims else None
+
+            if date_col is None:
+                raise ValueError("No date dimension found in dataset")
+
+        # Filter by date range
+        filtered_data = ds.sel({date_col: slice(start_date, end_date)})
+
         new_metadata = self.metadata.copy()
-        new_metadata['merged_with'] = {
-            'other_data_type': other.data_type,
-            'merge_keys': on,
-            'merge_type': how
-        }
-        
-        # Determine new data type based on merge
-        if self.data_type == other.data_type:
-            new_data_type = self.data_type
-        else:
-            new_data_type = f"{self.data_type}_merged_with_{other.data_type}"
-        
-        return Dataset(
-            data=merged_data,
-            data_type=new_data_type,
-            metadata=new_metadata
-        )
-    
-    @property
-    def shape(self) -> tuple:
-        """Return shape of underlying data"""
-        return self.data.shape
-    
-    @property
-    def columns(self) -> list:
-        """Return column names"""
-        return list(self.data.columns)
-    
-    def __repr__(self) -> str:
-        return f"Dataset(type='{self.data_type}', shape={self.shape}, columns={len(self.columns)})"
+        new_metadata["filtered_date_range"] = {"start": start_date, "end": end_date}
+
+        return XarrayDataset(data=filtered_data, data_type=self.data_type, metadata=new_metadata)
+
+    def to_pandas(self) -> pd.DataFrame:
+        """Convert to pandas DataFrame"""
+        return self.data.to_dataframe()
+
+    def to_xarray(self) -> xr.Dataset:
+        """Return the xarray Dataset"""
+        return self.data.copy()
+
+
+# Factory function for creating datasets
+def create_dataset(
+    data: pd.DataFrame | xr.Dataset, data_type: str, metadata: dict[str, Any] | None = None
+) -> BaseDataset:
+    """Factory function to create appropriate dataset wrapper"""
+    if metadata is None:
+        metadata = {}
+
+    if isinstance(data, pd.DataFrame):
+        return PandasDataset(data=data, data_type=data_type, metadata=metadata)
+    elif isinstance(data, xr.Dataset):
+        return XarrayDataset(data=data, data_type=data_type, metadata=metadata)
+    else:
+        raise ValueError(f"Unsupported data type: {type(data)}")

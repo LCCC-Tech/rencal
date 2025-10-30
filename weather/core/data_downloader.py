@@ -2,15 +2,21 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+import requests
 import cdsapi
 import certifi
 import xarray as xr
 
+from weather.utils.types import ParsedURL
 from weather.utils.constants import (
     AREA_BOUNDING_BOX_COORDINATES,
     CALIBRATION_YEARS,
     CDS_API_KEY,
     CDS_API_URL,
+    CFD_BMU_CSV_URL,
+    CFD_REGISTER_API_URL,
+    CFD_WIND_TECHNOLOGIES,
     DOWNLOAD_DATA_DIR,
     ERA5_DATASET,
     ERA5_PRODUCT_TYPE,
@@ -28,7 +34,7 @@ class DataDownloader(ABC):
         self.output_dir = Path(output_dir)
         self.logger = get_logger(self.__class__.__name__)
 
-    def _setup_output_directory(self, stem: str | None = None) -> None:
+    def _update_output_directory(self, stem: str | None = None) -> None:
         """Create output directory if it doesn't exist."""
         self.output_dir = self.output_dir / stem if stem else self.output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -53,6 +59,8 @@ class ERA5DataDownloader(DataDownloader):
         self.api_url = CDS_API_URL
         self._client = None
 
+        self._update_output_directory(stem="era5")
+
     @property
     def client(self) -> cdsapi.Client:
         """Lazy initialization of CDS API client."""
@@ -67,26 +75,6 @@ class ERA5DataDownloader(DataDownloader):
                 verify=certifi.where(),
             )
         return self._client
-
-    def download_era5(self, years: list[int] = CALIBRATION_YEARS) -> None:
-        """Download ERA5 data for specified years.
-
-        Args:
-            years: List of years to download data for
-        """
-        self._setup_output_directory(stem="era5")
-
-        for year in years:
-            file_path = self.output_dir / f"{year}.nc"
-
-            if file_path.exists():
-                self.logger.info(f"File already exists for {year}, verifying timestamps...")
-            else:
-                self._download_year(year, str(file_path))
-
-            self._verify_and_update_metadata(year, str(file_path))
-
-        self.logger.info("Completed all downloads and verifications.")
 
     def _download_year(self, year: int, file_path: str) -> None:
         """Download ERA5 data for a specific year."""
@@ -147,8 +135,77 @@ class ERA5DataDownloader(DataDownloader):
         return None
 
     def download(self, years: list[int] = CALIBRATION_YEARS) -> None:
-        """Download ERA5 data (implementation of abstract method)."""
-        self.download_era5(years)
+        """Download ERA5 data for specified years.
+
+        Args:
+            years: List of years to download data for
+        """
+        for year in years:
+            file_path = self.output_dir / f"{year}.nc"
+
+            if file_path.exists():
+                self.logger.info(f"File already exists for {year}, verifying timestamps...")
+            else:
+                self._download_year(year, str(file_path))
+
+            self._verify_and_update_metadata(year, str(file_path))
+
+        self.logger.info("ERA5 data saved and verified.")
+
+class CfDDataDownloader(DataDownloader):
+    def __init__(self, output_dir: str = DOWNLOAD_DATA_DIR):
+        super().__init__(output_dir)
+        self._cfd_register_api_url = ParsedURL(CFD_REGISTER_API_URL)
+        self._cfd_to_bmu_csv_url = ParsedURL(CFD_BMU_CSV_URL)
+
+        self._update_output_directory(stem="cfd")
+
+    def _download_cfd_bmu_csv(self) -> pd.DataFrame:
+        """Download the CfD to BMU mapping CSV from the LCCC data portal."""
+        try:
+            self.logger.info(f"Reading CfD to BMU mapping CSV from {self._cfd_to_bmu_csv_url.domain}...")
+            bmu_mapping = pd.read_csv(self._cfd_to_bmu_csv_url.url)
+            bmu_mapping = bmu_mapping.filter(["CFD_Id", "BMU_Id"])
+            self.logger.info("Loaded CSV into dataframe memory.")
+            return bmu_mapping
+        except Exception as e:
+            self.logger.error(f"Error downloading CfD to BMU CSV from {self._cfd_to_bmu_csv_url.domain}: {e}")
+            raise
+
+    def _download_cfd_register(self) -> pd.DataFrame:
+        """Download CfD register data from the LCCC API."""
+        try:
+            self.logger.info(f"Fetching CfD register data from {self._cfd_register_api_url.url}...")
+            res = requests.get(CFD_REGISTER_API_URL)
+            if res.status_code != 200:
+                raise Exception(f"Failed to fetch data: {res.status_code}: {res.text}")
+
+            data = res.json()
+            df = pd.DataFrame(data)
+            self.logger.info(f"Loaded {len(df)} records into dataframe memory.")
+
+            # Filter for wind technologies and transform - no copy needed
+            tech_mask = df["technology_type"].isin(CFD_WIND_TECHNOLOGIES)
+            cfd_df = df.loc[tech_mask, ["contract_id", "latitude", "longitude", "technology_type", "current_installed_capacity"]].rename(columns= {
+                "contract_id": "CFD_Id",
+                "latitude": "Latitude",
+                "longitude": "Longitude",
+                "technology_type": "Technology",
+                "current_installed_capacity": "Maximum Capacity"
+            })
+
+            return cfd_df
+
+        except Exception as e:
+            self.logger.error(f"Error downloading CfD register data: {e}")
+            raise
+
+    def download(self) -> None:
+        """Download CfD data"""
+        bmu_mapping = self._download_cfd_bmu_csv()
+        cfd_register = self._download_cfd_register()
+        cfd_df = cfd_register.merge(bmu_mapping, on="CFD_Id", how="inner")
+        cfd_df.to_csv(self.output_dir / "cfd_with_bmu.csv", index=False)
 
 
 class DownloadManager:
@@ -156,7 +213,12 @@ class DownloadManager:
 
     def __init__(self, output_dir: str = DOWNLOAD_DATA_DIR):
         self.era5 = ERA5DataDownloader(output_dir)
+        self.cfd = CfDDataDownloader(output_dir)
 
     def download_era5(self, years: list[int] = CALIBRATION_YEARS) -> None:
         """Download ERA5 data."""
         self.era5.download(years)
+
+    def download_cfd(self) -> None:
+        """Download CfD data."""
+        self.cfd.download()
