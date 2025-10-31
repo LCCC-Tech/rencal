@@ -7,7 +7,7 @@ name = "weather-lccc"
 version = "0.1.0"
 description = "Weather forecasting and modelling for renewable energy applications"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12,<3.13"
 license = {text = "MIT"}
 authors = [
     {name = "The Low Carbon Contracts Company", email = "analytics@lowcarboncontracts.uk"}
@@ -43,13 +43,20 @@ dependencies = [
     "pandas>=1.3.0",
     "scipy>=1.7.0",
     "matplotlib>=3.4.0",
-    "seaborn>=0.11.0",
+    "seaborn>=0.12.0",
     "scikit-learn>=1.0.0",
     "netCDF4>=1.5.0",
     "torch>=1.9.0",
     "xarray>=0.19.0",
     "pytz>=2021.1",
-    "requests>=2.25.0"
+    "requests>=2.25.0",
+    "polars>=1.8.2",
+    "pydantic>=2.10.6",
+    "pyodbc>=4.0.0",
+    "cdsapi>=0.6.0",
+    "python-dotenv>=1.0.0",
+    "openpyxl>=3.1.0",
+    "zarr>=2.16.1",
 ]
 
 [dependency-groups]
@@ -104,7 +111,7 @@ include = ["weather"]
 exclude = [".venv", "build", "dist"]
 venvPath = "."
 venv = ".venv"
-pythonVersion = "3.8"
+pythonVersion = "3.12"
 typeCheckingMode = "strict"
 reportMissingImports = true
 reportMissingTypeStubs = false
@@ -112,11 +119,17 @@ reportUnusedImport = true
 reportUnusedClass = true
 reportUnusedFunction = true
 reportUnusedVariable = true
+# Less strict about third-party library types
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+# Disable overly strict argument type checking for third-party libraries
+reportArgumentType = false
 
 [tool.ruff]
 line-length = 100
 indent-width = 4
-target-version = "py38"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = [

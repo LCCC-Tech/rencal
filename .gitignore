@@ -213,11 +213,9 @@ __marimo__/
 *.h5
 *.hdf5
 *.parquet
-data/era5/
-data/raw/
-data/processed/
-calibration_outputs/
-forecast_outputs/
+*.csv
+*.xlsx
+data/
 
 # Model files
 models/saved/

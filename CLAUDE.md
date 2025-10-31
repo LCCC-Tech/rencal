@@ -16,45 +16,44 @@ This is an open-source weather forecasting and modelling repository for renewabl
 ### Installation and Setup
 ```bash
 # Development installation
-pip install -e .
+uv sync
 
-# Install development dependencies
-pip install -r requirements-dev.txt
-
-# Install with optional dependencies
-pip install -e .[dev,azure,databricks]
+# Install with specific dependency groups
+uv sync --group dev         # Development dependencies
+uv sync --group azure       # Azure integration
+uv sync --group notebook    # Jupyter notebooks
+uv sync --group docs        # Documentation
 ```
 
 ### Code Quality and Testing
 ```bash
 # Run all tests
-pytest
+uv run pytest
 
 # Run tests with coverage
-pytest --cov=weather --cov-report=html
+uv run pytest --cov=weather --cov-report=html
 
 # Run specific test
-pytest tests/test_specific.py::test_function
+uv run pytest tests/test_specific.py::test_function
 
-# Code formatting
-black weather/
-isort weather/
+# Code formatting and linting
+uv run ruff format weather/
+uv run ruff check weather/
 
-# Linting
-flake8 weather/
-mypy weather/
+# Type checking
+uv run basedpyright weather/
 
 # Pre-commit hooks
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 ### Package Building
 ```bash
 # Build package
-python -m build
+uv build
 
 # Check package
-twine check dist/*
+uv run twine check dist/*
 ```
 
 ## Architecture Overview
