@@ -15,6 +15,7 @@ from weather.utils.constants import (
     CDS_API_KEY,
     CDS_API_URL,
     CFD_BMU_CSV_URL,
+    CFD_DATA_FILE_NAME,
     CFD_REGISTER_API_URL,
     CFD_WIND_TECHNOLOGIES,
     DOWNLOAD_DATA_DIR,
@@ -202,10 +203,16 @@ class CfDDataDownloader(DataDownloader):
 
     def download(self) -> None:
         """Download CfD data"""
-        bmu_mapping = self._download_cfd_bmu_csv()
-        cfd_register = self._download_cfd_register()
-        cfd_df = cfd_register.merge(bmu_mapping, on="CFD_Id", how="inner")
-        cfd_df.to_csv(self.output_dir / "cfd_with_bmu.csv", index=False)
+        if (self.output_dir / "cfd_with_bmu.csv").exists():
+            self.logger.info("CfD data with BMU mapping already exists, skipping download.")
+
+        else:
+            self.logger.info("Downloading CfD data with BMU mapping...")
+            bmu_mapping = self._download_cfd_bmu_csv()
+            cfd_register = self._download_cfd_register()
+            cfd_df = cfd_register.merge(bmu_mapping, on="CFD_Id", how="inner")
+            cfd_df.to_csv(self.output_dir / CFD_DATA_FILE_NAME, index=False)
+            self.logger.info(f"CfD data with BMU mapping saved to {self.output_dir / CFD_DATA_FILE_NAME}")
 
 
 class DownloadManager:
