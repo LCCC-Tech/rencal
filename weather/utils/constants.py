@@ -31,12 +31,13 @@ except yaml.YAMLError as e:
     run_config = {}
 
 # Absolute path to download data directory
-DOWNLOAD_DATA_DIR: str = run_config.get("DOWNLOAD_DATA_DIR", str(Path(__file__).parent.parent.parent / "data"))
+DOWNLOAD_DATA_DIR = run_config.get("DOWNLOAD_DATA_DIR", str(Path(__file__).parent.parent.parent / "data"))
 
 # Dates
-CALIBRATION_YEARS: list[int] = run_config.get("CALIBRATION_YEARS", [2023])
-SIMULATION_START_DATE: str = run_config.get("START_DATE", "2025-04-01T00:00:00")
-SIMULATION_END_DATE: str = run_config.get("END_DATE", "2025-06-30T00:00:00")
+CALIBRATION_START_DATE_UTC: str = run_config.get("CALIBRATION_START_DATE", "2023-01-01T00:00:00Z") or "2023-01-01T00:00:00Z"
+CALIBRATION_END_DATE_UTC: str = run_config.get("CALIBRATION_END_DATE", "2024-10-26T00:00:00Z") or "2024-10-26T00:00:00Z"
+SIMULATION_START_DATE = run_config.get("START_DATE", "2025-04-01T00:00:00")
+SIMULATION_END_DATE = run_config.get("END_DATE", "2025-06-30T00:00:00")
 
 # Runtime timestamp
 RUNTIME_DATE = datetime.datetime.today()
@@ -56,3 +57,7 @@ CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?
 CFD_BMU_CSV_URL =  "https://dp.lowcarboncontracts.uk/dataset/be8c542a-c66c-4a06-a3df-bc46db7416c0/resource/9316f493-365c-4abc-a40e-3a5e67119a0a/download/cfd_to_bm_unit_mapping.csv"
 CFD_DATA_FILE_NAME = "cfd_with_bmu.csv"
 CFD_WIND_TECHNOLOGIES = {"Onshore Wind", "Offshore Wind"}
+
+# Elexon API
+ELEXON_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
+
