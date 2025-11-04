@@ -7,6 +7,5 @@ def main():
     downloader.download_generation_data()
     downloader.download_era5()
 
-
 if __name__ == "__main__":
     main()

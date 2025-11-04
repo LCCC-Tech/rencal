@@ -11,8 +11,9 @@ import xarray as xr
 
 from weather.utils.constants import (
     AREA_BOUNDING_BOX_COORDINATES,
-    CALIBRATION_END_DATE_UTC,
-    CALIBRATION_START_DATE_UTC,
+    CALIBRATION_END_DATE,
+    CALIBRATION_START_YEAR,
+    CALIBRATION_START_DATE,
     CDS_API_KEY,
     CDS_API_URL,
     CFD_BMU_CSV_URL,
@@ -285,8 +286,8 @@ class GenerationDataDownloader(DataDownloader):
             )
 
             params = {
-                "from": CALIBRATION_START_DATE_UTC,
-                "to": CALIBRATION_END_DATE_UTC,
+                "from": CALIBRATION_START_DATE,
+                "to": CALIBRATION_END_DATE,
                 "bmUnit": self.bmu_ids,
                 "format": "json",
             }
