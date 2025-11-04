@@ -65,8 +65,8 @@ class ERA5DataDownloader(DataDownloader):
     def _extract_calibration_years(self) -> list[int]:
         """Extract years from calibration start and end dates."""
         try:
-            start_date = datetime.fromisoformat(CALIBRATION_START_DATE_UTC.replace("Z", "+00:00"))
-            end_date = datetime.fromisoformat(CALIBRATION_END_DATE_UTC.replace("Z", "+00:00"))
+            start_date = datetime.fromisoformat(CALIBRATION_START_DATE.replace("Z", "+00:00"))
+            end_date = datetime.fromisoformat(CALIBRATION_END_DATE.replace("Z", "+00:00"))
 
             start_year = start_date.year
             end_year = end_date.year
