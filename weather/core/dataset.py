@@ -3,10 +3,12 @@ from typing import Any
 
 import pandas as pd
 import xarray as xr
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, ValidationInfo, field_validator
+
 from weather.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
 
 class BaseDataset(BaseModel, ABC):
     """Abstract base class for weather/energy datasets"""
@@ -79,12 +81,6 @@ DATASET_SCHEMAS = {
             "capcaity": "float64",
         },
     ),
-    "bmu_mapping": DatasetSchema(
-        required_columns=["CFD_Id", "BMU_Id"],
-        optional_columns=["mapping_date", "status"],
-        required_datatypes={"CFD_Id": "object", "BMU_Id": "object"},
-        date_columns=["mapping_date"],
-    ),
     "generation": DatasetSchema(
         required_columns=["CFD_Id", "settlementDate", "quantity"],
         optional_columns=["forecast", "actual"],
@@ -107,7 +103,7 @@ class PandasDataset(BaseDataset):
 
     @field_validator("data")
     @classmethod
-    def validate_data_structure(cls, v, info):
+    def validate_data_structure(cls, v: pd.DataFrame, info: ValidationError) -> pd.DataFrame:
         """Validate required columns based on data type"""
         data_type = info.data.get("data_type")
         if not data_type or data_type not in DATASET_SCHEMAS:
@@ -202,7 +198,7 @@ class XarrayDataset(BaseDataset):
 
     @field_validator("data")
     @classmethod
-    def validate_data_structure(cls, v, info):
+    def validate_data_structure(cls, v: xr.Dataset, info: ValidationInfo) -> xr.Dataset:
         """Validate required variables based on data type"""
         data_type = info.data.get("data_type")
         if not data_type or data_type not in DATASET_SCHEMAS:
