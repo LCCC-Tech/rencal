@@ -11,8 +11,8 @@ import xarray as xr
 
 from weather.utils.constants import (
     AREA_BOUNDING_BOX_COORDINATES,
-    CALIBRATION_END_DATE_UTC,
-    CALIBRATION_START_DATE_UTC,
+    CALIBRATION_END_DATE,
+    CALIBRATION_START_DATE,
     CDS_API_KEY,
     CDS_API_URL,
     CFD_BMU_CSV_URL,
@@ -32,28 +32,66 @@ logger = get_logger(__name__)
 
 
 class DataDownloader(ABC):
-    """Abstract base class for data downloaders."""
+    """Abstract base class for data downloaders.
+
+    This class provides a common interface and shared functionality for downloading
+    various types of weather and energy data. Concrete implementations should inherit
+    from this class and implement the abstract download method.
+
+    Attributes:
+        output_dir (Path): Directory where downloaded data will be saved.
+        logger: Logger instance for the specific downloader class.
+    """
 
     def __init__(self):
+        """Initialize the DataDownloader with output directory and logger."""
         self.output_dir = Path(DOWNLOAD_DATA_DIR)
         self.logger = get_logger(self.__class__.__name__)
 
     def _update_output_directory(self, stem: str | None = None) -> None:
-        """Create output directory if it doesn't exist."""
+        """Create and update the output directory path.
+
+        Creates a subdirectory within the main output directory if a stem is provided.
+        The directory is created if it doesn't exist, including parent directories.
+
+        Args:
+            stem: Optional subdirectory name to append to the output path.
+                 If None, uses the current output directory unchanged.
+        """
         self.output_dir = self.output_dir / stem if stem else self.output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.logger.info(f"Data will be saved to: {self.output_dir}")
 
     @abstractmethod
     def download(self, *args: Any, **kwargs: Any) -> None:
-        """Abstract method for downloading data."""
+        """Abstract method for downloading data.
+
+        This method must be implemented by subclasses to define specific
+        data downloading behavior.
+
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+        """
         pass
 
 
 class ERA5DataDownloader(DataDownloader):
-    """Downloader for ERA5 reanalysis data from Copernicus Climate Data Store."""
+    """Downloader for ERA5 reanalysis data from Copernicus Climate Data Store.
+
+    Downloads ERA5 weather data for specified years and variables within a defined
+    geographical bounding box. The data is retrieved from the Copernicus Climate
+    Data Store (CDS) API and saved as NetCDF files.
+
+
+    Attributes:
+        _api_key (str): CDS API key for authentication.
+        _api (ParsedURL): Parsed CDS API URL.
+        _client (cdsapi.Client): Lazy-initialized CDS API client.
+    """
 
     def __init__(self):
+        """Initialize ERA5 data downloader with API configuration."""
         super().__init__()
         self._api_key = CDS_API_KEY
         self._api = ParsedURL(CDS_API_URL)
@@ -62,10 +100,20 @@ class ERA5DataDownloader(DataDownloader):
         self._update_output_directory(stem="era5")
 
     def _extract_calibration_years(self) -> list[int]:
-        """Extract years from calibration start and end dates."""
+        """Extract years from calibration start and end dates.
+
+        Parses the calibration start and end dates from constants and generates
+        a list of years covering the entire calibration period (inclusive).
+
+        Returns:
+            List of years (integers) from calibration start to end date.
+
+        Raises:
+            Exception: If date parsing fails or dates are invalid.
+        """
         try:
-            start_date = datetime.fromisoformat(CALIBRATION_START_DATE_UTC.replace("Z", "+00:00"))
-            end_date = datetime.fromisoformat(CALIBRATION_END_DATE_UTC.replace("Z", "+00:00"))
+            start_date = datetime.fromisoformat(CALIBRATION_START_DATE.replace("Z", "+00:00"))
+            end_date = datetime.fromisoformat(CALIBRATION_END_DATE.replace("Z", "+00:00"))
 
             start_year = start_date.year
             end_year = end_date.year
@@ -80,7 +128,18 @@ class ERA5DataDownloader(DataDownloader):
 
     @property
     def client(self) -> cdsapi.Client:
-        """Lazy initialization of CDS API client."""
+        """Lazy initialization of CDS API client.
+
+        Creates and returns a CDS API client instance with proper authentication
+        and SSL verification. The client is cached after first initialization.
+
+        Returns:
+            Authenticated CDS API client instance.
+
+        Raises:
+            ValueError: If CDS API key is not provided.
+            Exception: If client initialization fails.
+        """
         try:
             self.logger.info(f"Initializing CDS API client for {self._api.domain}...")
             if self._client is None:
@@ -99,7 +158,19 @@ class ERA5DataDownloader(DataDownloader):
             raise
 
     def _download_year(self, year: int, file_path: str) -> None:
-        """Download ERA5 data for a specific year."""
+        """Download ERA5 data for a specific year.
+
+        Downloads hourly ERA5 data for all days and months of the specified year
+        within the configured geographical bounding box. Data includes all
+        variables defined in ERA_VARIABLES constant.
+
+        Args:
+            year: Year to download data for.
+            file_path: Local file path where the NetCDF data will be saved.
+
+        Raises:
+            Exception: If download fails or API request is unsuccessful.
+        """
         self.logger.info(f"Downloading ERA5 data for {year}...")
 
         request = {
@@ -122,7 +193,21 @@ class ERA5DataDownloader(DataDownloader):
             raise
 
     def _verify_and_update_metadata(self, year: int, file_path: str) -> None:
-        """Verify downloaded file and update metadata."""
+        """Verify downloaded file and update metadata.
+
+        Opens the downloaded NetCDF file to verify its contents, checks for
+        valid datetime coordinates, logs the date range, and adds metadata
+        about timezone information. The file is then re-saved with updated
+        metadata.
+
+        Args:
+            year: Year of the data file being verified.
+            file_path: Path to the NetCDF file to verify and update.
+
+        Raises:
+            KeyError: If no datetime-like coordinate is found in the dataset.
+            Exception: If file verification or metadata update fails.
+        """
         try:
             ds = xr.open_dataset(file_path)
 
@@ -149,7 +234,17 @@ class ERA5DataDownloader(DataDownloader):
             raise
 
     def _find_datetime_coordinate(self, ds: xr.Dataset) -> str | None:
-        """Find the datetime coordinate in the dataset."""
+        """Find the datetime coordinate in the dataset.
+
+        Searches through dataset coordinates to find one that likely represents
+        time/date information based on coordinate name patterns.
+
+        Args:
+            ds: xarray Dataset to search for datetime coordinates.
+
+        Returns:
+            Name of the datetime coordinate if found, None otherwise.
+        """
         for coord in ds.coords:
             coord_str = str(coord)
             if "time" in coord_str.lower() or "date" in coord_str.lower():
@@ -157,10 +252,11 @@ class ERA5DataDownloader(DataDownloader):
         return None
 
     def download(self) -> None:
-        """Download ERA5 data for specified years.
+        """Download ERA5 data for calibration years.
 
-        Args:
-            years: List of years to download data for. If None, extracts from calibration dates.
+        Downloads ERA5 reanalysis data for all years within the calibration period.
+        If files already exist, they are verified for consistency. Each year's data
+        is saved as a separate NetCDF file in the era5 subdirectory.
         """
         years = self._extract_calibration_years()
 
@@ -178,7 +274,20 @@ class ERA5DataDownloader(DataDownloader):
 
 
 class CfDDataDownloader(DataDownloader):
+    """Downloader for Contract for Difference (CfD) data from LCCC.
+
+    Downloads CfD register data and BMU (Balancing Mechanism Unit) mapping
+    from The Low Carbon Contracts Company (LCCC) data portal. Combines the
+    register data with BMU identifiers to create a merged dataset for wind
+    technology analysis.
+
+    Attributes:
+        _cfd_register_api (ParsedURL): Parsed URL for CfD register API.
+        _cfd_to_bmu_api (ParsedURL): Parsed URL for CfD to BMU CSV mapping.
+    """
+
     def __init__(self):
+        """Initialize CfD data downloader with API endpoints."""
         super().__init__()
         self._cfd_register_api = ParsedURL(CFD_REGISTER_API_URL)
         self._cfd_to_bmu_api = ParsedURL(CFD_BMU_CSV_URL)
@@ -186,7 +295,18 @@ class CfDDataDownloader(DataDownloader):
         self._update_output_directory(stem="cfd")
 
     def _download_cfd_bmu_csv(self) -> pd.DataFrame:
-        """Download the CfD to BMU mapping CSV from the LCCC data portal."""
+        """Download the CfD to BMU mapping CSV from the LCCC data portal.
+
+        Downloads a CSV file containing the mapping between CfD contract IDs
+        and BMU (Balancing Mechanism Unit) identifiers. This mapping is
+        essential for linking CfD contracts to their operational units.
+
+        Returns:
+            DataFrame containing CFD_Id and BMU_Id columns.
+
+        Raises:
+            Exception: If CSV download or parsing fails.
+        """
         try:
             self.logger.info(
                 f"Reading CfD to BMU mapping CSV from {self._cfd_to_bmu_api.domain}..."
@@ -202,7 +322,19 @@ class CfDDataDownloader(DataDownloader):
             raise
 
     def _download_cfd_register(self) -> pd.DataFrame:
-        """Download CfD register data from the LCCC API."""
+        """Download CfD register data from the LCCC API.
+
+        Downloads the complete CfD register from LCCC's REST API and filters
+        it for wind technologies only. The returned data includes location
+        coordinates, technology type, and capacity information.
+
+        Returns:
+            DataFrame with columns: CFD_Id, Latitude, Longitude, Technology,
+            Maximum Capacity, filtered for wind technologies.
+
+        Raises:
+            Exception: If API request fails or returns invalid data.
+        """
         try:
             self.logger.info(f"Fetching CfD register data from {self._cfd_register_api.url}...")
             res = requests.get(self._cfd_register_api.url)
@@ -241,7 +373,12 @@ class CfDDataDownloader(DataDownloader):
             raise
 
     def download(self) -> None:
-        """Download CfD data"""
+        """Download and merge CfD register and BMU mapping data.
+
+        Downloads both the CfD register and BMU mapping datasets, merges them
+        on CFD_Id, and saves the combined dataset as a CSV file. If the output
+        file already exists, the download is skipped.
+        """
         if (self.output_dir / "cfd_with_bmu.csv").exists():
             self.logger.info("Skipping downloading existing CfD data with BMU mapping...")
 
@@ -257,15 +394,37 @@ class CfDDataDownloader(DataDownloader):
 
 
 class GenerationDataDownloader(DataDownloader):
+    """Downloader for electricity generation data from Elexon API.
+
+    Downloads settled generation data from the Elexon Balancing Mechanism
+    Reporting Service (BMRS) for BMU units associated with CfD contracts.
+    The data covers the calibration period and provides actual generation
+    volumes for model validation.
+
+    Attributes:
+        _api (ParsedURL): Parsed URL for Elexon API endpoint.
+    """
+
     def __init__(self):
+        """Initialize generation data downloader with Elexon API configuration."""
         super().__init__()
         self._api = ParsedURL(ELEXON_API_URL)
-        self.bmu_ids: list[str] = self._get_bmu_ids()
-
-        self._update_output_directory(stem="generation")
 
     def _get_bmu_ids(self) -> list[str]:
-        """Get BMU IDs from CfD data."""
+        """Get BMU IDs from previously downloaded CfD data.
+
+        Loads the CfD dataset with BMU mapping and extracts unique BMU
+        identifiers for generation data download. Requires that CfD data
+        has been downloaded previously.
+
+        Returns:
+            List of unique BMU ID strings.
+
+        Raises:
+            FileNotFoundError: If CfD data file doesn't exist.
+        """
+        self.logger.info("Loading BMU IDs from CfD data...")
+
         cfd_data_path = self.output_dir / "cfd" / CFD_DATA_FILE_NAME
         if not cfd_data_path.exists():
             self.logger.error(
@@ -275,19 +434,34 @@ class GenerationDataDownloader(DataDownloader):
 
         cfd_df = pd.read_csv(cfd_data_path)
         bmu_ids = cfd_df["BMU_Id"].unique().tolist()
+        self.logger.info(f"Found {len(bmu_ids)} unique BMU IDs.")
         return bmu_ids
 
-    def _download_generation_data(self) -> pd.DataFrame:
-        """Download CfD register data from the LCCC API."""
+    def _download_generation_data(self, bmu_ids: list[str]) -> pd.DataFrame:
+        """Download generation data from Elexon API for specified BMU units.
+
+        Retrieves settled generation data for all provided BMU IDs within
+        the calibration date range. The API returns settlement periods and
+        generation quantities for each BMU unit.
+
+        Args:
+            bmu_ids: List of BMU ID strings to download data for.
+
+        Returns:
+            DataFrame with columns: settlementDate, settlementPeriod,
+            bmUnit, quantity.
+
+        Raises:
+            Exception: If API request fails or returns invalid data.
+        """
+        self.logger.info("Downloading generation data...")
         try:
-            self.logger.info(
-                f"Fetching settled Elexon generation data from {self._api.url}..."
-            )
+            self.logger.info(f"Fetching settled Elexon generation data from {self._api.url}...")
 
             params = {
-                "from": CALIBRATION_START_DATE_UTC,
-                "to": CALIBRATION_END_DATE_UTC,
-                "bmUnit": self.bmu_ids,
+                "from": CALIBRATION_START_DATE,
+                "to": CALIBRATION_END_DATE,
+                "bmUnit": bmu_ids,
                 "format": "json",
             }
 
@@ -308,35 +482,81 @@ class GenerationDataDownloader(DataDownloader):
             raise
 
     def download(self) -> None:
-        """Download generation data."""
+        """Download generation data for all CfD-associated BMU units.
+
+        Downloads settled generation data from Elexon for all BMU units
+        found in the CfD dataset. The data is saved as a CSV file in the
+        generation subdirectory. If the file already exists, download
+        is skipped.
+        """
+        bmu_ids = self._get_bmu_ids()
+
+        self._update_output_directory(stem="generation")
         output_file = self.output_dir / "generation_data.csv"
         if output_file.exists():
             self.logger.info("Generation data already exists, skipping download...")
             return
 
-        self.logger.info("Downloading generation data...")
-        df = self._download_generation_data()
+        df = self._download_generation_data(bmu_ids)
         df.to_csv(output_file, index=False)
         self.logger.info(f"Generation data saved to {output_file}")
 
 
 class DownloadManager:
-    """Main weather data downloader with support for multiple data sources."""
+    """Main weather data downloader with support for multiple data sources.
+
+    Provides a unified interface for downloading all required data sources
+    for weather forecasting and renewable energy analysis. Manages instances
+    of specialized downloaders for different data types and coordinates
+    the overall download process.
+
+    The manager handles:
+    - ERA5 weather reanalysis data
+    - CfD contract and BMU mapping data
+    - Electricity generation data from Elexon
+    - Coordinated download of all data sources
+
+    Attributes:
+        cfd (CfDDataDownloader): Downloader for CfD register and mapping data.
+        generation (GenerationDataDownloader): Downloader for generation data.
+        era5 (ERA5DataDownloader): Downloader for ERA5 weather data.
+    """
 
     def __init__(self):
+        """Initialize download manager with all data source downloaders."""
         self.cfd = CfDDataDownloader()
         self.generation = GenerationDataDownloader()
         self.era5 = ERA5DataDownloader()
 
     def download_cfd(self) -> None:
-        """Download CfD data."""
+        """Download CfD register and BMU mapping data.
+
+        Initiates download of Contract for Difference register data and
+        BMU mapping information from LCCC data sources.
+        """
         self.cfd.download()
 
     def download_generation_data(self) -> None:
-        """Download generation data."""
+        """Download electricity generation data from Elexon.
+
+        Initiates download of settled generation data for CfD-associated
+        BMU units from the Elexon BMRS API.
+        """
         self.generation.download()
 
     def download_era5(self) -> None:
-        """Download ERA5 data."""
+        """Download ERA5 weather reanalysis data.
+
+        Initiates download of ERA5 weather data from the Copernicus
+        Climate Data Store for the calibration period.
+        """
         self.era5.download()
 
+    def download_all(self) -> None:
+        """Download all data sources in sequence.
+
+        This method ensures proper dependency handling between data sources.
+        """
+        self.download_cfd()
+        self.download_generation_data()
+        self.download_era5()

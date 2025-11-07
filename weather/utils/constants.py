@@ -34,10 +34,13 @@ except yaml.YAMLError as e:
 DOWNLOAD_DATA_DIR = run_config.get("DOWNLOAD_DATA_DIR", str(Path(__file__).parent.parent.parent / "data"))
 
 # Dates
-CALIBRATION_START_DATE_UTC: str = run_config.get("CALIBRATION_START_DATE", "2023-01-01T00:00:00Z") or "2023-01-01T00:00:00Z"
-CALIBRATION_END_DATE_UTC: str = run_config.get("CALIBRATION_END_DATE", "2024-10-26T00:00:00Z") or "2024-10-26T00:00:00Z"
-SIMULATION_START_DATE = run_config.get("START_DATE", "2025-04-01T00:00:00")
-SIMULATION_END_DATE = run_config.get("END_DATE", "2025-06-30T00:00:00")
+ERA5_START_YEAR: int = run_config.get("ERA5_START_YEAR", 2023)
+CALIBRATION_START_YEAR: int = run_config.get("CALIBRATION_START_YEAR", 2023)
+CALIBRATION_START_DATE: str = f"{CALIBRATION_START_YEAR}-01-01T00:00:00Z"
+CALIBRATION_END_DATE: str = (datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+SIMULATION_START_DATE = run_config.get("START_DATE", "2025-04-01T00:00:00Z")
+SIMULATION_END_DATE = run_config.get("END_DATE", "2025-06-30T00:00:00Z")
 
 # Runtime timestamp
 RUNTIME_DATE = datetime.datetime.today()
