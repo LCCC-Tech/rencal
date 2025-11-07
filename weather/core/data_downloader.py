@@ -12,7 +12,6 @@ import xarray as xr
 from weather.utils.constants import (
     AREA_BOUNDING_BOX_COORDINATES,
     CALIBRATION_END_DATE,
-    CALIBRATION_START_YEAR,
     CALIBRATION_START_DATE,
     CDS_API_KEY,
     CDS_API_URL,
@@ -261,12 +260,11 @@ class GenerationDataDownloader(DataDownloader):
     def __init__(self):
         super().__init__()
         self._api = ParsedURL(ELEXON_API_URL)
-        self.bmu_ids: list[str] = self._get_bmu_ids()
-
-        self._update_output_directory(stem="generation")
 
     def _get_bmu_ids(self) -> list[str]:
         """Get BMU IDs from CfD data."""
+        self.logger.info("Loading BMU IDs from CfD data...")
+
         cfd_data_path = self.output_dir / "cfd" / CFD_DATA_FILE_NAME
         if not cfd_data_path.exists():
             self.logger.error(
@@ -276,10 +274,12 @@ class GenerationDataDownloader(DataDownloader):
 
         cfd_df = pd.read_csv(cfd_data_path)
         bmu_ids = cfd_df["BMU_Id"].unique().tolist()
+        self.logger.info(f"Found {len(bmu_ids)} unique BMU IDs.")
         return bmu_ids
 
-    def _download_generation_data(self) -> pd.DataFrame:
+    def _download_generation_data(self, bmu_ids: list[str]) -> pd.DataFrame:
         """Download CfD register data from the LCCC API."""
+        self.logger.info("Downloading generation data...")
         try:
             self.logger.info(
                 f"Fetching settled Elexon generation data from {self._api.url}..."
@@ -288,7 +288,7 @@ class GenerationDataDownloader(DataDownloader):
             params = {
                 "from": CALIBRATION_START_DATE,
                 "to": CALIBRATION_END_DATE,
-                "bmUnit": self.bmu_ids,
+                "bmUnit": bmu_ids,
                 "format": "json",
             }
 
@@ -310,13 +310,15 @@ class GenerationDataDownloader(DataDownloader):
 
     def download(self) -> None:
         """Download generation data."""
+        bmu_ids = self._get_bmu_ids()
+
+        self._update_output_directory(stem="generation")
         output_file = self.output_dir / "generation_data.csv"
         if output_file.exists():
             self.logger.info("Generation data already exists, skipping download...")
             return
 
-        self.logger.info("Downloading generation data...")
-        df = self._download_generation_data()
+        df = self._download_generation_data(bmu_ids)
         df.to_csv(output_file, index=False)
         self.logger.info(f"Generation data saved to {output_file}")
 
@@ -340,4 +342,10 @@ class DownloadManager:
     def download_era5(self) -> None:
         """Download ERA5 data."""
         self.era5.download()
+
+    def download_all(self) -> None:
+        """Download all data sources."""
+        self.download_cfd()
+        self.download_generation_data()
+        self.download_era5()
 
