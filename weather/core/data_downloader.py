@@ -16,14 +16,13 @@ from weather.utils.constants import (
     CDS_API_KEY,
     CDS_API_URL,
     CFD_BMU_CSV_URL,
-    CFD_DATA_FILE_NAME,
     CFD_REGISTER_API_URL,
-    CFD_WIND_TECHNOLOGIES,
     DOWNLOAD_DATA_DIR,
     ELEXON_API_URL,
     ERA5_DATASET,
     ERA5_PRODUCT_TYPE,
     ERA_VARIABLES,
+    PLANT_DATA_FILE_NAME,
 )
 from weather.utils.logger import get_logger
 from weather.utils.types import ParsedURL
@@ -292,7 +291,7 @@ class CfDDataDownloader(DataDownloader):
         self._cfd_register_api = ParsedURL(CFD_REGISTER_API_URL)
         self._cfd_to_bmu_api = ParsedURL(CFD_BMU_CSV_URL)
 
-        self._update_output_directory(stem="cfd")
+        self._update_output_directory(stem="plant")
 
     def _download_cfd_bmu_csv(self) -> pd.DataFrame:
         """Download the CfD to BMU mapping CSV from the LCCC data portal.
@@ -345,8 +344,6 @@ class CfDDataDownloader(DataDownloader):
             df = pd.DataFrame(data)
             self.logger.info(f"Loaded {len(df)} records into dataframe memory.")
 
-            # Filter for wind technologies and transform - no copy needed
-            tech_mask = df["technology_type"].isin(CFD_WIND_TECHNOLOGIES)
             cfd_df = df.loc[
                 tech_mask,
                 [
@@ -359,10 +356,8 @@ class CfDDataDownloader(DataDownloader):
             ].rename(
                 columns={
                     "contract_id": "CFD_Id",
-                    "latitude": "Latitude",
-                    "longitude": "Longitude",
-                    "technology_type": "Technology",
-                    "current_installed_capacity": "Maximum Capacity",
+                    "technology_type": "technology",
+                    "current_installed_capacity": "capacity",
                 }
             )
 
@@ -379,7 +374,7 @@ class CfDDataDownloader(DataDownloader):
         on CFD_Id, and saves the combined dataset as a CSV file. If the output
         file already exists, the download is skipped.
         """
-        if (self.output_dir / "cfd_with_bmu.csv").exists():
+        if (self.output_dir / PLANT_DATA_FILE_NAME).exists():
             self.logger.info("Skipping downloading existing CfD data with BMU mapping...")
 
         else:
@@ -425,7 +420,7 @@ class GenerationDataDownloader(DataDownloader):
         """
         self.logger.info("Loading BMU IDs from CfD data...")
 
-        cfd_data_path = self.output_dir / "cfd" / CFD_DATA_FILE_NAME
+        cfd_data_path = self.output_dir / "plant" / CFD_DATA_FILE_NAME
         if not cfd_data_path.exists():
             self.logger.error(
                 f"CfD data file not found at {cfd_data_path}. Please download CfD data first."

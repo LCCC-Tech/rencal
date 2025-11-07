@@ -4,7 +4,9 @@ from typing import Any
 import pandas as pd
 import xarray as xr
 from pydantic import BaseModel, Field, field_validator
+from weather.utils.logger import get_logger
 
+logger = get_logger(__name__)
 
 class BaseDataset(BaseModel, ABC):
     """Abstract base class for weather/energy datasets"""
@@ -67,16 +69,15 @@ class DatasetSchema(BaseModel):
 
 # Schema definitions for different dataset types
 DATASET_SCHEMAS = {
-    "cfd_register": DatasetSchema(
-        required_columns=["CFD_Id", "Latitude", "Longitude", "Technology"],
-        optional_columns=["Capacity", "Commission_Date", "Status"],
+    "plant_data": DatasetSchema(
+        required_columns=["plant_id", "latitude", "longitude", "technology", "capacity"],
         required_datatypes={
-            "CFD_Id": "object",
-            "Latitude": "float64",
-            "Longitude": "float64",
-            "Technology": "object",
+            "plant_id": "object",
+            "latitude": "float64",
+            "longitude": "float64",
+            "technology": "object",
+            "capcaity": "float64",
         },
-        date_columns=["Commission_Date"],
     ),
     "bmu_mapping": DatasetSchema(
         required_columns=["CFD_Id", "BMU_Id"],
@@ -116,8 +117,14 @@ class PandasDataset(BaseDataset):
 
         # Check required columns
         missing_cols = set(schema.required_columns) - set(v.columns)
+        additional_cols = set(v.columns) - set(schema.required_columns)
         if missing_cols:
             raise ValueError(f"Missing required columns for {data_type} data: {missing_cols}")
+
+        if additional_cols:
+            logger.warning(
+                f"Additional columns found in {data_type} data not defined in schema: {additional_cols}"
+            )
 
         # Validate datatypes for required columns
         for col, expected_dtype in schema.required_datatypes.items():

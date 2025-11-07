@@ -58,8 +58,8 @@ AREA_BOUNDING_BOX_COORDINATES = [61, -12, 49, 5]  # [North, West, South, East] -
 # CFD API
 CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?format=json"
 CFD_BMU_CSV_URL =  "https://dp.lowcarboncontracts.uk/dataset/be8c542a-c66c-4a06-a3df-bc46db7416c0/resource/9316f493-365c-4abc-a40e-3a5e67119a0a/download/cfd_to_bm_unit_mapping.csv"
-CFD_DATA_FILE_NAME = "cfd_with_bmu.csv"
-CFD_WIND_TECHNOLOGIES = {"Onshore Wind", "Offshore Wind"}
+PLANT_DATA_FILE_NAME = "plant_data.csv"
+WIND_TECHNOLOGY_TYPES = {"Onshore Wind", "Offshore Wind"}
 
 # Elexon API
 ELEXON_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
