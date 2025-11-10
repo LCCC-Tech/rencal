@@ -8,6 +8,7 @@ from weather.utils.constants import (
     DOWNLOAD_DATA_DIR,
     GENERATION_DATE_FILE_NAME,
     PLANT_DATA_FILE_NAME,
+    PLANT_ID_COLUMN,
     WIND_TECHNOLOGY_TYPES,
 )
 from weather.utils.logger import get_logger
@@ -45,7 +46,7 @@ class LocalDataLoader(DataLoader):
     def __init__(self, data_path: str = DOWNLOAD_DATA_DIR):
         self._base_path = Path(data_path)
 
-    def load_wind_plant_data(self, id_column: str = "CFD_Id") -> BaseDataset:
+    def load_wind_plant_data(self, id_column: str = "cfd_id") -> BaseDataset:
         """Load CfD register with location/capacity data from Excel file"""
         file_path = self._base_path / "plant" / PLANT_DATA_FILE_NAME
         if not file_path.exists():
@@ -70,12 +71,20 @@ class LocalDataLoader(DataLoader):
             },
         )
 
-    def load_generation_data(self) -> BaseDataset:
+    def load_generation_data(self, id_column: str = PLANT_ID_COLUMN) -> BaseDataset:
+        """Load settlement/generation time series from CSV file
+
+        Args:
+            id_column (str): Column name for plant ID in the generation dataset
+        Returns:
+            BaseDataset: Dataset containing generation time series
+        """
         file_path = self._base_path / "generation" / GENERATION_DATE_FILE_NAME
         if not file_path.exists():
             raise FileNotFoundError(f"Generation data file not found at {file_path}")
 
         df = pd.read_csv(file_path)
+        df = df.rename(columns={id_column: "plant_id"})
 
         return PandasDataset(
             data=df,

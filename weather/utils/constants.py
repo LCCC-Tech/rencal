@@ -1,6 +1,7 @@
 import datetime
 import os
 from pathlib import Path
+from pdb import run
 from typing import Any
 
 import pytz
@@ -41,6 +42,9 @@ CALIBRATION_END_DATE: str = (datetime.datetime.now(datetime.UTC) - datetime.time
 
 SIMULATION_START_DATE = run_config.get("START_DATE", "2025-04-01T00:00:00Z")
 SIMULATION_END_DATE = run_config.get("END_DATE", "2025-06-30T00:00:00Z")
+
+# Data
+PLANT_ID_COLUMN: str = run_config.get("PLANT_ID_COLUMN", "cfd_id")
 
 # Runtime timestamp
 RUNTIME_DATE = datetime.datetime.today()

@@ -3,7 +3,7 @@ from typing import Any
 
 import pandas as pd
 import xarray as xr
-from pydantic import BaseModel, Field, ValidationError, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from weather.utils.logger import get_logger
 
@@ -78,14 +78,13 @@ DATASET_SCHEMAS = {
             "latitude": "float64",
             "longitude": "float64",
             "technology": "object",
-            "capcaity": "float64",
+            "capacity": "float64",
         },
     ),
     "generation": DatasetSchema(
-        required_columns=["CFD_Id", "settlementDate", "quantity"],
-        optional_columns=["forecast", "actual"],
-        required_datatypes={"CFD_Id": "object", "quantity": "float64"},
-        date_columns=["settlementDate"],
+        required_columns=["plant_id", "settlement_date", "quantity"],
+        required_datatypes={"plant_id": "object", "quantity": "float64"},
+        date_columns=["settlement_date"],
     ),
     "era5": DatasetSchema(
         required_columns=[],  # ERA5 variables vary, so we'll check for time dimension
@@ -103,7 +102,7 @@ class PandasDataset(BaseDataset):
 
     @field_validator("data")
     @classmethod
-    def validate_data_structure(cls, v: pd.DataFrame, info: ValidationError) -> pd.DataFrame:
+    def validate_data_structure(cls, v: pd.DataFrame, info: ValidationInfo) -> pd.DataFrame:
         """Validate required columns based on data type"""
         data_type = info.data.get("data_type")
         if not data_type or data_type not in DATASET_SCHEMAS:
@@ -119,22 +118,17 @@ class PandasDataset(BaseDataset):
 
         if additional_cols:
             logger.warning(
-                f"Additional columns found in {data_type} data not defined in schema: {additional_cols}"
+                f"Dropping additional columns found in {data_type} data not defined in schema: {additional_cols}"
             )
+            v = v.drop(columns=list(additional_cols))
 
         # Validate datatypes for required columns
         for col, expected_dtype in schema.required_datatypes.items():
             if col in v.columns and str(v[col].dtype) != expected_dtype:
-                # Try to convert if possible
-                try:
-                    if expected_dtype == "float64":
-                        v.loc[:, col] = pd.to_numeric(v[col], errors="coerce")
-                    elif expected_dtype == "object":
-                        v.loc[:, col] = v[col].astype(str)
-                except:
-                    raise ValidationError(
-                        f"Column '{col}' has dtype {v[col].dtype}, expected {expected_dtype}"
-                    )
+                raise ValueError(
+                    f"Column '{col}' has dtype {v[col].dtype}, expected {expected_dtype}. "
+                    f"No automatic conversion will be performed."
+                )
 
         # Special validation for ERA5 data
         if data_type == "era5":
@@ -207,7 +201,7 @@ class XarrayDataset(BaseDataset):
         schema = DATASET_SCHEMAS[data_type]
 
         # For xarray, check data variables and coordinates
-        all_vars = set(v.data_vars.keys()) | set(v.coords.keys())
+        all_vars = set(str(k) for k in v.data_vars.keys()) | set(str(k) for k in v.coords.keys())
 
         # Check required variables (treat as data variables or coordinates)
         missing_vars = set(schema.required_columns) - all_vars
@@ -274,19 +268,3 @@ class XarrayDataset(BaseDataset):
     def to_xarray(self) -> xr.Dataset:
         """Return the xarray Dataset"""
         return self.data.copy()
-
-
-# Factory function for creating datasets
-def create_dataset(
-    data: pd.DataFrame | xr.Dataset, data_type: str, metadata: dict[str, Any] | None = None
-) -> BaseDataset:
-    """Factory function to create appropriate dataset wrapper"""
-    if metadata is None:
-        metadata = {}
-
-    if isinstance(data, pd.DataFrame):
-        return PandasDataset(data=data, data_type=data_type, metadata=metadata)
-    elif isinstance(data, xr.Dataset):
-        return XarrayDataset(data=data, data_type=data_type, metadata=metadata)
-    else:
-        raise ValueError(f"Unsupported data type: {type(data)}")

@@ -497,14 +497,14 @@ class GenerationDataDownloader(DataDownloader):
         generation_df["settlementDate"] = pd.to_datetime(generation_df["settlementDate"]).dt.date
         generation_df["settlementPeriod"] = pd.to_numeric(generation_df["settlementPeriod"])
         generation_df["quantity"] = pd.to_numeric(generation_df["quantity"])
-        generation_df = generation_df.rename(columns={"bmUnit": "bmu_id"})
+        generation_df = generation_df.rename(columns={"bmUnit": "bmu_id", "settlementDate": "settlement_date", "settlementPeriod": "settlement_period"})
 
         # Merge with CfD mapping to add CFD_Id
         generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id"]], on="bmu_id", how="left")
 
         # Aggregate by CFD_Id if multiple BMUs per CfD
         result = generation_df.groupby(
-            ["cfd_id", "settlementDate", "settlementPeriod"], as_index=False
+            ["cfd_id", "settlement_date", "settlement_period"], as_index=False
         ).agg({"quantity": "sum"}).round(2)
 
         return result # type: ignore[return-value]
