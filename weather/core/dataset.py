@@ -132,7 +132,7 @@ class PandasDataset(BaseDataset):
                     elif expected_dtype == "object":
                         v.loc[:, col] = v[col].astype(str)
                 except:
-                    raise ValueError(
+                    raise ValidationError(
                         f"Column '{col}' has dtype {v[col].dtype}, expected {expected_dtype}"
                     )
 

@@ -22,6 +22,7 @@ from weather.utils.constants import (
     ERA5_DATASET,
     ERA5_PRODUCT_TYPE,
     ERA_VARIABLES,
+    GENERATION_DATE_FILE_NAME,
     PLANT_DATA_FILE_NAME,
 )
 from weather.utils.logger import get_logger
@@ -311,7 +312,8 @@ class CfDDataDownloader(DataDownloader):
                 f"Reading CfD to BMU mapping CSV from {self._cfd_to_bmu_api.domain}..."
             )
             bmu_mapping = pd.read_csv(self._cfd_to_bmu_api.url)
-            bmu_mapping = bmu_mapping.filter(["CFD_Id", "BMU_Id"])
+            bmu_mapping.rename(columns={"CFD_Id": "cfd_id", "BMU_Id": "bmu_id"}, inplace=True)
+            bmu_mapping = bmu_mapping.filter(["cfd_id", "bmu_id"])
             self.logger.info("Loaded CSV into dataframe memory.")
             return bmu_mapping
         except Exception as e:
@@ -345,7 +347,7 @@ class CfDDataDownloader(DataDownloader):
             self.logger.info(f"Loaded {len(df)} records into dataframe memory.")
 
             cfd_df = df.loc[
-                tech_mask,
+                :,
                 [
                     "contract_id",
                     "latitude",
@@ -355,7 +357,7 @@ class CfDDataDownloader(DataDownloader):
                 ],
             ].rename(
                 columns={
-                    "contract_id": "CFD_Id",
+                    "contract_id": "cfd_id",
                     "technology_type": "technology",
                     "current_installed_capacity": "capacity",
                 }
@@ -371,7 +373,7 @@ class CfDDataDownloader(DataDownloader):
         """Download and merge CfD register and BMU mapping data.
 
         Downloads both the CfD register and BMU mapping datasets, merges them
-        on CFD_Id, and saves the combined dataset as a CSV file. If the output
+        on cfd_id, and saves the combined dataset as a CSV file. If the output
         file already exists, the download is skipped.
         """
         if (self.output_dir / PLANT_DATA_FILE_NAME).exists():
@@ -381,10 +383,10 @@ class CfDDataDownloader(DataDownloader):
             self.logger.info("Downloading CfD data with BMU mapping...")
             bmu_mapping = self._download_cfd_bmu_csv()
             cfd_register = self._download_cfd_register()
-            cfd_df = cfd_register.merge(bmu_mapping, on="CFD_Id", how="inner")
-            cfd_df.to_csv(self.output_dir / CFD_DATA_FILE_NAME, index=False)
+            cfd_df = cfd_register.merge(bmu_mapping, on="cfd_id", how="inner")
+            cfd_df.to_csv(self.output_dir / PLANT_DATA_FILE_NAME, index=False)
             self.logger.info(
-                f"CfD data with BMU mapping saved to {self.output_dir / CFD_DATA_FILE_NAME}"
+                f"CfD data with BMU mapping saved to {self.output_dir / PLANT_DATA_FILE_NAME}"
             )
 
 
@@ -405,22 +407,18 @@ class GenerationDataDownloader(DataDownloader):
         super().__init__()
         self._api = ParsedURL(ELEXON_API_URL)
 
-    def _get_bmu_ids(self) -> list[str]:
-        """Get BMU IDs from previously downloaded CfD data.
+    def _get_cfd_plants(self) -> pd.DataFrame:
+        """Load CfD plant data with BMU mapping from local CSV file.
 
-        Loads the CfD dataset with BMU mapping and extracts unique BMU
-        identifiers for generation data download. Requires that CfD data
-        has been downloaded previously.
+        Reads the previously downloaded CfD dataset containing plant
+        information and BMU identifiers. This data is used to identify
+        which BMU units to download generation data for.
 
         Returns:
-            List of unique BMU ID strings.
-
-        Raises:
-            FileNotFoundError: If CfD data file doesn't exist.
+            DataFrame containing CfD plant data with BMU mapping.
         """
-        self.logger.info("Loading BMU IDs from CfD data...")
-
-        cfd_data_path = self.output_dir / "plant" / CFD_DATA_FILE_NAME
+        self.logger.info("Loading CfD plant data with BMU mapping...")
+        cfd_data_path = self.output_dir / "plant" / PLANT_DATA_FILE_NAME
         if not cfd_data_path.exists():
             self.logger.error(
                 f"CfD data file not found at {cfd_data_path}. Please download CfD data first."
@@ -428,11 +426,12 @@ class GenerationDataDownloader(DataDownloader):
             raise FileNotFoundError(f"CfD data file not found at {cfd_data_path}.")
 
         cfd_df = pd.read_csv(cfd_data_path)
-        bmu_ids = cfd_df["BMU_Id"].unique().tolist()
-        self.logger.info(f"Found {len(bmu_ids)} unique BMU IDs.")
-        return bmu_ids
+        self.bmu_ids: list[str] = cfd_df["bmu_id"].unique().tolist()
+        self.logger.info(f"Found {len(self.bmu_ids)} unique BMU IDs.")
 
-    def _download_generation_data(self, bmu_ids: list[str]) -> pd.DataFrame:
+        return cfd_df
+
+    def _download_generation_data(self) -> pd.DataFrame:
         """Download generation data from Elexon API for specified BMU units.
 
         Retrieves settled generation data for all provided BMU IDs within
@@ -456,7 +455,7 @@ class GenerationDataDownloader(DataDownloader):
             params = {
                 "from": CALIBRATION_START_DATE,
                 "to": CALIBRATION_END_DATE,
-                "bmUnit": bmu_ids,
+                "bmUnit": self.bmu_ids,
                 "format": "json",
             }
 
@@ -476,6 +475,40 @@ class GenerationDataDownloader(DataDownloader):
             self.logger.error(f"Error downloading generation data: {e}")
             raise
 
+    def _aggregate_bmu_generation_to_cfd(
+        self, cfd_df: pd.DataFrame, generation_df: pd.DataFrame
+    ) -> pd.DataFrame:
+        """Process and aggregate generation data by CFD ID.
+
+        Merges the CFD plant data with the raw generation data on BMU ID,
+        then aggregates the generation quantities by CFD ID, settlement date,
+        and settlement period. This accounts for cases where multiple BMUs
+        are associated with a single CFD contract.
+
+        Args:
+            cfd_df: DataFrame containing CFD plant data with BMU mapping.
+            generation_df: DataFrame containing raw generation data from Elexon.
+        Returns:
+            DataFrame with aggregated generation data by CFD ID.
+        """
+        # Create a copy to avoid modifying the input DataFrame
+        generation_df = generation_df.copy()
+
+        generation_df["settlementDate"] = pd.to_datetime(generation_df["settlementDate"]).dt.date
+        generation_df["settlementPeriod"] = pd.to_numeric(generation_df["settlementPeriod"])
+        generation_df["quantity"] = pd.to_numeric(generation_df["quantity"])
+        generation_df = generation_df.rename(columns={"bmUnit": "bmu_id"})
+
+        # Merge with CfD mapping to add CFD_Id
+        generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id"]], on="bmu_id", how="left")
+
+        # Aggregate by CFD_Id if multiple BMUs per CfD
+        result = generation_df.groupby(
+            ["cfd_id", "settlementDate", "settlementPeriod"], as_index=False
+        ).agg({"quantity": "sum"}).round(2)
+
+        return result # type: ignore[return-value]
+
     def download(self) -> None:
         """Download generation data for all CfD-associated BMU units.
 
@@ -484,16 +517,17 @@ class GenerationDataDownloader(DataDownloader):
         generation subdirectory. If the file already exists, download
         is skipped.
         """
-        bmu_ids = self._get_bmu_ids()
+        cfd_df = self._get_cfd_plants()
 
         self._update_output_directory(stem="generation")
-        output_file = self.output_dir / "generation_data.csv"
+        output_file = self.output_dir / GENERATION_DATE_FILE_NAME
         if output_file.exists():
             self.logger.info("Generation data already exists, skipping download...")
             return
+        bmu_generation_df = self._download_generation_data()
 
-        df = self._download_generation_data(bmu_ids)
-        df.to_csv(output_file, index=False)
+        generation_df = self._aggregate_bmu_generation_to_cfd(cfd_df, bmu_generation_df)
+        generation_df.to_csv(output_file, index=False)
         self.logger.info(f"Generation data saved to {output_file}")
 
 

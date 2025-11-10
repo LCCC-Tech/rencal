@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from weather.utils.constants import DOWNLOAD_DATA_DIR, PLANT_DATA_FILE_NAME, WIND_TECHNOLOGY_TYPES
+from weather.utils.constants import (
+    DOWNLOAD_DATA_DIR,
+    GENERATION_DATE_FILE_NAME,
+    PLANT_DATA_FILE_NAME,
+    WIND_TECHNOLOGY_TYPES,
+)
 from weather.utils.logger import get_logger
 
 from .dataset import BaseDataset, PandasDataset, XarrayDataset
@@ -21,9 +26,7 @@ class DataLoader(ABC):
         pass
 
     @abstractmethod
-    def load_generation_data(
-        self, cfd_ids: list[str], start_date: datetime, end_date: datetime
-    ) -> BaseDataset:
+    def load_generation_data(self) -> BaseDataset:
         """Load settlement/generation time series"""
         pass
 
@@ -46,7 +49,7 @@ class LocalDataLoader(DataLoader):
         """Load CfD register with location/capacity data from Excel file"""
         file_path = self._base_path / "plant" / PLANT_DATA_FILE_NAME
         if not file_path.exists():
-            raise FileNotFoundError(f"CfD plant data file not found at {file_path}")
+            raise FileNotFoundError(f"Plant data file not found at {file_path}")
 
         df = pd.read_csv(file_path)
 
@@ -55,9 +58,6 @@ class LocalDataLoader(DataLoader):
         wind_df = df.loc[mask].copy()
 
         wind_df = wind_df.rename(columns={id_column: "plant_id"})
-
-        print(wind_df.columns)
-        print(wind_df.head())
 
         return PandasDataset(
             data=wind_df,
@@ -70,34 +70,18 @@ class LocalDataLoader(DataLoader):
             },
         )
 
-    def load_generation_data(
-        self, cfd_ids: list[str], start_date: datetime, end_date: datetime
-    ) -> BaseDataset:
-        """Load generation data from BMRS API"""
-        df["settlementDate"] = pd.to_datetime(df["settlementDate"]).dt.date
-        df["settlementPeriod"] = pd.to_numeric(df["settlementPeriod"], errors="coerce")
-        df["quantity"] = pd.to_numeric(df["quantity"], errors="coerce")
-        df.rename(columns={"bmUnit": "BMU_Id"}, inplace=True)
+    def load_generation_data(self) -> BaseDataset:
+        file_path = self._base_path / "generation" / GENERATION_DATE_FILE_NAME
+        if not file_path.exists():
+            raise FileNotFoundError(f"Generation data file not found at {file_path}")
 
-        # Merge with CfD mapping to add CFD_Id
-        bmu_mapping = self.load_bmu_mapping()
-        df_with_cfd = df.merge(bmu_mapping.data[["BMU_Id", "CFD_Id"]], on="BMU_Id", how="left")
-
-        # Aggregate by CFD_Id if multiple BMUs per CfD
-        df_aggregated = (
-            df_with_cfd.groupby(["CFD_Id", "settlementDate", "settlementPeriod"], as_index=False)[
-                "quantity"
-            ]
-            .sum()
-            .round(2)
-        )
+        df = pd.read_csv(file_path)
 
         return PandasDataset(
-            data=df_aggregated,
+            data=df,
             data_type="generation",
             metadata={
-                "source": "bmrs_api",
-                "date_range": {"start": start_date, "end": end_date},
+                "source": "elexon_api",
                 "aggregated": True,
             },
         )
@@ -122,8 +106,7 @@ class LocalDataLoader(DataLoader):
             {
                 "time": pd.date_range(start_date, end_date, freq="h"),
                 "latitude": [55.0] * pd.date_range(start_date, end_date, freq="h").shape[0],
-                "longitude": [-4.0]
-                * pd.date_range(start_date, end_date, freq="h").shape[0],
+                "longitude": [-4.0] * pd.date_range(start_date, end_date, freq="h").shape[0],
             }
         )
 
