@@ -59,8 +59,29 @@ CDS_API_URL: str = "https://cds.climate.copernicus.eu/api"
 CDS_API_KEY: str | None = os.environ.get("CDS_API_KEY", None)
 ERA5_PRODUCT_TYPE = "reanalysis"
 ERA5_DATASET = "reanalysis-era5-single-levels"
-ERA_VARIABLES = ["100m_u_component_of_wind", "100m_v_component_of_wind"]
 AREA_BOUNDING_BOX_COORDINATES = [61, -12, 49, 5]  # [North, West, South, East] - UK bounding box
+
+# Default ERA5 variables for different use cases
+DEFAULT_WIND_VARIABLES = ["100m_u_component_of_wind", "100m_v_component_of_wind"]
+DEFAULT_SOLAR_VARIABLES = ["surface_solar_radiation_downwards", "2m_temperature"]
+
+# ERA5 Variable Name Mapping
+# Maps ERA5 API names to possible NetCDF variable names (handles both naming conventions)
+ERA5_VARIABLE_MAPPING = {
+    "100m_u_component_of_wind": ["u100", "100m_u_component_of_wind"],
+    "100m_v_component_of_wind": ["v100", "100m_v_component_of_wind"],
+    "surface_solar_radiation_downwards": ["ssrd", "surface_solar_radiation_downwards"],
+    "2m_temperature": ["t2m", "2m_temperature"],
+}
+
+
+def get_all_era5_variable_names() -> set[str]:
+    """Get all valid ERA5 variable names (both API and NetCDF names)"""
+    all_names = set()
+    for api_name, netcdf_names in ERA5_VARIABLE_MAPPING.items():
+        all_names.add(api_name)
+        all_names.update(netcdf_names)
+    return all_names
 
 # CFD API
 CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?format=json"

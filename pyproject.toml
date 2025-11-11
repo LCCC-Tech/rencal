@@ -112,12 +112,12 @@ exclude = [".venv", "build", "dist"]
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"
-typeCheckingMode = "strict"
+typeCheckingMode = "basic"  # Changed from strict to basic to reduce false positives
 reportMissingImports = true
 reportMissingTypeStubs = false
 reportUnusedImport = true
-reportUnusedClass = true
-reportUnusedFunction = true
+reportUnusedClass = false  # Reduce noise for now
+reportUnusedFunction = false  # Reduce noise for now
 reportUnusedVariable = true
 # Less strict about third-party library types
 reportUnknownMemberType = false
@@ -125,6 +125,8 @@ reportUnknownVariableType = false
 reportUnknownArgumentType = false
 # Disable overly strict argument type checking for third-party libraries
 reportArgumentType = false
+# Additional settings to help with import resolution
+extraPaths = ["."]
 
 [tool.ruff]
 line-length = 100

@@ -21,7 +21,8 @@ from weather.utils.constants import (
     ELEXON_API_URL,
     ERA5_DATASET,
     ERA5_PRODUCT_TYPE,
-    ERA_VARIABLES,
+    DEFAULT_WIND_VARIABLES,
+    DEFAULT_SOLAR_VARIABLES,
     GENERATION_DATE_FILE_NAME,
     PLANT_DATA_FILE_NAME,
 )
@@ -162,7 +163,7 @@ class ERA5DataDownloader(DataDownloader):
 
         Downloads hourly ERA5 data for all days and months of the specified year
         within the configured geographical bounding box. Data includes all
-        variables defined in ERA_VARIABLES constant.
+        standard wind and solar variables.
 
         Args:
             year: Year to download data for.
@@ -173,9 +174,12 @@ class ERA5DataDownloader(DataDownloader):
         """
         self.logger.info(f"Downloading ERA5 data for {year}...")
 
+        # Combine wind and solar variables for download
+        all_variables = DEFAULT_WIND_VARIABLES + DEFAULT_SOLAR_VARIABLES
+        
         request = {
             "product_type": ERA5_PRODUCT_TYPE,
-            "variable": ERA_VARIABLES,
+            "variable": all_variables,
             "year": str(year),
             "month": [f"{m:02d}" for m in range(1, 13)],
             "day": [f"{d:02d}" for d in range(1, 32)],
@@ -489,7 +493,7 @@ class GenerationDataDownloader(DataDownloader):
 
         During DST transitions, this preserves the actual timeline:
         - Spring forward: Some UTC hours may have fewer settlement periods
-        - Fall back: Some UTC hours may span multiple settlement periods
+        - Autumn back: Some UTC hours may span multiple settlement periods
         - Normal days: Each UTC hour has exactly 2 settlement periods
 
         Args:

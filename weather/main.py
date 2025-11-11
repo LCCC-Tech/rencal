@@ -7,8 +7,8 @@ def main():
     downloader.download_all()
 
     loader = LocalDataLoader()
-    loader.load_generation_data()
-
+    generation_ds = loader.load_generation_data()
+    print(f"Generation data columns {generation_ds.get_columns()}")
 
 if __name__ == "__main__":
     main()

@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+import xarray as xr
 
 from weather.utils.constants import (
     DOWNLOAD_DATA_DIR,
+    ERA5_VARIABLE_MAPPING,
+    DEFAULT_WIND_VARIABLES,
+    DEFAULT_SOLAR_VARIABLES,
     GENERATION_DATE_FILE_NAME,
     PLANT_DATA_FILE_NAME,
     PLANT_ID_COLUMN,
@@ -13,7 +16,11 @@ from weather.utils.constants import (
 )
 from weather.utils.logger import get_logger
 
-from .dataset import BaseDataset, PandasDataset, XarrayDataset
+from weather.models.dataset import (
+    ERA5Dataset,
+    GenerationDataset,
+    PlantDataset,
+)
 
 logger = get_logger(__name__)
 
@@ -22,31 +29,26 @@ class DataLoader(ABC):
     """Abstract base class for loading different data sources"""
 
     @abstractmethod
-    def load_wind_plant_data(self) -> BaseDataset:
+    def load_wind_plant_data(self) -> PlantDataset:
         """Load CfD register with location/capacity data"""
         pass
 
     @abstractmethod
-    def load_generation_data(self) -> BaseDataset:
+    def load_generation_data(self) -> GenerationDataset:
         """Load settlement/generation time series"""
         pass
 
     @abstractmethod
-    def load_era5_data(
-        self,
-        variables: list[str],
-        start_date: datetime,
-        end_date: datetime,
-    ) -> BaseDataset:
-        """Load ERA5 weather data"""
+    def load_era5_data(self) -> ERA5Dataset:
+        """Load ERA5 weather data using standard wind and solar variables"""
         pass
 
 
 class LocalDataLoader(DataLoader):
-    def __init__(self, data_path: str = DOWNLOAD_DATA_DIR):
+    def __init__(self, data_path: str = DOWNLOAD_DATA_DIR) -> None:
         self._base_path = Path(data_path)
 
-    def load_wind_plant_data(self, id_column: str = "cfd_id") -> BaseDataset:
+    def load_wind_plant_data(self, id_column: str = PLANT_ID_COLUMN) -> PlantDataset:
         """Load CfD register with location/capacity data from Excel file"""
         file_path = self._base_path / "plant" / PLANT_DATA_FILE_NAME
         if not file_path.exists():
@@ -55,14 +57,13 @@ class LocalDataLoader(DataLoader):
         df = pd.read_csv(file_path)
 
         # Filter for wind technologies
-        mask = df["technology"].isin(WIND_TECHNOLOGY_TYPES)
+        mask = df["technology"].isin(list(WIND_TECHNOLOGY_TYPES))
         wind_df = df.loc[mask].copy()
 
         wind_df = wind_df.rename(columns={id_column: "plant_id"})
 
-        return PandasDataset(
+        return PlantDataset(
             data=wind_df,
-            data_type="plant_data",
             metadata={
                 "source": "local_excel",
                 "file_path": str(file_path),
@@ -71,13 +72,13 @@ class LocalDataLoader(DataLoader):
             },
         )
 
-    def load_generation_data(self, id_column: str = PLANT_ID_COLUMN) -> BaseDataset:
+    def load_generation_data(self, id_column: str = PLANT_ID_COLUMN) -> GenerationDataset:
         """Load settlement/generation time series from CSV file
 
         Args:
             id_column (str): Column name for plant ID in the generation dataset
         Returns:
-            BaseDataset: Dataset containing generation time series
+            GenerationDataset: Dataset containing generation time series
         """
         file_path = self._base_path / "generation" / GENERATION_DATE_FILE_NAME
         if not file_path.exists():
@@ -85,54 +86,111 @@ class LocalDataLoader(DataLoader):
 
         df = pd.read_csv(file_path)
         df = df.rename(columns={id_column: "plant_id"})
-        print(df.columns)
-        print(df.head())
 
-        return PandasDataset(
+        return GenerationDataset(
             data=df,
-            data_type="generation",
             metadata={
                 "source": "elexon_api",
                 "aggregated": True,
             },
         )
 
-    def load_era5_data(
-        self,
-        variables: list[str],
-        start_date: datetime,
-        end_date: datetime,
-    ) -> XarrayDataset:
-        """Load ERA5 weather data from NetCDF files"""
-        # This is a stub implementation - users need to implement based on their ERA5 data structure
-        # Expected variables: ['u100', 'v100'] for wind, ['ssrd', 't2m'] for solar
+    def load_era5_data(self) -> ERA5Dataset:
+        """Load ERA5 weather data from NetCDF files using standard variables
 
+        Automatically discovers and loads all available NetCDF files, filtering for
+        standard ERA5 variables defined in DEFAULT_WIND_VARIABLES and DEFAULT_SOLAR_VARIABLES. 
+        No date filtering is applied - users can filter post-load using the dataset's filter methods.
+
+        Returns:
+            ERA5Dataset: Dataset containing all available ERA5 weather data
+
+        Raises:
+            FileNotFoundError: If no NetCDF files found in the data path
+            ValueError: If no standard ERA5 variables are found in the data
+        """
         era5_files = list(self._base_path.glob("*.nc"))
         if not era5_files:
             raise FileNotFoundError(f"No ERA5 NetCDF files found in {self._base_path}")
 
-        # Placeholder implementation - would need xarray to properly load NetCDF
-        # For now, return a minimal structure
-        df = pd.DataFrame(
-            {
-                "time": pd.date_range(start_date, end_date, freq="h"),
-                "latitude": [55.0] * pd.date_range(start_date, end_date, freq="h").shape[0],
-                "longitude": [-4.0] * pd.date_range(start_date, end_date, freq="h").shape[0],
-            }
-        )
+        # Load all NetCDF files and concatenate if multiple files exist
+        datasets: list[xr.Dataset] = []
+        for file_path in era5_files:
+            try:
+                ds = xr.open_dataset(file_path)
+                datasets.append(ds)
+                logger.debug(f"Successfully loaded {file_path}")
+            except Exception as e:
+                logger.warning(f"Failed to load {file_path}: {e}")
+                continue
 
-        # Add requested variables with placeholder data
-        for var in variables:
-            df[var] = 0.0  # Placeholder - real implementation would load from NetCDF
+        if not datasets:
+            raise ValueError("Failed to load any NetCDF files successfully")
 
-        return XarrayDataset(
-            data=df,
-            data_type="era5",
+        # Concatenate datasets if multiple files, otherwise use single dataset
+        combined_ds: xr.Dataset
+        if len(datasets) > 1:
+            # Assume files are split by time and concatenate along time dimension
+            try:
+                combined_ds = xr.concat(datasets, dim="time")
+                logger.info(f"Successfully concatenated {len(datasets)} NetCDF files")
+            except Exception as e:
+                logger.error(f"Failed to concatenate datasets: {e}")
+                raise ValueError(f"Failed to concatenate NetCDF files: {e}") from e
+        else:
+            combined_ds = datasets[0]
+            logger.info("Using single NetCDF file")
+
+        # Use the centralized ERA5 variable mapping from constants
+        era5_var_mapping = ERA5_VARIABLE_MAPPING
+
+        # Find available ERA5 variables in the dataset (checking both naming conventions)
+        available_vars = list(combined_ds.data_vars.keys())
+        requested_vars: list[str] = []
+
+        # Check for standard wind and solar variables
+        standard_variables = DEFAULT_WIND_VARIABLES + DEFAULT_SOLAR_VARIABLES
+        for era5_var in standard_variables:
+            possible_names = era5_var_mapping.get(era5_var, [era5_var])
+            for name in possible_names:
+                if name in available_vars:
+                    requested_vars.append(name)
+                    break
+
+        # Check for any other ERA5 variables that might be present but aren't in our standard set
+        all_era5_api_names = list(era5_var_mapping.keys())
+        for era5_var in all_era5_api_names:
+            if era5_var not in standard_variables:
+                possible_names = era5_var_mapping.get(era5_var, [era5_var])
+                for name in possible_names:
+                    if name in available_vars and name not in requested_vars:
+                        requested_vars.append(name)
+                        break
+
+        if not requested_vars:
+            # Create a readable list of expected variable names
+            expected_names: list[str] = []
+            for era5_var in standard_variables:
+                possible_names = era5_var_mapping.get(era5_var, [era5_var])
+                expected_names.extend(possible_names)
+
+            raise ValueError(
+                f"No standard ERA5 variables found in data. "
+                f"Expected variables (any of): {expected_names}, "
+                f"Available variables: {available_vars}"
+            )
+
+        # Select available ERA5 variables
+        combined_ds = combined_ds[requested_vars]
+        logger.info(f"Loaded ERA5 variables: {requested_vars}")
+
+        return ERA5Dataset(
+            data=combined_ds,
             metadata={
                 "source": "local_netcdf",
                 "data_path": str(self._base_path),
-                "variables": variables,
-                "files_found": len(era5_files),
-                "note": "Stub implementation - implement NetCDF loading with xarray",
+                "files_loaded": len(datasets),
+                "total_files_found": len(era5_files),
+                "dimensions": dict(combined_ds.sizes),  # Use .sizes instead of .dims to avoid FutureWarning
             },
         )
