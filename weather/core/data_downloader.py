@@ -448,7 +448,7 @@ class GenerationDataDownloader(DataDownloader):
         Raises:
             Exception: If API request fails or returns invalid data.
         """
-        self.logger.info("Downloading generation data...")
+        self.logger.info("Downloading generation data for CfD-associated BMUs...")
         try:
             self.logger.info(f"Fetching settled Elexon generation data from {self._api.url}...")
 
@@ -542,9 +542,8 @@ class GenerationDataDownloader(DataDownloader):
         if output_file.exists():
             self.logger.info("Generation data already exists, skipping download...")
             return
-        bmu_generation_df = self._download_generation_data()
-        bmu_generation_df.to_csv(self.output_dir / "bmu_generation_raw.csv", index=False)
 
+        bmu_generation_df = self._download_generation_data()
         generation_df = self._aggregate_bmu_generation_to_cfd(cfd_df, bmu_generation_df)
         generation_df.to_csv(output_file, index=False)
         self.logger.info(f"Generation data saved to {output_file}")
