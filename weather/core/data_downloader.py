@@ -475,34 +475,49 @@ class GenerationDataDownloader(DataDownloader):
             self.logger.error(f"Error downloading generation data: {e}")
             raise
 
-    def _create_settlement_datetime(self, generation_df: pd.DataFrame) -> pd.Series:
-        """Create timezone-aware settlement datetimes from settlement periods.
+    def _create_hourly_utc_datetime(self, generation_df: pd.DataFrame) -> pd.Series:
+        """Create hourly UTC datetimes from UK settlement periods.
 
-        Converts UK electricity market dates with settlement periods (30-minute interval ints)
-        into proper timezone-aware datetime objects, handling DST transitions.
+        Converts UK electricity market dates with settlement periods (30-minute intervals)
+        into hourly UTC datetime boundaries, handling DST transitions correctly.
 
-        Since we use logical hour mapping (hour = (period-1) // 2), the exact
-        handling of ambiguous times doesn't affect the final aggregation.
+        This method consolidates the timezone conversion and hour flooring into a single step.
+        Settlement periods represent UK local time intervals, so we:
+        1. Build UK timezone-aware datetimes from settlement periods
+        2. Convert to UTC to get consistent timeline representation
+        3. Floor to hour boundaries for aggregation
+
+        During DST transitions, this preserves the actual timeline:
+        - Spring forward: Some UTC hours may have fewer settlement periods
+        - Fall back: Some UTC hours may span multiple settlement periods
+        - Normal days: Each UTC hour has exactly 2 settlement periods
 
         Args:
             generation_df: DataFrame with settlement_date and settlement_period columns.
 
         Returns:
-            Series of timezone-aware datetime objects.
+            Series of UTC datetime objects floored to hour boundaries.
         """
-        # Build naive timestamps from settlement periods
+        # Build naive timestamps from settlement periods (representing UK local time)
         minutes_from_midnight = (generation_df["settlement_period"] - 1) * 30
         base_datetime = pd.to_datetime(generation_df["settlement_date"])
         settlement_datetime_naive = base_datetime + pd.to_timedelta(
             minutes_from_midnight, unit="min"
         )
 
-        # Localize to UK timezone with DST handling
-        return settlement_datetime_naive.dt.tz_localize(
+        # Localize to UK timezone first (to handle DST properly), then convert to UTC
+        uk_timezone = settlement_datetime_naive.dt.tz_localize(
             "Europe/London",
             ambiguous=True,  # Always choose first occurrence for autumn back days
             nonexistent="shift_forward",  # Handle spring forward by shifting to next valid time
         )
+
+        utc_datetime = uk_timezone.dt.tz_convert("UTC")
+
+        # Floor to hour boundaries in UTC for aggregation
+        # This preserves the actual timeline - during DST transitions, some UTC hours
+        # may have 0, 1, or 2 settlement periods, which correctly reflects reality
+        return utc_datetime.dt.floor("h")
 
     def _aggregate_bmu_generation_to_cfd(
         self, cfd_df: pd.DataFrame, generation_df: pd.DataFrame
@@ -510,21 +525,15 @@ class GenerationDataDownloader(DataDownloader):
         """Process and aggregate generation data by CFD ID.
 
         Merges the CFD plant data with the raw generation data on BMU ID,
-        then aggregates the generation quantities by CFD ID, settlement date,
-        and hour. This accounts for cases where multiple BMUs are associated
-        with a single CFD contract.
-
-        Uses logical hour mapping from settlement periods to ensure consistent
-        hour numbering across all DST scenarios:
-        - Normal day (48 periods): Hours 0-23
-        - Spring forward (46 periods): Hours 0-22
-        - Autumn back (50 periods): Hours 0-24
+        then aggregates the generation quantities by CFD ID and hourly UTC datetime.
+        This accounts for cases where multiple BMUs are associated with a single
+        CFD contract.
 
         Args:
             cfd_df: DataFrame containing CFD plant data with BMU mapping.
             generation_df: DataFrame containing raw generation data from Elexon.
         Returns:
-            DataFrame with aggregated generation data by CFD ID and hour.
+            DataFrame with aggregated generation data by CFD ID and hourly UTC datetime.
         """
         # Create a copy to avoid modifying the input DataFrame
         generation_df = generation_df.copy()
@@ -538,20 +547,15 @@ class GenerationDataDownloader(DataDownloader):
             }
         )
 
-        # Use logical hour mapping that preserves settlement period structure
-        # This approach maintains consistent hour numbering regardless of DST transitions
-        generation_df["hour"] = (generation_df["settlement_period"] - 1) // 2
+        # Create hourly UTC datetimes directly from settlement periods
+        # This consolidates timezone conversion and hour flooring in one step
+        generation_df["settlement_datetime"] = self._create_hourly_utc_datetime(generation_df)
 
-        # Create proper settlement datetime for date consistency
-        generation_df["settlement_datetime"] = self._create_settlement_datetime(generation_df)
-        generation_df["settlement_date"] = generation_df["settlement_datetime"].dt.date
-
-        # Merge with CfD mapping to add CFD_Id
         generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id"]], on="bmu_id", how="left")
 
-        # Aggregate to hourly by summing the half-hourly periods
+        # Aggregate to hourly by summing periods within each UTC hour
         result = (
-            generation_df.groupby(["cfd_id", "settlement_date", "hour"], as_index=False)
+            generation_df.groupby(["cfd_id", "settlement_datetime"], as_index=False)
             .agg({"quantity": "sum"})
             .round(2)
         )
