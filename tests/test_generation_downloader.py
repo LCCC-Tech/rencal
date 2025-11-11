@@ -276,4 +276,4 @@ class TestGenerationDataDownloader:
 
 if __name__ == "__main__":
     # Allow running tests directly with python -m pytest tests/test_generation_downloader.py
-    pytest.main([__file__, "-v"])
+    pytest.main([__file__, "-vv"])
