@@ -28,9 +28,13 @@ class WindData(BucketedData):
         connection,
         historical_start_date=pd.Timestamp(1980, 1, 1),
         historical_end_date=pd.Timestamp(2023, 1, 1),
-        desired_averages=[],
-        windstreams=[],
+        desired_averages=None,
+        windstreams=None,
     ):
+        if desired_averages is None:
+            desired_averages = []
+        if windstreams is None:
+            windstreams = []
         if len(desired_averages) != len(windstreams):
             raise ValueError(
                 "You need to specify as many desired averages as windstreams. "
@@ -46,7 +50,7 @@ class WindData(BucketedData):
             [
                 i
                 for i in range(len(self.desired_Averages))
-                if (self.desired_Averages[i] != None and not (np.isnan(self.desired_Averages[i])))
+                if (self.desired_Averages[i] is not None and not (np.isnan(self.desired_Averages[i])))
             ]
         )
 

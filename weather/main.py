@@ -7,7 +7,7 @@ def main():
     downloader.download_all()
 
     loader = LocalDataLoader()
-    generation = loader.load_generation_data()
+    loader.load_generation_data()
 
 
 if __name__ == "__main__":

@@ -16,4 +16,3 @@ class ParsedURL:
     def domain(self) -> str:
         """Return the domain of the URL."""
         return f"{self._parsed.scheme}://{self._parsed.netloc}"
-

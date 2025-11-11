@@ -201,7 +201,7 @@ class XarrayDataset(BaseDataset):
         schema = DATASET_SCHEMAS[data_type]
 
         # For xarray, check data variables and coordinates
-        all_vars = set(str(k) for k in v.data_vars.keys()) | set(str(k) for k in v.coords.keys())
+        all_vars = {str(k) for k in v.data_vars.keys()} | {str(k) for k in v.coords.keys()}
 
         # Check required variables (treat as data variables or coordinates)
         missing_vars = set(schema.required_columns) - all_vars

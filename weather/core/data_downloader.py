@@ -518,9 +518,7 @@ class GenerationDataDownloader(DataDownloader):
 
         # Aggregate by CFD_Id if multiple BMUs per CfD
         result = (
-            generation_df.groupby(
-                ["cfd_id", "settlement_date", "hour"], as_index=False
-            )
+            generation_df.groupby(["cfd_id", "settlement_date", "hour"], as_index=False)
             .agg({"quantity": "sum"})
             .round(2)
         )
