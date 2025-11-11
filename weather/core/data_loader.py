@@ -85,6 +85,8 @@ class LocalDataLoader(DataLoader):
 
         df = pd.read_csv(file_path)
         df = df.rename(columns={id_column: "plant_id"})
+        print(df.columns)
+        print(df.head())
 
         return PandasDataset(
             data=df,

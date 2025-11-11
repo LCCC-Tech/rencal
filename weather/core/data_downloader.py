@@ -494,20 +494,38 @@ class GenerationDataDownloader(DataDownloader):
         # Create a copy to avoid modifying the input DataFrame
         generation_df = generation_df.copy()
 
-        generation_df["settlementDate"] = pd.to_datetime(generation_df["settlementDate"]).dt.date
-        generation_df["settlementPeriod"] = pd.to_numeric(generation_df["settlementPeriod"])
-        generation_df["quantity"] = pd.to_numeric(generation_df["quantity"])
-        generation_df = generation_df.rename(columns={"bmUnit": "bmu_id", "settlementDate": "settlement_date", "settlementPeriod": "settlement_period"})
+        generation_df = generation_df.rename(
+            columns={
+                "bmUnit": "bmu_id",
+                "settlementDate": "settlement_date",
+                "settlementPeriod": "settlement_period",
+            }
+        )
+
+        # Handle UK timezone properly for ELEXON data
+        generation_df["settlement_datetime"] = pd.to_datetime(
+            generation_df["settlement_date"]
+        ).dt.tz_localize("Europe/London", ambiguous="infer")
+
+        print(generation_df.head())
+
+        # Extract date in UK timezone
+        generation_df["settlement_date"] = generation_df["settlement_datetime"].dt.date
+        generation_df["hour"] = (generation_df["settlement_period"] - 1) // 2
 
         # Merge with CfD mapping to add CFD_Id
         generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id"]], on="bmu_id", how="left")
 
         # Aggregate by CFD_Id if multiple BMUs per CfD
-        result = generation_df.groupby(
-            ["cfd_id", "settlement_date", "settlement_period"], as_index=False
-        ).agg({"quantity": "sum"}).round(2)
+        result = (
+            generation_df.groupby(
+                ["cfd_id", "settlement_date", "hour"], as_index=False
+            )
+            .agg({"quantity": "sum"})
+            .round(2)
+        )
 
-        return result # type: ignore[return-value]
+        return result  # type: ignore[return-value]
 
     def download(self) -> None:
         """Download generation data for all CfD-associated BMU units.
@@ -525,6 +543,7 @@ class GenerationDataDownloader(DataDownloader):
             self.logger.info("Generation data already exists, skipping download...")
             return
         bmu_generation_df = self._download_generation_data()
+        bmu_generation_df.to_csv(self.output_dir / "bmu_generation_raw.csv", index=False)
 
         generation_df = self._aggregate_bmu_generation_to_cfd(cfd_df, bmu_generation_df)
         generation_df.to_csv(output_file, index=False)
