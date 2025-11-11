@@ -475,6 +475,35 @@ class GenerationDataDownloader(DataDownloader):
             self.logger.error(f"Error downloading generation data: {e}")
             raise
 
+    def _create_settlement_datetime(self, generation_df: pd.DataFrame) -> pd.Series:
+        """Create timezone-aware settlement datetimes from settlement periods.
+
+        Converts UK electricity market dates with settlement periods (30-minute interval ints)
+        into proper timezone-aware datetime objects, handling DST transitions.
+
+        Since we use logical hour mapping (hour = (period-1) // 2), the exact
+        handling of ambiguous times doesn't affect the final aggregation.
+
+        Args:
+            generation_df: DataFrame with settlement_date and settlement_period columns.
+
+        Returns:
+            Series of timezone-aware datetime objects.
+        """
+        # Build naive timestamps from settlement periods
+        minutes_from_midnight = (generation_df["settlement_period"] - 1) * 30
+        base_datetime = pd.to_datetime(generation_df["settlement_date"])
+        settlement_datetime_naive = base_datetime + pd.to_timedelta(
+            minutes_from_midnight, unit="min"
+        )
+
+        # Localize to UK timezone with DST handling
+        return settlement_datetime_naive.dt.tz_localize(
+            "Europe/London",
+            ambiguous=True,  # Always choose first occurrence for autumn back days
+            nonexistent="shift_forward",  # Handle spring forward by shifting to next valid time
+        )
+
     def _aggregate_bmu_generation_to_cfd(
         self, cfd_df: pd.DataFrame, generation_df: pd.DataFrame
     ) -> pd.DataFrame:
@@ -482,18 +511,25 @@ class GenerationDataDownloader(DataDownloader):
 
         Merges the CFD plant data with the raw generation data on BMU ID,
         then aggregates the generation quantities by CFD ID, settlement date,
-        and settlement period. This accounts for cases where multiple BMUs
-        are associated with a single CFD contract.
+        and hour. This accounts for cases where multiple BMUs are associated
+        with a single CFD contract.
+
+        Uses logical hour mapping from settlement periods to ensure consistent
+        hour numbering across all DST scenarios:
+        - Normal day (48 periods): Hours 0-23
+        - Spring forward (46 periods): Hours 0-22
+        - Autumn back (50 periods): Hours 0-24
 
         Args:
             cfd_df: DataFrame containing CFD plant data with BMU mapping.
             generation_df: DataFrame containing raw generation data from Elexon.
         Returns:
-            DataFrame with aggregated generation data by CFD ID.
+            DataFrame with aggregated generation data by CFD ID and hour.
         """
         # Create a copy to avoid modifying the input DataFrame
         generation_df = generation_df.copy()
 
+        # Standardize column names
         generation_df = generation_df.rename(
             columns={
                 "bmUnit": "bmu_id",
@@ -502,21 +538,18 @@ class GenerationDataDownloader(DataDownloader):
             }
         )
 
-        # Handle UK timezone properly for ELEXON data
-        generation_df["settlement_datetime"] = pd.to_datetime(
-            generation_df["settlement_date"]
-        ).dt.tz_localize("Europe/London", ambiguous="infer")
-
-        print(generation_df.head())
-
-        # Extract date in UK timezone
-        generation_df["settlement_date"] = generation_df["settlement_datetime"].dt.date
+        # Use logical hour mapping that preserves settlement period structure
+        # This approach maintains consistent hour numbering regardless of DST transitions
         generation_df["hour"] = (generation_df["settlement_period"] - 1) // 2
+
+        # Create proper settlement datetime for date consistency
+        generation_df["settlement_datetime"] = self._create_settlement_datetime(generation_df)
+        generation_df["settlement_date"] = generation_df["settlement_datetime"].dt.date
 
         # Merge with CfD mapping to add CFD_Id
         generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id"]], on="bmu_id", how="left")
 
-        # Aggregate by CFD_Id if multiple BMUs per CfD
+        # Aggregate to hourly by summing the half-hourly periods
         result = (
             generation_df.groupby(["cfd_id", "settlement_date", "hour"], as_index=False)
             .agg({"quantity": "sum"})
