@@ -82,9 +82,9 @@ DATASET_SCHEMAS = {
         },
     ),
     "generation": DatasetSchema(
-        required_columns=["plant_id", "settlement_date", "quantity"],
+        required_columns=["plant_id", "time", "quantity"],
         required_datatypes={"plant_id": "object", "quantity": "float64"},
-        date_columns=["settlement_date"],
+        date_columns=["time"],
     ),
     "era5": DatasetSchema(
         required_columns=[],  # ERA5 variables vary, so we'll check for time dimension

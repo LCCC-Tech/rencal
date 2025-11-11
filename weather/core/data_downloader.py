@@ -549,13 +549,13 @@ class GenerationDataDownloader(DataDownloader):
 
         # Create hourly UTC datetimes directly from settlement periods
         # This consolidates timezone conversion and hour flooring in one step
-        generation_df["settlement_datetime"] = self._create_hourly_utc_datetime(generation_df)
+        generation_df["time"] = self._create_hourly_utc_datetime(generation_df)
 
         generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id"]], on="bmu_id", how="left")
 
         # Aggregate to hourly by summing periods within each UTC hour
         result = (
-            generation_df.groupby(["cfd_id", "settlement_datetime"], as_index=False)
+            generation_df.groupby(["cfd_id", "time"], as_index=False)
             .agg({"quantity": "sum"})
             .round(2)
         )

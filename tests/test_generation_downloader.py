@@ -11,7 +11,7 @@ Test scenarios covered:
 - File creation and skip-if-exists behavior
 - Complete download workflow with mocked external dependencies
 
-Output format: cfd_id, settlement_datetime (UTC), quantity
+Output format: cfd_id, time (UTC), quantity
 """
 
 import os
@@ -105,13 +105,13 @@ class TestGenerationDataDownloader:
 
             # Verify new UTC datetime format
             assert not result.empty, "Result should not be empty"
-            assert list(result.columns) == ["cfd_id", "settlement_datetime", "quantity"]
+            assert list(result.columns) == ["cfd_id", "time", "quantity"]
 
             # Normal day should have exactly 24 UTC hours
             assert len(result) == 24, f"Expected 24 records for normal day, got {len(result)}"
 
-            # Parse settlement_datetime and verify it's UTC
-            result["parsed_datetime"] = pd.to_datetime(result["settlement_datetime"])
+            # Parse time column and verify it's UTC
+            result["parsed_datetime"] = pd.to_datetime(result["time"])
             
             # Check that all datetimes are on expected date and in UTC
             expected_date = date(2023, 1, 15)
@@ -120,7 +120,7 @@ class TestGenerationDataDownloader:
             assert expected_date in dates, f"Expected date {expected_date} should be present"
             
             # Verify timezone is UTC (should end with +00:00)
-            assert all(dt_str.endswith("+00:00") for dt_str in result["settlement_datetime"]), (
+            assert all(dt_str.endswith("+00:00") for dt_str in result["time"]), (
                 "All datetimes should be in UTC format (+00:00)"
             )
 
@@ -164,12 +164,12 @@ class TestGenerationDataDownloader:
             )
 
             # Verify all datetimes are UTC format
-            assert all(dt_str.endswith("+00:00") for dt_str in result["settlement_datetime"]), (
+            assert all(dt_str.endswith("+00:00") for dt_str in result["time"]), (
                 "All datetimes should be in UTC format (+00:00)"
             )
             
             # Parse datetimes to verify date range
-            result["parsed_datetime"] = pd.to_datetime(result["settlement_datetime"])
+            result["parsed_datetime"] = pd.to_datetime(result["time"])
             dates = result["parsed_datetime"].dt.date.unique()
             expected_date = date(2023, 3, 26)
             assert expected_date in dates, f"Expected date {expected_date} should be present"
@@ -211,12 +211,12 @@ class TestGenerationDataDownloader:
             )
 
             # Verify all datetimes are UTC format
-            assert all(dt_str.endswith("+00:00") for dt_str in result["settlement_datetime"]), (
+            assert all(dt_str.endswith("+00:00") for dt_str in result["time"]), (
                 "All datetimes should be in UTC format (+00:00)"
             )
 
             # Parse datetimes to verify date range spans multiple dates
-            result["parsed_datetime"] = pd.to_datetime(result["settlement_datetime"])
+            result["parsed_datetime"] = pd.to_datetime(result["time"])
             dates = result["parsed_datetime"].dt.date.unique()
             expected_date = date(2023, 10, 29)
             assert expected_date in dates, f"Expected date {expected_date} should be present"
@@ -256,8 +256,8 @@ class TestGenerationDataDownloader:
             # Verify processed file contains aggregated data with expected structure
             final_data = pd.read_csv(final_file)
             assert "cfd_id" in final_data.columns, "Final data should have cfd_id column"
-            assert "settlement_datetime" in final_data.columns, (
-                "Final data should have settlement_datetime column"
+            assert "time" in final_data.columns, (
+                "Final data should have time column"
             )
             assert "quantity" in final_data.columns, "Final data should have quantity column"
 
@@ -274,7 +274,7 @@ class TestGenerationDataDownloader:
         generation_dir = downloader_with_temp_dir.output_dir / "generation"
         generation_dir.mkdir(parents=True, exist_ok=True)
         output_file = generation_dir / "generation_data.csv"
-        output_file.write_text("cfd_id,settlement_datetime,quantity\nTEST,2023-01-01 00:00:00+00:00,100.0\n")
+        output_file.write_text("cfd_id,time,quantity\nTEST,2023-01-01 00:00:00+00:00,100.0\n")
 
         with (
             patch.object(downloader_with_temp_dir, "_get_cfd_plants") as mock_cfd,
