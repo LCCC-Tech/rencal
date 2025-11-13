@@ -8,6 +8,6 @@ from .dataset import (
 
 __all__ = [
     "ERA5Dataset",
-    "GenerationDataset", 
+    "GenerationDataset",
     "PlantDataset",
 ]
