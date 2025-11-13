@@ -4,23 +4,22 @@ from pathlib import Path
 import pandas as pd
 import xarray as xr
 
+from weather.models.dataset import (
+    ERA5Dataset,
+    GenerationDataset,
+    PlantDataset,
+)
 from weather.utils.constants import (
+    DEFAULT_SOLAR_VARIABLES,
+    DEFAULT_WIND_VARIABLES,
     DOWNLOAD_DATA_DIR,
     ERA5_VARIABLE_MAPPING,
-    DEFAULT_WIND_VARIABLES,
-    DEFAULT_SOLAR_VARIABLES,
     GENERATION_DATE_FILE_NAME,
     PLANT_DATA_FILE_NAME,
     PLANT_ID_COLUMN,
     WIND_TECHNOLOGY_TYPES,
 )
 from weather.utils.logger import get_logger
-
-from weather.models.dataset import (
-    ERA5Dataset,
-    GenerationDataset,
-    PlantDataset,
-)
 
 logger = get_logger(__name__)
 
@@ -95,11 +94,58 @@ class LocalDataLoader(DataLoader):
             },
         )
 
+    def _check_time_dimension(self, ds: xr.Dataset) -> None:
+        """Check if the dataset has a valid time dimension"""
+        if "valid_time" not in ds.dims:
+            raise ValueError(
+                "Dataset does not contain a valid time dimension ('valid_time' or 'time')"
+            )
+
+    def _combine_datasets_on_time_dimension(self, datasets: list[xr.Dataset]) -> xr.Dataset:
+        """Combine multiple xarray Datasets on the time dimension"""
+        combined_ds: xr.Dataset
+        if len(datasets) > 1:
+            # Assume files are split by time and concatenate along valid_time dimension
+            try:
+                combined_ds = xr.concat(datasets, dim="valid_time")
+                # Sort by time to ensure chronological order
+                combined_ds = combined_ds.sortby("valid_time")
+                logger.info(f"Successfully concatenated and sorted {len(datasets)} NetCDF files")
+            except Exception as e:
+                logger.error(f"Failed to concatenate datasets on time dimension: {e}")
+                raise ValueError(f"Failed to concatenate NetCDF files: {e}") from e
+        else:
+            combined_ds = datasets[0]
+            logger.info("Using single NetCDF file")
+        return combined_ds
+
+    def _filter_dataset_variables(self, ds: xr.Dataset) -> xr.Dataset:
+        # Find available ERA5 variables in the dataset (checking both naming conventions)
+        available_vars = list(ds.data_vars.keys())
+        requested_vars: list[str] = []
+        logger.debug(f"Available variables in dataset: {available_vars}")
+
+        # Check for standard wind and solar variables
+        standard_variables = DEFAULT_WIND_VARIABLES + DEFAULT_SOLAR_VARIABLES
+        for era5_var in standard_variables:
+            name = ERA5_VARIABLE_MAPPING.get(era5_var)
+            if name is not None and name in available_vars:
+                requested_vars.append(name)
+
+        if not requested_vars:
+            raise ValueError(
+                f"No standard ERA5 variables found in data. Available variables: {available_vars}"
+            )
+
+        ds = ds[requested_vars]
+        logger.info(f"Filtered dataset to ERA5 variables: {requested_vars}")
+        return ds
+
     def load_era5_data(self) -> ERA5Dataset:
         """Load ERA5 weather data from NetCDF files using standard variables
 
         Automatically discovers and loads all available NetCDF files, filtering for
-        standard ERA5 variables defined in DEFAULT_WIND_VARIABLES and DEFAULT_SOLAR_VARIABLES. 
+        standard ERA5 variables defined in DEFAULT_WIND_VARIABLES and DEFAULT_SOLAR_VARIABLES.
         No date filtering is applied - users can filter post-load using the dataset's filter methods.
 
         Returns:
@@ -109,15 +155,17 @@ class LocalDataLoader(DataLoader):
             FileNotFoundError: If no NetCDF files found in the data path
             ValueError: If no standard ERA5 variables are found in the data
         """
-        era5_files = list(self._base_path.glob("*.nc"))
+        directory_path = self._base_path / "era5"
+        era5_files = list(directory_path.glob("*.nc"))
         if not era5_files:
-            raise FileNotFoundError(f"No ERA5 NetCDF files found in {self._base_path}")
+            raise FileNotFoundError(f"No ERA5 NetCDF files found in {directory_path}")
 
         # Load all NetCDF files and concatenate if multiple files exist
         datasets: list[xr.Dataset] = []
         for file_path in era5_files:
             try:
                 ds = xr.open_dataset(file_path)
+                self._check_time_dimension(ds)
                 datasets.append(ds)
                 logger.debug(f"Successfully loaded {file_path}")
             except Exception as e:
@@ -127,70 +175,16 @@ class LocalDataLoader(DataLoader):
         if not datasets:
             raise ValueError("Failed to load any NetCDF files successfully")
 
-        # Concatenate datasets if multiple files, otherwise use single dataset
-        combined_ds: xr.Dataset
-        if len(datasets) > 1:
-            # Assume files are split by time and concatenate along time dimension
-            try:
-                combined_ds = xr.concat(datasets, dim="time")
-                logger.info(f"Successfully concatenated {len(datasets)} NetCDF files")
-            except Exception as e:
-                logger.error(f"Failed to concatenate datasets: {e}")
-                raise ValueError(f"Failed to concatenate NetCDF files: {e}") from e
-        else:
-            combined_ds = datasets[0]
-            logger.info("Using single NetCDF file")
-
-        # Use the centralized ERA5 variable mapping from constants
-        era5_var_mapping = ERA5_VARIABLE_MAPPING
-
-        # Find available ERA5 variables in the dataset (checking both naming conventions)
-        available_vars = list(combined_ds.data_vars.keys())
-        requested_vars: list[str] = []
-
-        # Check for standard wind and solar variables
-        standard_variables = DEFAULT_WIND_VARIABLES + DEFAULT_SOLAR_VARIABLES
-        for era5_var in standard_variables:
-            possible_names = era5_var_mapping.get(era5_var, [era5_var])
-            for name in possible_names:
-                if name in available_vars:
-                    requested_vars.append(name)
-                    break
-
-        # Check for any other ERA5 variables that might be present but aren't in our standard set
-        all_era5_api_names = list(era5_var_mapping.keys())
-        for era5_var in all_era5_api_names:
-            if era5_var not in standard_variables:
-                possible_names = era5_var_mapping.get(era5_var, [era5_var])
-                for name in possible_names:
-                    if name in available_vars and name not in requested_vars:
-                        requested_vars.append(name)
-                        break
-
-        if not requested_vars:
-            # Create a readable list of expected variable names
-            expected_names: list[str] = []
-            for era5_var in standard_variables:
-                possible_names = era5_var_mapping.get(era5_var, [era5_var])
-                expected_names.extend(possible_names)
-
-            raise ValueError(
-                f"No standard ERA5 variables found in data. "
-                f"Expected variables (any of): {expected_names}, "
-                f"Available variables: {available_vars}"
-            )
-
-        # Select available ERA5 variables
-        combined_ds = combined_ds[requested_vars]
-        logger.info(f"Loaded ERA5 variables: {requested_vars}")
+        combined_ds = self._combine_datasets_on_time_dimension(datasets)
+        combined_ds = self._filter_dataset_variables(combined_ds)
+        combined_ds = combined_ds.rename({"valid_time": "time"})
 
         return ERA5Dataset(
             data=combined_ds,
             metadata={
                 "source": "local_netcdf",
-                "data_path": str(self._base_path),
-                "files_loaded": len(datasets),
                 "total_files_found": len(era5_files),
-                "dimensions": dict(combined_ds.sizes),  # Use .sizes instead of .dims to avoid FutureWarning
+                "dimensions": dict(combined_ds.sizes),
             },
         )
+

@@ -3,12 +3,15 @@ from weather.core.data_loader import LocalDataLoader
 
 
 def main():
-    downloader = DownloadManager()
-    downloader.download_all()
+    # downloader = DownloadManager()
+    # downloader.download_all()
 
     loader = LocalDataLoader()
-    generation_ds = loader.load_generation_data()
-    print(f"Generation data columns {generation_ds.get_columns()}")
+    # generation_ds = loader.load_generation_data()
+    # print(f"Generation data columns {generation_ds.get_columns()}")
+
+    weather_ds = loader.load_era5_data()
+    print(f"Weather data columns {weather_ds.get_columns()}")
 
 if __name__ == "__main__":
     main()

@@ -17,12 +17,12 @@ from weather.utils.constants import (
     CDS_API_URL,
     CFD_BMU_CSV_URL,
     CFD_REGISTER_API_URL,
+    DEFAULT_SOLAR_VARIABLES,
+    DEFAULT_WIND_VARIABLES,
     DOWNLOAD_DATA_DIR,
     ELEXON_API_URL,
     ERA5_DATASET,
     ERA5_PRODUCT_TYPE,
-    DEFAULT_WIND_VARIABLES,
-    DEFAULT_SOLAR_VARIABLES,
     GENERATION_DATE_FILE_NAME,
     PLANT_DATA_FILE_NAME,
 )
@@ -176,7 +176,7 @@ class ERA5DataDownloader(DataDownloader):
 
         # Combine wind and solar variables for download
         all_variables = DEFAULT_WIND_VARIABLES + DEFAULT_SOLAR_VARIABLES
-        
+
         request = {
             "product_type": ERA5_PRODUCT_TYPE,
             "variable": all_variables,

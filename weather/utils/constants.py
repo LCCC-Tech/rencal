@@ -68,10 +68,10 @@ DEFAULT_SOLAR_VARIABLES = ["surface_solar_radiation_downwards", "2m_temperature"
 # ERA5 Variable Name Mapping
 # Maps ERA5 API names to possible NetCDF variable names (handles both naming conventions)
 ERA5_VARIABLE_MAPPING = {
-    "100m_u_component_of_wind": ["u100", "100m_u_component_of_wind"],
-    "100m_v_component_of_wind": ["v100", "100m_v_component_of_wind"],
-    "surface_solar_radiation_downwards": ["ssrd", "surface_solar_radiation_downwards"],
-    "2m_temperature": ["t2m", "2m_temperature"],
+    "100m_u_component_of_wind": "u100",
+    "100m_v_component_of_wind": "v100",
+    "surface_solar_radiation_downwards": "ssrd",
+    "2m_temperature": "t2m",
 }
 
 

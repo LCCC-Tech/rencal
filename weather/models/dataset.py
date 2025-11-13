@@ -244,62 +244,68 @@ class ERA5Dataset(BaseDataset):
     @field_validator("data")
     @classmethod
     def validate_era5_data(cls, v: xr.Dataset) -> xr.Dataset:
-        """Validate ERA5 data structure with gap detection and quality analysis"""
-        # Check for time dimension
-        if "time" not in v.dims:
-            raise ValueError("ERA5 data must contain a time dimension ('time')")
+        """Validate ERA5 data structure with gap detection and quality analysis.
 
-        time_dim = "time"
+        Args:
+            v (xr.Dataset): Input xarray Dataset containing ERA5 data
+        Returns:
+            xr.Dataset: Validated xarray dataset
+        """
 
-        # Validate that requested variables are known ERA5 variables
+        # Check if all data variables are valid ERA5 NetCDF names
         data_vars = set(v.data_vars.keys())
-
-        # Create set of all valid ERA5 variable names (both API names and NetCDF names)
-        all_valid_era5_names = set()
-        for api_name, netcdf_names in ERA5_VARIABLE_MAPPING.items():
-            all_valid_era5_names.add(api_name)
-            all_valid_era5_names.update(netcdf_names)
-
-        non_standard_vars = data_vars - all_valid_era5_names
-        if non_standard_vars:
-            logger.warning(
-                f"Variables {list(non_standard_vars)} are not in the standard ERA5 variable mapping. "
-                f"Expected variables include: {sorted(all_valid_era5_names)}"
-            )
+        valid_netcdf_names = set(ERA5_VARIABLE_MAPPING.values())
+        invalid_vars = set(data_vars) - valid_netcdf_names
+        if invalid_vars:
+            logger.warning(f"Dropping invalid ERA5 variables: {list(invalid_vars)}")
+            v = v.drop_vars(list(invalid_vars))
+            logger.info(f"Should be an expected NetCDF variable from: {sorted(valid_netcdf_names)}")
 
         # Time continuity validation - basic checks
-        if time_dim in v.coords:
-            time_coord = v.coords[time_dim]
+        time_dim = "time"
+        if time_dim not in v.dims:
+            raise ValueError("ERA5 data must contain a time dimension ('time')")
 
-            if len(time_coord) > 1:
-                # Convert to pandas for easier time analysis
-                try:
-                    time_series = pd.to_datetime(time_coord.values)
-                    time_series_sorted = time_series.sort_values()
+        if time_dim not in v.coords:
+            raise ValueError("ERA5 data must contain a time coordinate ('time')")
 
-                    # Check for duplicate timestamps
-                    duplicate_times = time_series_sorted.duplicated()
-                    if duplicate_times.any():
-                        num_duplicates = duplicate_times.sum()
-                        logger.warning(
-                            f"ERA5 data quality warning: Found {num_duplicates} duplicate timestamps. "
-                            f"This may indicate overlapping data files or processing errors."
-                        )
+        time_coord = v.coords[time_dim]
 
-                    # Check if time series is sorted
-                    if not time_series.equals(time_series_sorted):
-                        logger.warning("ERA5 data quality warning: Time series is not sorted.")
-
-                    # Basic time coverage summary
-                    logger.info(
-                        f"ERA5 data coverage: {len(time_series)} time periods "
-                        f"from {time_series_sorted.min()} to {time_series_sorted.max()}"
+        if len(time_coord) > 1:
+            # Convert to pandas for easier time analysis
+            try:
+                # Get the raw datetime values (may already be datetime64)
+                time_values = time_coord.values
+                if not pd.api.types.is_datetime64_any_dtype(time_values):
+                    time_values = pd.to_datetime(time_values)
+                
+                # Create pandas series for analysis
+                time_series = pd.Series(time_values)
+                
+                # Check for duplicate timestamps
+                duplicate_mask = time_series.duplicated()
+                if duplicate_mask.any():
+                    num_duplicates = duplicate_mask.sum()
+                    logger.warning(
+                        f"ERA5 data quality warning: Found {num_duplicates} duplicate timestamps. "
+                        f"This may indicate overlapping data files or processing errors."
                     )
 
-                except Exception as e:
-                    logger.warning(f"Could not perform time series validation: {e}")
-            else:
-                logger.info("ERA5 data contains only a single time period")
+                # Check if time series is sorted by comparing values directly
+                is_sorted = (time_series.values == time_series.sort_values().values).all()
+                if not is_sorted:
+                    logger.warning("ERA5 data quality warning: Time series is not sorted.")
+
+                # Basic time coverage summary
+                logger.info(
+                    f"ERA5 data coverage: {len(time_series)} time periods "
+                    f"from {time_series.min()} to {time_series.max()}"
+                )
+
+            except Exception as e:
+                logger.warning(f"Could not perform time series validation: {e}")
+        else:
+            logger.info("ERA5 data contains only a single time period")
 
         return v
 
