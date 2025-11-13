@@ -8,11 +8,18 @@ def get_logger(name: str | None = None, level: int = logging.DEBUG) -> logging.L
 
     Args:
         name: Logger name (defaults to calling module name)
-        level: Logging level (defaults to DEBUG)
+        level: Logging level (defaults to DEBUG, but respects QUIET_MODE/VERBOSE_MODE)
 
     Returns:
         Configured logger instance
     """
+    # Import here to avoid circular imports
+    try:
+        from weather.utils.constants import QUIET_MODE, VERBOSE_MODE
+    except ImportError:
+        QUIET_MODE = False
+        VERBOSE_MODE = False
+
     # Use the calling module name if no name provided
     if name is None:
         import inspect
@@ -29,6 +36,14 @@ def get_logger(name: str | None = None, level: int = logging.DEBUG) -> logging.L
     # Avoid adding multiple handlers if logger already exists
     if logger.handlers:
         return logger
+
+    # Determine logging level based on modes
+    if QUIET_MODE:
+        level = logging.WARNING  # Only warnings and errors
+    elif VERBOSE_MODE:
+        level = logging.DEBUG    # All messages
+    else:
+        level = logging.INFO     # Default: INFO and above
 
     # Set level
     logger.setLevel(level)

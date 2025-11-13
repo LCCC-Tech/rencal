@@ -73,7 +73,7 @@ class PlantDataset(BaseDataset):
         Returns:
             pd.DataFrame: Validated DataFrame
         """
-        logger.info("Validating PlantDataset structure...")
+        logger.debug("Validating PlantDataset structure...")
         required_columns = ["plant_id", "latitude", "longitude", "technology", "capacity"]
 
         # Check required columns
@@ -158,7 +158,7 @@ class GenerationDataset(BaseDataset):
         Returns:
             pd.DataFrame: Validated DataFrame
         """
-        logger.info("Validating GenerationDataset structure...")
+        logger.debug("Validating GenerationDataset structure...")
         required_columns = ["plant_id", "time", "quantity"]
 
         # Check required columns
@@ -174,7 +174,7 @@ class GenerationDataset(BaseDataset):
         if "time" not in v.columns:
             raise ValueError("Generation data must contain a 'time' column")
 
-        logger.info("GenerationDataset validation completed successfully!")
+        logger.debug("GenerationDataset validation completed successfully!")
         return v
 
     def get_plant_ids(self) -> list[str]:
@@ -265,14 +265,14 @@ class ERA5Dataset(BaseDataset):
         Returns:
             xr.Dataset: Validated xarray dataset
         """
-        logger.info("Validating ERA5Dataset structure...")
+        logger.debug("Validating ERA5Dataset structure...")
         data_vars = set(v.data_vars.keys())
         valid_netcdf_names = set(ERA5_VARIABLE_MAPPING.values())
         invalid_vars = set(data_vars) - valid_netcdf_names
         if invalid_vars:
             logger.warning(f"Dropping invalid ERA5 variables: {list(invalid_vars)}")
             v = v.drop_vars(list(invalid_vars))
-            logger.info(f"Should be an expected NetCDF variable from: {sorted(valid_netcdf_names)}")
+            logger.debug(f"Expected NetCDF variables: {sorted(valid_netcdf_names)}")
 
         # Time continuity validation - basic checks
         time_dim = "time"
@@ -311,7 +311,7 @@ class ERA5Dataset(BaseDataset):
                     logger.warning("ERA5 data quality warning: Time series is not sorted.")
 
                 # Basic time coverage summary
-                logger.info(
+                logger.debug(
                     f"ERA5 data coverage: {len(time_series)} time periods "
                     f"from {time_series.min()} to {time_series.max()}"
                 )
@@ -319,9 +319,9 @@ class ERA5Dataset(BaseDataset):
             except Exception as e:
                 logger.warning(f"Could not perform time series validation: {e}")
         else:
-            logger.info("ERA5 data contains only a single time period")
+            logger.debug("ERA5 data contains only a single time period")
 
-        logger.info("ERA5Dataset validation completed successfully!")
+        logger.debug("ERA5Dataset validation completed successfully!")
         return v
 
     def get_wind_components(self) -> dict[str, xr.DataArray] | None:

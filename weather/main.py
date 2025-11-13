@@ -11,13 +11,13 @@ def main():
 
     loader = LocalDataLoader()
     plant_ds = loader.load_wind_plant_data()
-    logger.info(f"Plant data columns {plant_ds.get_columns()}")
+    logger.info(f"Plant data loaded: {plant_ds.get_shape()[0]} plants")
 
     generation_ds = loader.load_generation_data()
-    logger.info(f"Generation data columns {generation_ds.get_columns()}")
+    logger.info(f"Generation data loaded: {generation_ds.get_shape()[0]} records")
 
     weather_ds = loader.load_era5_data()
-    logger.info(f"Weather data columns {weather_ds.get_columns()}")
+    logger.info(f"Weather data loaded: {weather_ds.get_shape()[0]} time periods")
 
 
 if __name__ == "__main__":

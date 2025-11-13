@@ -92,3 +92,7 @@ WIND_TECHNOLOGY_TYPES = {"Onshore Wind", "Offshore Wind"}
 # Elexon API
 ELEXON_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
 GENERATION_DATE_FILE_NAME = "generation_data.csv"
+
+# Logging Configuration
+QUIET_MODE: bool = run_config.get("QUIET_MODE", False)  # Only show warnings/errors
+VERBOSE_MODE: bool = run_config.get("VERBOSE_MODE", False)  # Show all DEBUG logs

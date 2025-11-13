@@ -61,7 +61,7 @@ class DataDownloader(ABC):
         """
         self.output_dir = self.output_dir / stem if stem else self.output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.logger.info(f"Data will be saved to: {self.output_dir}")
+        self.logger.debug(f"Data will be saved to: {self.output_dir}")
 
     @abstractmethod
     def download(self, *args: Any, **kwargs: Any) -> None:
@@ -121,7 +121,7 @@ class ERA5DataDownloader(DataDownloader):
 
             # Generate list of years from start to end (inclusive)
             years = list(range(start_year, end_year + 1))
-            self.logger.info(f"Extracted calibration years from date range: {years}")
+            self.logger.debug(f"Extracted calibration years from date range: {years}")
             return years
         except Exception as e:
             self.logger.error(f"Error extracting calibration years: {e}")
@@ -142,7 +142,7 @@ class ERA5DataDownloader(DataDownloader):
             Exception: If client initialization fails.
         """
         try:
-            self.logger.info(f"Initializing CDS API client for {self._api.domain}...")
+            self.logger.debug(f"Initializing CDS API client for {self._api.domain}...")
             if self._client is None:
                 if not self._api_key:
                     self.logger.error("CDS API key not found in environment variables.")
@@ -220,7 +220,7 @@ class ERA5DataDownloader(DataDownloader):
                 self.logger.error(f"No datetime-like coordinate found in {file_path}.")
                 raise KeyError("No datetime-like coordinate found (expected 'time' or similar).")
 
-            self.logger.info(
+            self.logger.debug(
                 f"{year}.nc date range: {ds[datetime_coord].values[0]}  →  {ds[datetime_coord].values[-1]}"
             )
 
@@ -231,7 +231,7 @@ class ERA5DataDownloader(DataDownloader):
             ds.load()
             ds.close()
             ds.to_netcdf(file_path, mode="w")
-            self.logger.info(f"File verified and metadata updated: {file_path}")
+            self.logger.debug(f"File verified and metadata updated: {file_path}")
 
         except Exception as e:
             self.logger.error(f"Error verifying {year}: {e}")
@@ -263,18 +263,27 @@ class ERA5DataDownloader(DataDownloader):
         is saved as a separate NetCDF file in the era5 subdirectory.
         """
         years = self._extract_calibration_years()
+        existing_files = 0
+        downloaded_files = 0
 
         for year in years:
             file_path = self.output_dir / f"{year}.nc"
 
             if file_path.exists():
-                self.logger.info(f"File already exists for {year}, verifying timestamps...")
+                self.logger.debug(f"File already exists for {year}, verifying timestamps...")
+                existing_files += 1
             else:
                 self._download_year(year, str(file_path))
+                downloaded_files += 1
 
             self._verify_and_update_metadata(year, str(file_path))
 
-        self.logger.info("ERA5 data saved and verified.")
+        # Summary log
+        total_files = len(years)
+        if downloaded_files > 0:
+            self.logger.info(f"ERA5 data complete: {downloaded_files} downloaded, {existing_files} verified ({total_files} total files)")
+        else:
+            self.logger.info(f"ERA5 data verified: {total_files} files ({min(years)}-{max(years)})")
 
 
 class CfDDataDownloader(DataDownloader):
@@ -381,7 +390,7 @@ class CfDDataDownloader(DataDownloader):
         file already exists, the download is skipped.
         """
         if (self.output_dir / PLANT_DATA_FILE_NAME).exists():
-            self.logger.info("Skipping downloading existing CfD data with BMU mapping...")
+            self.logger.debug("Skipping downloading existing CfD data with BMU mapping...")
 
         else:
             self.logger.info("Downloading CfD data with BMU mapping...")
@@ -579,7 +588,7 @@ class GenerationDataDownloader(DataDownloader):
         self._update_output_directory(stem="generation")
         output_file = self.output_dir / GENERATION_DATE_FILE_NAME
         if output_file.exists():
-            self.logger.info("Generation data already exists, skipping download...")
+            self.logger.debug("Generation data already exists, skipping download...")
             return
 
         bmu_generation_df = self._download_generation_data()

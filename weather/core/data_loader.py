@@ -110,13 +110,13 @@ class LocalDataLoader(DataLoader):
                 combined_ds = xr.concat(datasets, dim="valid_time")
                 # Sort by time to ensure chronological order
                 combined_ds = combined_ds.sortby("valid_time")
-                logger.info(f"Successfully concatenated and sorted {len(datasets)} NetCDF files")
+                logger.debug(f"Successfully concatenated and sorted {len(datasets)} NetCDF files")
             except Exception as e:
                 logger.error(f"Failed to concatenate datasets on time dimension: {e}")
                 raise ValueError(f"Failed to concatenate NetCDF files: {e}") from e
         else:
             combined_ds = datasets[0]
-            logger.info("Using single NetCDF file")
+            logger.debug("Using single NetCDF file")
         return combined_ds
 
     def _filter_dataset_variables(self, ds: xr.Dataset) -> xr.Dataset:
@@ -138,7 +138,7 @@ class LocalDataLoader(DataLoader):
             )
 
         ds = ds[requested_vars]
-        logger.info(f"Filtered dataset to ERA5 variables: {requested_vars}")
+        logger.debug(f"Filtered dataset to ERA5 variables: {requested_vars}")
         return ds
 
     def load_era5_data(self) -> ERA5Dataset:
@@ -178,6 +178,9 @@ class LocalDataLoader(DataLoader):
         combined_ds = self._combine_datasets_on_time_dimension(datasets)
         combined_ds = self._filter_dataset_variables(combined_ds)
         combined_ds = combined_ds.rename({"valid_time": "time"})
+
+        # Summary log
+        logger.info(f"ERA5 data loaded: {len(era5_files)} files, {combined_ds.sizes['time']} time periods")
 
         return ERA5Dataset(
             data=combined_ds,
