@@ -3,16 +3,17 @@
 Simple integration tests for ERA5 data loader functionality
 """
 
-import pytest
 import tempfile
-import numpy as np
-import xarray as xr
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
+import xarray as xr
 
 from weather.core.data_loader import LocalDataLoader
 from weather.models.dataset import ERA5Dataset
-from weather.utils.constants import DEFAULT_WIND_VARIABLES, DEFAULT_SOLAR_VARIABLES
+from weather.utils.constants import DEFAULT_SOLAR_VARIABLES, DEFAULT_WIND_VARIABLES
 
 
 class TestERA5DataLoaderIntegration:
@@ -23,14 +24,14 @@ class TestERA5DataLoaderIntegration:
         # Test DEFAULT_WIND_VARIABLES
         assert isinstance(DEFAULT_WIND_VARIABLES, list)
         assert len(DEFAULT_WIND_VARIABLES) > 0
-        assert '100m_u_component_of_wind' in DEFAULT_WIND_VARIABLES
-        assert '100m_v_component_of_wind' in DEFAULT_WIND_VARIABLES
-        
+        assert "100m_u_component_of_wind" in DEFAULT_WIND_VARIABLES
+        assert "100m_v_component_of_wind" in DEFAULT_WIND_VARIABLES
+
         # Test DEFAULT_SOLAR_VARIABLES
         assert isinstance(DEFAULT_SOLAR_VARIABLES, list)
         assert len(DEFAULT_SOLAR_VARIABLES) > 0
-        assert 'surface_solar_radiation_downwards' in DEFAULT_SOLAR_VARIABLES
-        assert '2m_temperature' in DEFAULT_SOLAR_VARIABLES
+        assert "surface_solar_radiation_downwards" in DEFAULT_SOLAR_VARIABLES
+        assert "2m_temperature" in DEFAULT_SOLAR_VARIABLES
 
     def test_no_netcdf_files_error_message(self):
         """Test proper error message when no NetCDF files are found"""
@@ -38,9 +39,9 @@ class TestERA5DataLoaderIntegration:
             # Create era5 subdirectory
             era5_dir = Path(tmpdir) / "era5"
             era5_dir.mkdir()
-            
+
             loader = LocalDataLoader(data_path=tmpdir)
-            
+
             with pytest.raises(FileNotFoundError, match="No ERA5 NetCDF files found"):
                 loader.load_era5_data()
 
@@ -52,14 +53,14 @@ class TestERA5DataLoaderIntegration:
             era5_dir.mkdir()
             dummy_file = era5_dir / "test.nc"
             dummy_file.write_text("dummy")
-            
+
             loader = LocalDataLoader(data_path=tmpdir)
-            
+
             # Mock the entire loading process
-            with patch.object(loader, 'load_era5_data') as mock_load:
+            with patch.object(loader, "load_era5_data") as mock_load:
                 mock_era5_dataset = MagicMock(spec=ERA5Dataset)
                 mock_load.return_value = mock_era5_dataset
-                
+
                 result = loader.load_era5_data()
                 assert result == mock_era5_dataset
 
@@ -77,9 +78,9 @@ class TestERA5DataLoaderIntegration:
             era5_dir.mkdir()
             invalid_file = era5_dir / "invalid.nc"
             invalid_file.write_text("invalid netcdf content")
-            
+
             loader = LocalDataLoader(data_path=tmpdir)
-            
+
             # Should raise some exception during loading
             with pytest.raises(Exception):
                 loader.load_era5_data()
@@ -92,92 +93,99 @@ class TestERA5DataLoaderFunctional:
         """End-to-end test using actual xarray dataset"""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
-            
+
             # Create era5 subdirectory
             era5_dir = tmpdir_path / "era5"
             era5_dir.mkdir()
-            
+
             # Create a small ERA5 NetCDF file with standard variables
-            time = np.arange('2023-01-01', '2023-01-03', dtype='datetime64[h]')  # 48 hours
+            time = np.arange("2023-01-01", "2023-01-03", dtype="datetime64[h]")  # 48 hours
             lat = np.linspace(50, 60, 3)  # Small grid
             lon = np.linspace(-10, 10, 5)  # Small grid
-            
+
             # Create mock data for u100 and v100 (standard wind variables)
             u100_data = np.random.randn(len(time), len(lat), len(lon)).astype(np.float32)
             v100_data = np.random.randn(len(time), len(lat), len(lon)).astype(np.float32)
-            
+
             # Create xarray dataset with valid_time (ERA5 convention)
-            ds = xr.Dataset({
-                'u100': (['valid_time', 'latitude', 'longitude'], u100_data),
-                'v100': (['valid_time', 'latitude', 'longitude'], v100_data),
-            }, coords={
-                'valid_time': time,
-                'latitude': lat,
-                'longitude': lon,
-            })
-            
+            ds = xr.Dataset(
+                {
+                    "u100": (["valid_time", "latitude", "longitude"], u100_data),
+                    "v100": (["valid_time", "latitude", "longitude"], v100_data),
+                },
+                coords={
+                    "valid_time": time,
+                    "latitude": lat,
+                    "longitude": lon,
+                },
+            )
+
             # Save to NetCDF file in era5 subdirectory
             netcdf_file = era5_dir / "era5_test.nc"
-            
+
             # Try to save, but skip if netCDF4 has issues
             try:
-                ds.to_netcdf(netcdf_file, engine='netcdf4')
+                ds.to_netcdf(netcdf_file, engine="netcdf4")
             except Exception:
                 # Skip this test if netCDF4 has compatibility issues
                 pytest.skip("NetCDF4 compatibility issue - skipping functional test")
-            
+
             # Test the ERA5 loading API
             loader = LocalDataLoader(data_path=str(tmpdir_path))
             era5_dataset = loader.load_era5_data()
-            
+
             # Verify results
             assert isinstance(era5_dataset, ERA5Dataset)
-            assert era5_dataset.get_available_variables() == ['u100', 'v100']
+            assert era5_dataset.get_available_variables() == ["u100", "v100"]
             assert len(era5_dataset.get_available_variables()) == 2
-            
+
             # Test wind components
             wind_components = era5_dataset.get_wind_components()
             assert wind_components is not None
-            assert set(wind_components.keys()) == {'u100', 'v100'}
-            
+            assert set(wind_components.keys()) == {"u100", "v100"}
+
             # Test time range
             time_range = era5_dataset.get_time_range()
             assert time_range is not None
-            assert 'start' in time_range
-            assert 'end' in time_range
-            
+            assert "start" in time_range
+            assert "end" in time_range
+
             # Test spatial bounds
             spatial_bounds = era5_dataset.get_spatial_bounds()
             assert spatial_bounds is not None
-            assert 'lat_min' in spatial_bounds
-            assert 'lat_max' in spatial_bounds
-            assert 'lon_min' in spatial_bounds
-            assert 'lon_max' in spatial_bounds
+            assert "lat_min" in spatial_bounds
+            assert "lat_max" in spatial_bounds
+            assert "lon_min" in spatial_bounds
+            assert "lon_max" in spatial_bounds
 
     def test_data_validation_with_real_dataset(self):
         """Test validation logic with a real xarray dataset"""
         # Create a small real dataset for validation testing
-        time = np.arange('2023-01-01', '2023-01-02', dtype='datetime64[h]')  # 24 hours
+        time = np.arange("2023-01-01", "2023-01-02", dtype="datetime64[h]")  # 24 hours
         lat = np.linspace(50, 55, 2)
         lon = np.linspace(-5, 5, 3)
-        
+
         # Valid dataset with ERA5 variables
         valid_data = np.random.randn(len(time), len(lat), len(lon)).astype(np.float32)
-        
-        valid_ds = xr.Dataset({
-            'u100': (['time', 'latitude', 'longitude'], valid_data),
-            'v100': (['time', 'latitude', 'longitude'], valid_data),
-        }, coords={
-            'time': time,
-            'latitude': lat,
-            'longitude': lon,
-        })
-        
+
+        valid_ds = xr.Dataset(
+            {
+                "u100": (["time", "latitude", "longitude"], valid_data),
+                "v100": (["time", "latitude", "longitude"], valid_data),
+            },
+            coords={
+                "time": time,
+                "latitude": lat,
+                "longitude": lon,
+            },
+        )
+
         # This should work
         era5_dataset = ERA5Dataset(data=valid_ds)
         assert isinstance(era5_dataset, ERA5Dataset)
-        assert era5_dataset.get_available_variables() == ['u100', 'v100']
+        assert era5_dataset.get_available_variables() == ["u100", "v100"]
 
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
