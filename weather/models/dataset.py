@@ -67,7 +67,13 @@ class PlantDataset(BaseDataset):
     @field_validator("data")
     @classmethod
     def validate_plant_data(cls, v: pd.DataFrame) -> pd.DataFrame:
-        """Validate plant data structure"""
+        """Validate plant data structure
+        Args:
+            v (pd.DataFrame): Input DataFrame containing plant data
+        Returns:
+            pd.DataFrame: Validated DataFrame
+        """
+        logger.info("Validating PlantDataset structure...")
         required_columns = ["plant_id", "latitude", "longitude", "technology", "capacity"]
 
         # Check required columns
@@ -145,7 +151,14 @@ class GenerationDataset(BaseDataset):
     @field_validator("data")
     @classmethod
     def validate_generation_data(cls, v: pd.DataFrame) -> pd.DataFrame:
-        """Validate generation data structure"""
+        """Validate generation data structure
+
+        Args:
+            v (pd.DataFrame): Input DataFrame containing generation data
+        Returns:
+            pd.DataFrame: Validated DataFrame
+        """
+        logger.info("Validating GenerationDataset structure...")
         required_columns = ["plant_id", "time", "quantity"]
 
         # Check required columns
@@ -161,6 +174,7 @@ class GenerationDataset(BaseDataset):
         if "time" not in v.columns:
             raise ValueError("Generation data must contain a 'time' column")
 
+        logger.info("GenerationDataset validation completed successfully!")
         return v
 
     def get_plant_ids(self) -> list[str]:
@@ -251,8 +265,7 @@ class ERA5Dataset(BaseDataset):
         Returns:
             xr.Dataset: Validated xarray dataset
         """
-
-        # Check if all data variables are valid ERA5 NetCDF names
+        logger.info("Validating ERA5Dataset structure...")
         data_vars = set(v.data_vars.keys())
         valid_netcdf_names = set(ERA5_VARIABLE_MAPPING.values())
         invalid_vars = set(data_vars) - valid_netcdf_names
@@ -278,10 +291,10 @@ class ERA5Dataset(BaseDataset):
                 time_values = time_coord.values
                 if not pd.api.types.is_datetime64_any_dtype(time_values):
                     time_values = pd.to_datetime(time_values)
-                
+
                 # Create pandas series for analysis
                 time_series = pd.Series(time_values)
-                
+
                 # Check for duplicate timestamps
                 duplicate_mask = time_series.duplicated()
                 if duplicate_mask.any():
@@ -292,7 +305,8 @@ class ERA5Dataset(BaseDataset):
                     )
 
                 # Check if time series is sorted by comparing values directly
-                is_sorted = (time_series.values == time_series.sort_values().values).all()
+                sorted_series = time_series.sort_values()
+                is_sorted = time_series.equals(sorted_series)
                 if not is_sorted:
                     logger.warning("ERA5 data quality warning: Time series is not sorted.")
 
@@ -307,6 +321,7 @@ class ERA5Dataset(BaseDataset):
         else:
             logger.info("ERA5 data contains only a single time period")
 
+        logger.info("ERA5Dataset validation completed successfully!")
         return v
 
     def get_wind_components(self) -> dict[str, xr.DataArray] | None:
