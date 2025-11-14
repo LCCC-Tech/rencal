@@ -206,15 +206,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Weather data specific
-*.nc
-*.grib
-*.grb
-*.h5
-*.hdf5
-*.parquet
-*.csv
-*.xlsx
+# Data folder
 data/
 
 # Model files
