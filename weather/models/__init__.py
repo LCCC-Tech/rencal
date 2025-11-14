@@ -1,13 +1,11 @@
 # Models package for weather datasets and schemas
 
-from .dataset import (
-    ERA5Dataset,
-    GenerationDataset,
-    PlantDataset,
-)
+from .era5_model import ERA5DatasetModel
+from .generation_model import GenerationDatasetModel
+from .plant_model import PlantDatasetModel
 
 __all__ = [
-    "ERA5Dataset",
-    "GenerationDataset",
-    "PlantDataset",
+    "ERA5DatasetModel",
+    "GenerationDatasetModel",
+    "PlantDatasetModel",
 ]

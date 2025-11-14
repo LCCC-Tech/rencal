@@ -4,11 +4,7 @@ from pathlib import Path
 import pandas as pd
 import xarray as xr
 
-from weather.models.dataset import (
-    ERA5Dataset,
-    GenerationDataset,
-    PlantDataset,
-)
+from weather.models import ERA5DatasetModel, GenerationDatasetModel, PlantDatasetModel
 from weather.utils.constants import (
     DEFAULT_SOLAR_VARIABLES,
     DEFAULT_WIND_VARIABLES,
@@ -17,7 +13,6 @@ from weather.utils.constants import (
     GENERATION_DATE_FILE_NAME,
     PLANT_DATA_FILE_NAME,
     PLANT_ID_COLUMN,
-    WIND_TECHNOLOGY_TYPES,
 )
 from weather.utils.logger import get_logger
 
@@ -28,17 +23,17 @@ class DataLoader(ABC):
     """Abstract base class for loading different data sources"""
 
     @abstractmethod
-    def load_wind_plant_data(self) -> PlantDataset:
+    def load_plant_data(self) -> PlantDatasetModel:
         """Load CfD register with location/capacity data"""
         pass
 
     @abstractmethod
-    def load_generation_data(self) -> GenerationDataset:
+    def load_generation_data(self) -> GenerationDatasetModel:
         """Load settlement/generation time series"""
         pass
 
     @abstractmethod
-    def load_era5_data(self) -> ERA5Dataset:
+    def load_era5_data(self) -> ERA5DatasetModel:
         """Load ERA5 weather data using standard wind and solar variables"""
         pass
 
@@ -47,31 +42,24 @@ class LocalDataLoader(DataLoader):
     def __init__(self, data_path: str = DOWNLOAD_DATA_DIR) -> None:
         self._base_path = Path(data_path)
 
-    def load_wind_plant_data(self, id_column: str = PLANT_ID_COLUMN) -> PlantDataset:
+    def load_plant_data(self, id_column: str = PLANT_ID_COLUMN) -> PlantDatasetModel:
         """Load CfD register with location/capacity data from Excel file"""
         file_path = self._base_path / "plant" / PLANT_DATA_FILE_NAME
         if not file_path.exists():
             raise FileNotFoundError(f"Plant data file not found at {file_path}")
 
         df = pd.read_csv(file_path)
+        df = df.rename(columns={id_column: "plant_id"})
 
-        # Filter for wind technologies
-        mask = df["technology"].isin(list(WIND_TECHNOLOGY_TYPES))
-        wind_df = df.loc[mask].copy()
-
-        wind_df = wind_df.rename(columns={id_column: "plant_id"})
-
-        return PlantDataset(
-            data=wind_df,
+        return PlantDatasetModel(
+            data=df,
             metadata={
                 "source": "local_excel",
                 "file_path": str(file_path),
-                "filtered": True,
-                "filter_criteria": "Onshore Wind, Offshore Wind only",
             },
         )
 
-    def load_generation_data(self, id_column: str = PLANT_ID_COLUMN) -> GenerationDataset:
+    def load_generation_data(self, id_column: str = PLANT_ID_COLUMN) -> GenerationDatasetModel:
         """Load settlement/generation time series from CSV file
 
         Args:
@@ -83,10 +71,10 @@ class LocalDataLoader(DataLoader):
         if not file_path.exists():
             raise FileNotFoundError(f"Generation data file not found at {file_path}")
 
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, parse_dates=["time"])
         df = df.rename(columns={id_column: "plant_id"})
 
-        return GenerationDataset(
+        return GenerationDatasetModel(
             data=df,
             metadata={
                 "source": "elexon_api",
@@ -141,7 +129,7 @@ class LocalDataLoader(DataLoader):
         logger.debug(f"Filtered dataset to ERA5 variables: {requested_vars}")
         return ds
 
-    def load_era5_data(self) -> ERA5Dataset:
+    def load_era5_data(self) -> ERA5DatasetModel:
         """Load ERA5 weather data from NetCDF files using standard variables
 
         Automatically discovers and loads all available NetCDF files, filtering for
@@ -180,9 +168,11 @@ class LocalDataLoader(DataLoader):
         combined_ds = combined_ds.rename({"valid_time": "time"})
 
         # Summary log
-        logger.info(f"ERA5 data loaded: {len(era5_files)} files, {combined_ds.sizes['time']} time periods")
+        logger.info(
+            f"ERA5 data loaded: {len(era5_files)} files, {combined_ds.sizes['time']} time periods"
+        )
 
-        return ERA5Dataset(
+        return ERA5DatasetModel(
             data=combined_ds,
             metadata={
                 "source": "local_netcdf",
@@ -190,4 +180,3 @@ class LocalDataLoader(DataLoader):
                 "dimensions": dict(combined_ds.sizes),
             },
         )
-

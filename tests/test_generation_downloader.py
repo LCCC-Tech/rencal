@@ -158,6 +158,7 @@ class TestGenerationDataDownloader:
 
             # Spring forward: 46 periods should produce ~22 UTC hours
             # (some hours get compressed due to DST transition)
+            # TODO: Double check why this is 22 not 23
             expected_records = 22  # Based on our testing above
             assert len(result) == expected_records, (
                 f"Expected {expected_records} records for spring forward, got {len(result)}"

@@ -50,7 +50,10 @@ class WindData(BucketedData):
             [
                 i
                 for i in range(len(self.desired_Averages))
-                if (self.desired_Averages[i] is not None and not (np.isnan(self.desired_Averages[i])))
+                if (
+                    self.desired_Averages[i] is not None
+                    and not (np.isnan(self.desired_Averages[i]))
+                )
             ]
         )
 

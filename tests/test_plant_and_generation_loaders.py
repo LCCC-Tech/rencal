@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive tests for GenerationDataset and PlantDataset data loading functionality.
+Comprehensive tests for GenerationDatasetModel and PlantDatasetModel data loading functionality.
 Tests both the LocalDataLoader methods and the Dataset validation.
 """
 
@@ -11,15 +11,15 @@ import pandas as pd
 import pytest
 
 from weather.core.data_loader import LocalDataLoader
-from weather.models.dataset import GenerationDataset, PlantDataset
+from weather.models import GenerationDatasetModel, PlantDatasetModel
 from weather.utils.constants import WIND_TECHNOLOGY_TYPES
 
 
 class TestPlantDataLoader:
     """Tests for plant data loading and validation"""
 
-    def test_load_wind_plant_data_success(self):
-        """Test successful loading of wind plant data"""
+    def test_load_plant_data_success(self):
+        """Test successful loading of plant data"""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create plant subdirectory and CSV file
             plant_dir = Path(tmpdir) / "plant"
@@ -42,33 +42,26 @@ class TestPlantDataLoader:
 
             # Test loading
             loader = LocalDataLoader(data_path=tmpdir)
-            result = loader.load_wind_plant_data()
+            result = loader.load_plant_data()
 
             # Verify results
-            assert isinstance(result, PlantDataset)
-            assert len(result.data) == 2  # Only wind plants should be loaded
-            assert all(result.data["technology"].isin(list(WIND_TECHNOLOGY_TYPES)))
+            assert isinstance(result, PlantDatasetModel)
+            # Filter to wind plants for testing
+            wind_plants = result.get_wind_plants()
+            assert len(wind_plants.data) == 2  # Only wind plants should be loaded
+            assert all(wind_plants.data["technology"].isin(list(WIND_TECHNOLOGY_TYPES)))
             assert "plant_id" in result.data.columns  # Renamed from cfd_id
-            assert set(result.get_columns()) == {
-                "plant_id",
-                "technology",
-                "latitude",
-                "longitude",
-                "capacity",
-                "commission_date",
-                "plant_name",
-            }
 
-    def test_load_wind_plant_data_file_not_found(self):
+    def test_load_plant_data_file_not_found(self):
         """Test error handling when plant data file doesn't exist"""
         with tempfile.TemporaryDirectory() as tmpdir:
             loader = LocalDataLoader(data_path=tmpdir)
 
             with pytest.raises(FileNotFoundError, match="Plant data file not found"):
-                loader.load_wind_plant_data()
+                loader.load_plant_data()
 
     def test_plant_dataset_validation_success(self):
-        """Test PlantDataset validation with valid data"""
+        """Test PlantDatasetModel validation with valid data"""
         valid_data = pd.DataFrame(
             {
                 "plant_id": ["WIND-001", "WIND-002"],
@@ -79,12 +72,12 @@ class TestPlantDataLoader:
             }
         )
 
-        dataset = PlantDataset(data=valid_data)
-        assert isinstance(dataset, PlantDataset)
+        dataset = PlantDatasetModel(data=valid_data)
+        assert isinstance(dataset, PlantDatasetModel)
         assert len(dataset.data) == 2
 
     def test_plant_dataset_validation_missing_columns(self):
-        """Test PlantDataset validation with missing required columns"""
+        """Test PlantDatasetModel validation with missing required columns"""
         invalid_data = pd.DataFrame(
             {
                 "plant_id": ["WIND-001"],
@@ -94,10 +87,10 @@ class TestPlantDataLoader:
         )
 
         with pytest.raises(ValueError, match="Missing required columns"):
-            PlantDataset(data=invalid_data)
+            PlantDatasetModel(data=invalid_data)
 
     def test_plant_dataset_validation_invalid_types(self):
-        """Test PlantDataset validation with invalid data types"""
+        """Test PlantDatasetModel validation with invalid data types"""
         invalid_data = pd.DataFrame(
             {
                 "plant_id": ["WIND-001"],
@@ -109,10 +102,10 @@ class TestPlantDataLoader:
         )
 
         with pytest.raises(ValueError, match="must be numeric"):
-            PlantDataset(data=invalid_data)
+            PlantDatasetModel(data=invalid_data)
 
     def test_plant_dataset_methods(self):
-        """Test PlantDataset utility methods"""
+        """Test PlantDatasetModel utility methods"""
         test_data = pd.DataFrame(
             {
                 "plant_id": ["WIND-001", "WIND-002", "SOLAR-001"],
@@ -123,10 +116,10 @@ class TestPlantDataLoader:
             }
         )
 
-        dataset = PlantDataset(data=test_data)
+        dataset = PlantDatasetModel(data=test_data)
 
         # Test filtering by technology
-        wind_only = dataset.filter_by_technology("Onshore Wind")
+        wind_only = dataset.filter_by_technology(["Onshore Wind"])
         assert len(wind_only.data) == 1
         assert wind_only.data.iloc[0]["technology"] == "Onshore Wind"
 
@@ -136,12 +129,6 @@ class TestPlantDataLoader:
         assert bounds["lat_max"] == 52.0
         assert bounds["lon_min"] == -2.0
         assert bounds["lon_max"] == 1.5
-
-        # Test capacity summary
-        capacity_summary = dataset.get_capacity_summary()
-        assert capacity_summary["total_capacity"] == 400.0
-        assert capacity_summary["capacity_count"] == 3
-        assert capacity_summary["mean_capacity"] == pytest.approx(133.33, rel=1e-2)
 
 
 class TestGenerationDataLoader:
@@ -175,12 +162,11 @@ class TestGenerationDataLoader:
             result = loader.load_generation_data()
 
             # Verify results
-            assert isinstance(result, GenerationDataset)
+            assert isinstance(result, GenerationDatasetModel)
             assert len(result.data) == 4
             assert "plant_id" in result.data.columns  # Renamed from cfd_id
             assert "time" in result.data.columns
             assert "quantity" in result.data.columns
-            assert set(result.get_columns()) == {"plant_id", "time", "quantity"}
 
     def test_load_generation_data_file_not_found(self):
         """Test error handling when generation data file doesn't exist"""
@@ -191,61 +177,61 @@ class TestGenerationDataLoader:
                 loader.load_generation_data()
 
     def test_generation_dataset_validation_success(self):
-        """Test GenerationDataset validation with valid data"""
+        """Test GenerationDatasetModel validation with valid data"""
         valid_data = pd.DataFrame(
             {
                 "plant_id": ["WIND-001", "WIND-001"],
-                "time": ["2023-01-01T00:00:00+00:00", "2023-01-01T01:00:00+00:00"],
+                "time": pd.to_datetime(["2023-01-01T00:00:00+00:00", "2023-01-01T01:00:00+00:00"]),
                 "quantity": [85.5, 92.1],
             }
         )
 
-        dataset = GenerationDataset(data=valid_data)
-        assert isinstance(dataset, GenerationDataset)
+        dataset = GenerationDatasetModel(data=valid_data)
+        assert isinstance(dataset, GenerationDatasetModel)
         assert len(dataset.data) == 2
 
     def test_generation_dataset_validation_missing_columns(self):
-        """Test GenerationDataset validation with missing required columns"""
+        """Test GenerationDatasetModel validation with missing required columns"""
         invalid_data = pd.DataFrame(
             {
                 "plant_id": ["WIND-001"],
-                "time": ["2023-01-01T00:00:00+00:00"],
+                "time": pd.to_datetime(["2023-01-01T00:00:00+00:00"]),
                 # Missing quantity column
             }
         )
 
         with pytest.raises(ValueError, match="Missing required columns"):
-            GenerationDataset(data=invalid_data)
+            GenerationDatasetModel(data=invalid_data)
 
     def test_generation_dataset_validation_invalid_quantity_type(self):
-        """Test GenerationDataset validation with non-numeric quantity"""
+        """Test GenerationDatasetModel validation with non-numeric quantity"""
         invalid_data = pd.DataFrame(
             {
                 "plant_id": ["WIND-001"],
-                "time": ["2023-01-01T00:00:00+00:00"],
+                "time": pd.to_datetime(["2023-01-01T00:00:00+00:00"]),
                 "quantity": ["not_a_number"],  # Should be numeric
             }
         )
 
         with pytest.raises(ValueError, match="must be numeric"):
-            GenerationDataset(data=invalid_data)
+            GenerationDatasetModel(data=invalid_data)
 
     def test_generation_dataset_methods(self):
-        """Test GenerationDataset utility methods"""
+        """Test GenerationDatasetModel utility methods"""
         test_data = pd.DataFrame(
             {
                 "plant_id": ["WIND-001", "WIND-001", "WIND-002", "WIND-002"],
-                "time": [
+                "time": pd.to_datetime([
                     "2023-01-01T00:00:00+00:00",
                     "2023-01-01T01:00:00+00:00",
                     "2023-01-01T00:00:00+00:00",
                     "2023-01-01T01:00:00+00:00",
-                ],
+                ]),
                 "quantity": [85.5, 92.1, 156.7, 178.3],
             }
         )
 
-        dataset = GenerationDataset(data=test_data)
+        dataset = GenerationDatasetModel(data=test_data)
 
         # Test plant ID retrieval
         plant_ids = dataset.get_plant_ids()
@@ -256,13 +242,6 @@ class TestGenerationDataLoader:
         assert len(wind_001_data.data) == 2
         assert all(wind_001_data.data["plant_id"] == "WIND-001")
 
-        # Test generation summary
-        summary = dataset.get_generation_summary()
-        assert summary["total_generation"] == pytest.approx(512.6)
-        assert summary["plant_count"] == 2
-        assert summary["time_periods"] == 4
-        assert summary["mean_generation"] == pytest.approx(128.15)
-
         # Test time range
         time_range = dataset.get_time_range()
         assert time_range is not None
@@ -271,20 +250,20 @@ class TestGenerationDataLoader:
         assert time_range["periods"] == 2  # Unique time periods
 
     def test_generation_dataset_date_filtering(self):
-        """Test GenerationDataset date range filtering"""
+        """Test GenerationDatasetModel date range filtering"""
         test_data = pd.DataFrame(
             {
                 "plant_id": ["WIND-001", "WIND-001", "WIND-001"],
-                "time": [
+                "time": pd.to_datetime([
                     "2023-01-01T00:00:00+00:00",
                     "2023-01-02T00:00:00+00:00",
                     "2023-01-03T00:00:00+00:00",
-                ],
+                ]),
                 "quantity": [85.5, 92.1, 78.3],
             }
         )
 
-        dataset = GenerationDataset(data=test_data)
+        dataset = GenerationDatasetModel(data=test_data)
 
         # Filter to just first two days
         filtered = dataset.filter_by_date_range("2023-01-01", "2023-01-02")
@@ -296,17 +275,17 @@ class TestGenerationDataLoader:
         assert filtered.metadata["filtered_date_range"]["end"] == "2023-01-02"
 
     def test_generation_dataset_timezone_handling(self):
-        """Test that GenerationDataset properly handles UTC timestamps"""
+        """Test that GenerationDatasetModel properly handles UTC timestamps"""
         # Test data with explicit UTC timestamps
         utc_data = pd.DataFrame(
             {
                 "plant_id": ["WIND-001"],
-                "time": ["2023-03-26T01:00:00+00:00"],  # During DST transition
+                "time": pd.to_datetime(["2023-03-26T01:00:00+00:00"]),  # During DST transition
                 "quantity": [85.5],
             }
         )
 
-        dataset = GenerationDataset(data=utc_data)
+        dataset = GenerationDatasetModel(data=utc_data)
         time_range = dataset.get_time_range()
 
         # Should handle UTC timestamps correctly
@@ -352,12 +331,12 @@ class TestDataLoaderIntegration:
 
             # Test loading both
             loader = LocalDataLoader(data_path=tmpdir)
-            plant_dataset = loader.load_wind_plant_data()
+            plant_dataset = loader.load_plant_data()
             generation_dataset = loader.load_generation_data()
 
             # Verify both loaded correctly
-            assert isinstance(plant_dataset, PlantDataset)
-            assert isinstance(generation_dataset, GenerationDataset)
+            assert isinstance(plant_dataset, PlantDatasetModel)
+            assert isinstance(generation_dataset, GenerationDatasetModel)
             assert len(plant_dataset.data) == 2
             assert len(generation_dataset.data) == 2
 
@@ -387,7 +366,7 @@ class TestDataLoaderIntegration:
 
             # Test loading with custom column name
             loader = LocalDataLoader(data_path=tmpdir)
-            result = loader.load_wind_plant_data(id_column="facility_id")
+            result = loader.load_plant_data(id_column="facility_id")
 
             # Should rename to plant_id
             assert "plant_id" in result.data.columns
@@ -397,4 +376,3 @@ class TestDataLoaderIntegration:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

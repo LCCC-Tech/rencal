@@ -281,7 +281,9 @@ class ERA5DataDownloader(DataDownloader):
         # Summary log
         total_files = len(years)
         if downloaded_files > 0:
-            self.logger.info(f"ERA5 data complete: {downloaded_files} downloaded, {existing_files} verified ({total_files} total files)")
+            self.logger.info(
+                f"ERA5 data complete: {downloaded_files} downloaded, {existing_files} verified ({total_files} total files)"
+            )
         else:
             self.logger.info(f"ERA5 data verified: {total_files} files ({min(years)}-{max(years)})")
 

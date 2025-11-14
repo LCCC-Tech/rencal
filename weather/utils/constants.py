@@ -78,10 +78,11 @@ ERA5_VARIABLE_MAPPING = {
 def get_all_era5_variable_names() -> set[str]:
     """Get all valid ERA5 variable names (both API and NetCDF names)"""
     all_names = set()
-    for api_name, netcdf_names in ERA5_VARIABLE_MAPPING.items():
+    for api_name, netcdf_name in ERA5_VARIABLE_MAPPING.items():
         all_names.add(api_name)
-        all_names.update(netcdf_names)
+        all_names.add(netcdf_name)
     return all_names
+
 
 # CFD API
 CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?format=json"

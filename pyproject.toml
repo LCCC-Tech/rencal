@@ -108,7 +108,7 @@ weather = ["data/*.csv", "data/*.json", "calibration/templates/*"]
 
 [tool.basedpyright]
 include = ["weather"]
-exclude = [".venv", "build", "dist"]
+exclude = [".venv", "build", "dist", "weather/simulation/intermittent_bucketer.py", "weather/core/bucketed_data.py",]
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"

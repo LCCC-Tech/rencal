@@ -12,7 +12,7 @@ import pytest
 import xarray as xr
 
 from weather.core.data_loader import LocalDataLoader
-from weather.models.dataset import ERA5Dataset
+from weather.models import ERA5DatasetModel
 from weather.utils.constants import DEFAULT_SOLAR_VARIABLES, DEFAULT_WIND_VARIABLES
 
 
@@ -58,17 +58,17 @@ class TestERA5DataLoaderIntegration:
 
             # Mock the entire loading process
             with patch.object(loader, "load_era5_data") as mock_load:
-                mock_era5_dataset = MagicMock(spec=ERA5Dataset)
+                mock_era5_dataset = MagicMock(spec=ERA5DatasetModel)
                 mock_load.return_value = mock_era5_dataset
 
                 result = loader.load_era5_data()
                 assert result == mock_era5_dataset
 
     def test_era5_dataset_validation_wrong_type(self):
-        """Test that ERA5Dataset validates input type"""
+        """Test that ERA5DatasetModel validates input type"""
         # Should raise Pydantic ValidationError for wrong type
         with pytest.raises(Exception):  # Pydantic ValidationError
-            ERA5Dataset(data=MagicMock())  # type: ignore
+            ERA5DatasetModel(data=MagicMock())  # type: ignore
 
     def test_error_handling_with_invalid_files(self):
         """Test that errors are properly handled with invalid NetCDF files"""
@@ -135,14 +135,14 @@ class TestERA5DataLoaderFunctional:
             era5_dataset = loader.load_era5_data()
 
             # Verify results
-            assert isinstance(era5_dataset, ERA5Dataset)
-            assert era5_dataset.get_available_variables() == ["u100", "v100"]
-            assert len(era5_dataset.get_available_variables()) == 2
+            assert isinstance(era5_dataset, ERA5DatasetModel)
+            assert list(era5_dataset.data.data_vars.keys()) == ["u100", "v100"]
+            assert len(list(era5_dataset.data.data_vars.keys())) == 2
 
             # Test wind components
             wind_components = era5_dataset.get_wind_components()
             assert wind_components is not None
-            assert set(wind_components.keys()) == {"u100", "v100"}
+            assert set(wind_components.data_vars.keys()) == {"u100", "v100"}
 
             # Test time range
             time_range = era5_dataset.get_time_range()
@@ -181,11 +181,10 @@ class TestERA5DataLoaderFunctional:
         )
 
         # This should work
-        era5_dataset = ERA5Dataset(data=valid_ds)
-        assert isinstance(era5_dataset, ERA5Dataset)
-        assert era5_dataset.get_available_variables() == ["u100", "v100"]
+        era5_dataset = ERA5DatasetModel(data=valid_ds)
+        assert isinstance(era5_dataset, ERA5DatasetModel)
+        assert list(era5_dataset.data.data_vars.keys()) == ["u100", "v100"]
 
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

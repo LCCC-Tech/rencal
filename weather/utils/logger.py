@@ -41,9 +41,9 @@ def get_logger(name: str | None = None, level: int = logging.DEBUG) -> logging.L
     if QUIET_MODE:
         level = logging.WARNING  # Only warnings and errors
     elif VERBOSE_MODE:
-        level = logging.DEBUG    # All messages
+        level = logging.DEBUG  # All messages
     else:
-        level = logging.INFO     # Default: INFO and above
+        level = logging.INFO  # Default: INFO and above
 
     # Set level
     logger.setLevel(level)

@@ -10,14 +10,15 @@ def main():
     downloader.download_all()
 
     loader = LocalDataLoader()
-    plant_ds = loader.load_wind_plant_data()
-    logger.info(f"Plant data loaded: {plant_ds.get_shape()[0]} plants")
+    plant_ds = loader.load_plant_data()
+    wind_plant_ds = plant_ds.get_wind_plants()
+    print(wind_plant_ds)
 
     generation_ds = loader.load_generation_data()
-    logger.info(f"Generation data loaded: {generation_ds.get_shape()[0]} records")
+    print(generation_ds)
 
     weather_ds = loader.load_era5_data()
-    logger.info(f"Weather data loaded: {weather_ds.get_shape()[0]} time periods")
+    print(weather_ds)
 
 
 if __name__ == "__main__":
