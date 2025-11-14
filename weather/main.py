@@ -12,13 +12,13 @@ def main():
     loader = LocalDataLoader()
     plant_ds = loader.load_plant_data()
     wind_plant_ds = plant_ds.get_wind_plants()
-    print(wind_plant_ds)
+    logger.info(wind_plant_ds)
 
     generation_ds = loader.load_generation_data()
-    print(generation_ds)
+    logger.info(generation_ds)
 
     weather_ds = loader.load_era5_data()
-    print(weather_ds)
+    logger.info(weather_ds)
 
 
 if __name__ == "__main__":

@@ -40,7 +40,7 @@ class PlantDatasetModel(PandasDatasetModel):
         data = cls._validate_required_columns(data)
         data = cls._validate_datatypes(data)
 
-        logger.debug("PlantDatasetModel validation completed successfully!")
+        logger.debug("Validation completed successfully!")
         return data
 
     def get_geographic_bounds(self) -> dict[str, float]:
@@ -94,7 +94,11 @@ class PlantDatasetModel(PandasDatasetModel):
         bounds = self.get_geographic_bounds()
         geo_str = f"lat: {bounds['lat_min']:.2f}°-{bounds['lat_max']:.2f}°, lon: {bounds['lon_min']:.2f}°-{bounds['lon_max']:.2f}°"
 
-        # Show sample technologies
-        tech_display = f"{technologies[:3]}{'...' if len(technologies) > 3 else ''}"
+        # Show sample technologies with total count
+        tech_display = ", ".join(technologies[:3]) + (f" ({len(technologies)} total)" if len(technologies) > 3 else "")
 
         return f"PlantDatasetModel({plant_count} plants, {total_capacity:.1f}MW total, technologies={tech_display}, {geo_str})"
+
+    def __str__(self) -> str:
+        """Override PyDantics default str() to use __repr__"""
+        return self.__repr__()

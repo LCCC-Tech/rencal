@@ -36,7 +36,7 @@ class GenerationDatasetModel(PandasDatasetModel):
         data = cls._validate_datatypes(data)
         data = cls._validate_time_column(data)
 
-        logger.debug("GenerationDatasetModel validation completed successfully!")
+        logger.debug("Validation completed successfully!")
         return data
 
     def get_plant_ids(self) -> list[str]:
@@ -102,8 +102,12 @@ class GenerationDatasetModel(PandasDatasetModel):
         if time_info:
             time_str = f", {time_info['start']} to {time_info['end']} ({time_info['periods']} unique times)"
 
-        # Get sample of plant IDs for display
+        # Get sample of plant IDs for display with total count
         plant_ids = self.get_plant_ids()
-        plant_display = f"{plant_ids[:3]}{'...' if len(plant_ids) > 3 else ''}"
+        plant_display = ", ".join(plant_ids[:3]) + (f" ({len(plant_ids)} total)" if len(plant_ids) > 3 else "")
 
         return f"GenerationDatasetModel({plant_count} plants, {total_records} records{time_str}, plants={plant_display})"
+
+    def __str__(self) -> str:
+        """Override Pydantic's default str() to use __repr__"""
+        return self.__repr__()

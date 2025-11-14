@@ -39,7 +39,7 @@ class ERA5DatasetModel(XArrayDatasetModel):
         data = cls._validate_datatypes(data)
         data = cls._validate_time_column(data)
 
-        logger.debug("ERA5DatasetModel validation completed successfully!")
+        logger.debug("Validation completed successfully!")
         return data
 
     def get_wind_components(self) -> xr.Dataset:
@@ -141,3 +141,7 @@ class ERA5DatasetModel(XArrayDatasetModel):
             spatial_str = f", lat: {spatial_info['lat_min']:.2f}°-{spatial_info['lat_max']:.2f}°, lon: {spatial_info['lon_min']:.2f}°-{spatial_info['lon_max']:.2f}°"
 
         return f"ERA5DatasetModel(variables={variables}, dims={dims}{time_str}{spatial_str})"
+
+    def __str__(self) -> str:
+        """Overrides PyDantic default str representation"""
+        return self.__repr__()
