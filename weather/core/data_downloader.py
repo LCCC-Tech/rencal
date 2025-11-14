@@ -268,16 +268,19 @@ class ERA5DataDownloader(DataDownloader):
         existing_files = 0
         downloaded_files = 0
 
+        # Create logger-styled progress bar format
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with tqdm(
             years,
             desc="Processing ERA5 data",
             unit="year",
-            bar_format="{desc}: {percentage:3.0f}%|{bar:20}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}",
+            bar_format="[INFO] - {desc}: {percentage:3.0f}%|{bar:20}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix} - [data_downloader] - " + current_time,
         ) as pbar:
             for year in pbar:
                 file_path = self.output_dir / f"{year}.nc"
 
                 if file_path.exists():
+                    pbar.set_postfix_str(f"verifying {year}.nc")
                     self.logger.debug(f"File already exists for {year}, verifying timestamps...")
                     existing_files += 1
                 else:
@@ -285,7 +288,6 @@ class ERA5DataDownloader(DataDownloader):
                     self._download_year(year, str(file_path))
                     downloaded_files += 1
 
-                # pbar.set_postfix_str(f"processing {year}.nc")
                 pbar.set_postfix_str(f"verifying {year}.nc")
                 self._verify_and_update_metadata(year, str(file_path))
 
