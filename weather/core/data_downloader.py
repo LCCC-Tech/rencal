@@ -5,6 +5,7 @@ from typing import Any
 
 import cdsapi
 import certifi
+import numpy as np
 import pandas as pd
 import requests
 import xarray as xr
@@ -25,6 +26,9 @@ from weather.utils.constants import (
     ERA5_DATASET,
     ERA5_PRODUCT_TYPE,
     GENERATION_DATE_FILE_NAME,
+    MARCH_FORWARD_MINUTES,
+    NORMAL_DAY_MINUTES,
+    OCTOBER_BACK_MINUTES,
     PLANT_DATA_FILE_NAME,
 )
 from weather.utils.logger import get_logger
@@ -274,7 +278,8 @@ class ERA5DataDownloader(DataDownloader):
             years,
             desc="Processing ERA5 data",
             unit="year",
-            bar_format="[INFO] - {desc}: {percentage:3.0f}%|{bar:20}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix} - [data_downloader] - " + current_time,
+            bar_format="[INFO] - {desc}: {percentage:3.0f}%|{bar:20}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix} - [data_downloader] - "
+            + current_time,
         ) as pbar:
             for year in pbar:
                 file_path = self.output_dir / f"{year}.nc"
@@ -502,22 +507,47 @@ class GenerationDataDownloader(DataDownloader):
             self.logger.error(f"Error downloading generation data: {e}")
             raise
 
+    def _get_day_type_from_period_counts(self, generation_df: pd.DataFrame) -> pd.Series:
+        """Determine day type by counting settlement periods per date.
+
+        - 48 periods = Normal day ('n')
+        - 46 periods = Short day/March forward ('s')
+        - 50 periods = Long day/October back ('l')
+
+        Returns 'n', 's', or 'l' for each row.
+        """
+        period_counts = generation_df.groupby("settlement_date")["settlement_period"].nunique()
+
+        # Create day type lookup per date using explicit mapping
+        date_to_day_type = pd.Series(index=period_counts.index, dtype=str)
+        date_to_day_type[period_counts == 48] = "n"
+        date_to_day_type[period_counts == 46] = "s"
+        date_to_day_type[period_counts == 50] = "l"
+
+        # We shouldn't have any other counts, log unexpected cases
+        unexpected_mask = date_to_day_type.isna()
+        if unexpected_mask.any():
+            unexpected_counts = period_counts[unexpected_mask]
+            self.logger.warning(f"Unexpected settlement period counts: {dict(unexpected_counts)}")
+            date_to_day_type = date_to_day_type.fillna("n")
+
+        day_type_series = generation_df["settlement_date"].map(date_to_day_type)
+
+        return pd.Series(day_type_series, index=generation_df.index, dtype="category")
+
     def _create_hourly_utc_datetime(self, generation_df: pd.DataFrame) -> pd.Series:
-        """Create hourly UTC datetimes from UK settlement periods.
+        """Create hourly UTC datetimes from UK settlement periods using Elexon rules.
 
-        Converts UK electricity market dates with settlement periods (30-minute intervals)
-        into hourly UTC datetime boundaries, handling DST transitions correctly.
+        Converts UK settlement periods to UTC using official Elexon settlement period
+        bmu_mapping. This accounts for daylight saving time changes and ensures
+        correct hour alignment.
 
-        This method consolidates the timezone conversion and hour flooring into a single step.
-        Settlement periods represent UK local time intervals, so we:
-        1. Build UK timezone-aware datetimes from settlement periods
-        2. Convert to UTC to get consistent timeline representation
-        3. Floor to hour boundaries for aggregation
+        Reference: https://www.elexon.co.uk/bsc/settlement/
 
-        During DST transitions, this preserves the actual timeline:
-        - Spring forward: Some UTC hours may have fewer settlement periods
-        - Autumn back: Some UTC hours may span multiple settlement periods
-        - Normal days: Each UTC hour has exactly 2 settlement periods
+        Expected outputs based on period counts:
+        - 48 periods ('n'): → 24 UTC hours
+        - 46 periods ('s'): → 23 UTC hours (periods 3&4 missing)
+        - 50 periods ('l'): → 25 UTC hours (periods 3&4 duplicated)
 
         Args:
             generation_df: DataFrame with settlement_date and settlement_period columns.
@@ -525,25 +555,51 @@ class GenerationDataDownloader(DataDownloader):
         Returns:
             Series of UTC datetime objects floored to hour boundaries.
         """
-        # Build naive timestamps from settlement periods (representing UK local time)
-        minutes_from_midnight = (generation_df["settlement_period"] - 1) * 30
-        base_datetime = pd.to_datetime(generation_df["settlement_date"])
+
+        # Create working copy with day type from period counts
+        df = generation_df.copy()
+        df["day_type"] = self._get_day_type_from_period_counts(df)
+
+        # Log day type distribution for debugging
+        day_type_counts = df["day_type"].value_counts()
+        self.logger.debug(f"Day type distribution: {day_type_counts.to_dict()}")
+
+        # Convert to numpy arrays for vectorized operations
+        normal_minuates_array = np.array(NORMAL_DAY_MINUTES)
+        short_minutes_array = np.array(MARCH_FORWARD_MINUTES)
+        long_minutes_array = np.array(OCTOBER_BACK_MINUTES)
+
+        # Vectorized lookup with proper array bounds for each day type
+        minutes_from_midnight = np.zeros(len(df), dtype=int)
+        periods_idx = df["settlement_period"] - 1  # Convert to 0-based indexing
+
+        # Apply correct array for each day type
+        normal_day_mask = df["day_type"] == "n"
+        short_day_mask = df["day_type"] == "s"
+        long_day_mask = df["day_type"] == "l"
+
+        minutes_from_midnight[normal_day_mask] = normal_minuates_array[periods_idx[normal_day_mask]]
+        minutes_from_midnight[short_day_mask] = short_minutes_array[periods_idx[short_day_mask]]
+        minutes_from_midnight[long_day_mask] = long_minutes_array[periods_idx[long_day_mask]]
+
+        df["minutes_from_midnight"] = minutes_from_midnight
+
+        # Build UK local datetimes
+        base_datetime = pd.to_datetime(df["settlement_date"])
         settlement_datetime_naive = base_datetime + pd.to_timedelta(
-            minutes_from_midnight, unit="min"
+            df["minutes_from_midnight"].values,
+            unit="min",
         )
 
-        # Localize to UK timezone first (to handle DST properly), then convert to UTC
+        # Localize to UK timezone
         uk_timezone = settlement_datetime_naive.dt.tz_localize(
             "Europe/London",
-            ambiguous=True,  # Always choose first occurrence for autumn back days
-            nonexistent="shift_forward",  # Handle spring forward by shifting to next valid time
+            ambiguous="infer",  # Handle fall back duplicates
+            nonexistent="raise",  # Should never occur with proper Elexon mapping
         )
 
+        # Convert to UTC and floor to hours
         utc_datetime = uk_timezone.dt.tz_convert("UTC")
-
-        # Floor to hour boundaries in UTC for aggregation
-        # This preserves the actual timeline - during DST transitions, some UTC hours
-        # may have 0, 1, or 2 settlement periods, which correctly reflects reality
         return utc_datetime.dt.floor("h")
 
     def _aggregate_bmu_generation_to_cfd(
@@ -562,10 +618,7 @@ class GenerationDataDownloader(DataDownloader):
         Returns:
             DataFrame with aggregated generation data by CFD ID and hourly UTC datetime.
         """
-        # Create a copy to avoid modifying the input DataFrame
         generation_df = generation_df.copy()
-
-        # Standardize column names
         generation_df = generation_df.rename(
             columns={
                 "bmUnit": "bmu_id",
@@ -574,10 +627,7 @@ class GenerationDataDownloader(DataDownloader):
             }
         )
 
-        # Create hourly UTC datetimes directly from settlement periods
-        # This consolidates timezone conversion and hour flooring in one step
         generation_df["time"] = self._create_hourly_utc_datetime(generation_df)
-
         generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id"]], on="bmu_id", how="left")
 
         # Aggregate to hourly by summing periods within each UTC hour

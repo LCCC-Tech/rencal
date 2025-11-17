@@ -95,7 +95,9 @@ class PlantDatasetModel(PandasDatasetModel):
         geo_str = f"lat: {bounds['lat_min']:.2f}°-{bounds['lat_max']:.2f}°, lon: {bounds['lon_min']:.2f}°-{bounds['lon_max']:.2f}°"
 
         # Show sample technologies with total count
-        tech_display = ", ".join(technologies[:3]) + (f" ({len(technologies)} total)" if len(technologies) > 3 else "")
+        tech_display = ", ".join(technologies[:3]) + (
+            f" ({len(technologies)} total)" if len(technologies) > 3 else ""
+        )
 
         return f"PlantDatasetModel({plant_count} plants, {total_capacity:.1f}MW total, technologies={tech_display}, {geo_str})"
 

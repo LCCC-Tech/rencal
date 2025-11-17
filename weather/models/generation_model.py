@@ -104,7 +104,9 @@ class GenerationDatasetModel(PandasDatasetModel):
 
         # Get sample of plant IDs for display with total count
         plant_ids = self.get_plant_ids()
-        plant_display = ", ".join(plant_ids[:3]) + (f" ({len(plant_ids)} total)" if len(plant_ids) > 3 else "")
+        plant_display = ", ".join(plant_ids[:3]) + (
+            f" ({len(plant_ids)} total)" if len(plant_ids) > 3 else ""
+        )
 
         return f"GenerationDatasetModel({plant_count} plants, {total_records} records{time_str}, plants={plant_display})"
 

@@ -55,7 +55,9 @@ class LocalDataLoader(DataLoader):
         total_plants = len(df)
         total_capacity = df["capacity"].sum() if "capacity" in df.columns else 0
 
-        logger.info(f"Plant data loaded: {total_plants} plants, {total_capacity:.1f}MW total capacity")
+        logger.info(
+            f"Plant data loaded: {total_plants} plants, {total_capacity:.1f}MW total capacity"
+        )
 
         return PlantDatasetModel(
             data=df,

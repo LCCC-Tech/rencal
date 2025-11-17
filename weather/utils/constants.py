@@ -74,16 +74,6 @@ ERA5_VARIABLE_MAPPING = {
     "2m_temperature": "t2m",
 }
 
-
-def get_all_era5_variable_names() -> set[str]:
-    """Get all valid ERA5 variable names (both API and NetCDF names)"""
-    all_names = set()
-    for api_name, netcdf_name in ERA5_VARIABLE_MAPPING.items():
-        all_names.add(api_name)
-        all_names.add(netcdf_name)
-    return all_names
-
-
 # CFD API
 CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?format=json"
 CFD_BMU_CSV_URL = "https://dp.lowcarboncontracts.uk/dataset/be8c542a-c66c-4a06-a3df-bc46db7416c0/resource/9316f493-365c-4abc-a40e-3a5e67119a0a/download/cfd_to_bm_unit_mapping.csv"
@@ -93,6 +83,24 @@ WIND_TECHNOLOGY_TYPES = {"Onshore Wind", "Offshore Wind"}
 # Elexon API
 ELEXON_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
 GENERATION_DATE_FILE_NAME = "generation_data.csv"
+
+# Normal Day (n): 48 periods, continuous 30-minute intervals
+NORMAL_DAY_MINUTES = [i * 30 for i in range(50)]  # [0, 30, 60, 90, ...] up to period 50
+
+# March Forward Day (s): 46 periods, skip 01:00-02:00 UK time
+# Periods 1-2: normal timing, Periods 3-46: add 60-minute offset for missing hour
+MARCH_FORWARD_MINUTES = (
+    [0, 30] +  # Periods 1-2: 00:00, 00:30
+    [(i * 30) + 60 for i in range(2, 46)]  # Periods 3-46: skip missing hour
+)
+
+# October Back Day (l): 50 periods, duplicate 01:00-02:00 UK time
+# Periods 1-4: normal, 5-6: duplicate hour, 7+: continue normally
+OCTOBER_BACK_MINUTES = (
+    [i * 30 for i in range(4)] +  # Periods 1-4: [0, 30, 60, 90]
+    [60, 90] +  # Periods 5-6: duplicate 01:00-02:00
+    [(i * 30) for i in range(4, 48)]  # Periods 7-50: [120, 150, ..., 1410]
+)
 
 # Logging Configuration
 QUIET_MODE: bool = run_config.get("QUIET_MODE", False)  # Only show warnings/errors

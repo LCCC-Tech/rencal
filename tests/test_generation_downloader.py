@@ -6,7 +6,7 @@ DST transitions and proper end-to-end workflow validation with file I/O.
 
 Test scenarios covered:
 - Normal day: 48 settlement periods → 24 UTC hours
-- Spring forward (DST start): 46 periods → 22 UTC hours (compressed due to DST)
+- Spring forward (DST start): 46 periods → 23 UTC hours (periods 3&4 missing per Elexon rules)
 - Fall back (DST end): 50 periods → 25 UTC hours (spans midnight UTC)
 - File creation and skip-if-exists behavior
 - Complete download workflow with mocked external dependencies
@@ -124,6 +124,42 @@ class TestGenerationDataDownloader:
                 "All datetimes should be in UTC format (+00:00)"
             )
 
+            # Enhanced UTC time range validation for normal day
+            sorted_times = sorted(result["parsed_datetime"])
+            expected_start = pd.Timestamp("2023-01-15 00:00:00+00:00")
+            expected_end = pd.Timestamp("2023-01-15 23:00:00+00:00")
+            assert sorted_times[0] == expected_start, (
+                f"Normal day should start at {expected_start}, got {sorted_times[0]}"
+            )
+            assert sorted_times[-1] == expected_end, (
+                f"Normal day should end at {expected_end}, got {sorted_times[-1]}"
+            )
+            
+            # Verify 1-hour intervals between aggregated records
+            for i in range(1, len(sorted_times)):
+                interval = sorted_times[i] - sorted_times[i-1]
+                assert interval == pd.Timedelta(hours=1), (
+                    f"Expected 1-hour intervals, got {interval} between {sorted_times[i-1]} and {sorted_times[i]}"
+                )
+
+            # Test raw settlement period mapping (before aggregation)
+            raw_utc_times = downloader_with_temp_dir._create_hourly_utc_datetime(
+                normal_day_generation_df.rename(columns={
+                    "settlementDate": "settlement_date",
+                    "settlementPeriod": "settlement_period"
+                })
+            )
+            
+            # Verify 30-minute periods map correctly - should be 2 periods per hour
+            raw_unique = sorted(raw_utc_times.dt.floor('h').unique())
+            assert len(raw_unique) == 24, f"Raw periods should map to 24 unique hours, got {len(raw_unique)}"
+            
+            # Check that we have exactly 2 periods per hour (30-min intervals)
+            hour_counts = raw_utc_times.dt.floor('h').value_counts()
+            assert all(count == 2 for count in hour_counts), (
+                f"Each hour should have exactly 2 periods (30-min intervals), got: {hour_counts.to_dict()}"
+            )
+
             # Verify CfD ID is preserved
             assert all(result["cfd_id"] == "TEST-CFD-001"), "CfD ID should be preserved"
 
@@ -156,10 +192,10 @@ class TestGenerationDataDownloader:
             output_file = downloader_with_temp_dir.output_dir / "generation_data.csv"
             result = pd.read_csv(output_file)
 
-            # Spring forward: 46 periods should produce ~22 UTC hours
-            # (some hours get compressed due to DST transition)
-            # TODO: Double check why this is 22 not 23
-            expected_records = 22  # Based on our testing above
+            # Spring forward: 46 periods should produce 23 UTC hours
+            # (periods 3&4 are missing per official Elexon rules)
+            # Fixed: Now using correct Elexon settlement period mapping
+            expected_records = 23  # Periods 3&4 missing = 23 unique hours
             assert len(result) == expected_records, (
                 f"Expected {expected_records} records for spring forward, got {len(result)}"
             )
@@ -174,6 +210,48 @@ class TestGenerationDataDownloader:
             dates = result["parsed_datetime"].dt.date.unique()
             expected_date = date(2023, 3, 26)
             assert expected_date in dates, f"Expected date {expected_date} should be present"
+
+            # Enhanced UTC time range validation for spring forward day
+            sorted_times = sorted(result["parsed_datetime"])
+            expected_start = pd.Timestamp("2023-03-26 00:00:00+00:00")
+            expected_end = pd.Timestamp("2023-03-26 22:00:00+00:00")  # Missing 23:00 hour
+            assert sorted_times[0] == expected_start, (
+                f"Spring forward day should start at {expected_start}, got {sorted_times[0]}"
+            )
+            assert sorted_times[-1] == expected_end, (
+                f"Spring forward day should end at {expected_end}, got {sorted_times[-1]}"
+            )
+            
+            # Verify 1-hour intervals between aggregated records (except missing hour)
+            expected_hours = list(range(0, 23))  # Hours 0-22 (missing hour 23)
+            actual_hours = [t.hour for t in sorted_times]
+            assert actual_hours == expected_hours, (
+                f"Spring forward should have hours 0-22, got {actual_hours}"
+            )
+
+            # Test raw settlement period mapping (before aggregation)  
+            raw_utc_times = downloader_with_temp_dir._create_hourly_utc_datetime(
+                spring_forward_generation_df.rename(columns={
+                    "settlementDate": "settlement_date", 
+                    "settlementPeriod": "settlement_period"
+                })
+            )
+            
+            # Verify 46 periods map to 23 unique hours (2 periods per hour)
+            raw_unique = sorted(raw_utc_times.dt.floor('h').unique())
+            assert len(raw_unique) == 23, f"Raw periods should map to 23 unique hours, got {len(raw_unique)}"
+            
+            # Check that we have exactly 2 periods per hour (30-min intervals)
+            hour_counts = raw_utc_times.dt.floor('h').value_counts()
+            assert all(count == 2 for count in hour_counts), (
+                f"Each hour should have exactly 2 periods (30-min intervals), got: {hour_counts.to_dict()}"
+            )
+            
+            # Verify the missing hour in raw data
+            raw_hours = [t.hour for t in raw_unique]
+            assert raw_hours == expected_hours, (
+                f"Raw data should span hours 0-22 (missing 23), got {raw_hours}"
+            )
 
             # Verify quantity preservation
             original_total = spring_forward_generation_df["quantity"].sum()
@@ -223,6 +301,50 @@ class TestGenerationDataDownloader:
             assert expected_date in dates, f"Expected date {expected_date} should be present"
             # Fall back should span multiple UTC dates
             assert len(dates) > 1, "Fall back should span multiple UTC dates due to timezone change"
+
+            # Enhanced UTC time range validation for fall back day
+            sorted_times = sorted(result["parsed_datetime"])
+            expected_start = pd.Timestamp("2023-10-28 23:00:00+00:00")  # Starts night before
+            expected_end = pd.Timestamp("2023-10-29 23:00:00+00:00")    # Ends at 23:00 next day
+            assert sorted_times[0] == expected_start, (
+                f"Fall back day should start at {expected_start}, got {sorted_times[0]}"
+            )
+            assert sorted_times[-1] == expected_end, (
+                f"Fall back day should end at {expected_end}, got {sorted_times[-1]}"
+            )
+            
+            # Verify we have 25 unique hours including the duplicate
+            # Should have: 28th 23:00, 29th 00:00-23:00 (with one hour duplicated)
+            time_hours = [(t.date(), t.hour) for t in sorted_times]
+            assert len(time_hours) == 25, f"Should have 25 unique hour records, got {len(time_hours)}"
+
+            # Test raw settlement period mapping (before aggregation)
+            raw_utc_times = downloader_with_temp_dir._create_hourly_utc_datetime(
+                fall_back_generation_df.rename(columns={
+                    "settlementDate": "settlement_date",
+                    "settlementPeriod": "settlement_period"
+                })
+            )
+            
+            # Verify 50 periods map to 25 unique hours (2 periods per hour)
+            raw_unique = sorted(raw_utc_times.dt.floor('h').unique())
+            assert len(raw_unique) == 25, f"Raw periods should map to 25 unique hours, got {len(raw_unique)}"
+            
+            # Check that we have exactly 2 periods per hour (30-min intervals)
+            hour_counts = raw_utc_times.dt.floor('h').value_counts()
+            assert all(count == 2 for count in hour_counts), (
+                f"Each hour should have exactly 2 periods (30-min intervals), got: {hour_counts.to_dict()}"
+            )
+            
+            # Verify the time span in raw data
+            raw_start = raw_utc_times.min()
+            raw_end = raw_utc_times.max()
+            assert raw_start == expected_start, (
+                f"Raw data should start at {expected_start}, got {raw_start}"
+            )
+            assert raw_end == expected_end, (
+                f"Raw data should end at {expected_end}, got {raw_end}"
+            )
 
             # Verify quantity preservation
             original_total = fall_back_generation_df["quantity"].sum()
