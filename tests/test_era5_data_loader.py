@@ -90,7 +90,7 @@ class TestERA5DataLoaderFunctional:
     """Functional tests using actual (small) NetCDF data"""
 
     def test_load_era5_data_end_to_end(self):
-        """End-to-end test using actual xarray dataset"""
+        """End-to-end test using actual xarray dataset with patched xr.open_dataset"""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
 
@@ -120,43 +120,46 @@ class TestERA5DataLoaderFunctional:
                 },
             )
 
-            # Save to NetCDF file in era5 subdirectory
+            # Save to NetCDF file in era5 subdirectory using scipy engine
             netcdf_file = era5_dir / "era5_test.nc"
+            ds.to_netcdf(netcdf_file, engine="scipy")
 
-            # Try to save, but skip if netCDF4 has issues
-            try:
-                ds.to_netcdf(netcdf_file, engine="netcdf4")
-            except Exception:
-                # Skip this test if netCDF4 has compatibility issues
-                pytest.skip("NetCDF4 compatibility issue - skipping functional test")
+            # Patch xr.open_dataset to use scipy engine to avoid netCDF4 compatibility issues
+            original_open_dataset = xr.open_dataset
+            def patched_open_dataset(path, **kwargs):
+                # Force scipy engine if no engine specified
+                if 'engine' not in kwargs:
+                    kwargs['engine'] = 'scipy'
+                return original_open_dataset(path, **kwargs)
+            
+            with patch('xarray.open_dataset', side_effect=patched_open_dataset):
+                # Test the ERA5 loading API
+                loader = LocalDataLoader(data_path=str(tmpdir_path))
+                era5_dataset = loader.load_era5_data()
 
-            # Test the ERA5 loading API
-            loader = LocalDataLoader(data_path=str(tmpdir_path))
-            era5_dataset = loader.load_era5_data()
+                # Verify results
+                assert isinstance(era5_dataset, ERA5DatasetModel)
+                assert list(era5_dataset.data.data_vars.keys()) == ["u100", "v100"]
+                assert len(list(era5_dataset.data.data_vars.keys())) == 2
 
-            # Verify results
-            assert isinstance(era5_dataset, ERA5DatasetModel)
-            assert list(era5_dataset.data.data_vars.keys()) == ["u100", "v100"]
-            assert len(list(era5_dataset.data.data_vars.keys())) == 2
+                # Test wind components
+                wind_components = era5_dataset.get_wind_components()
+                assert wind_components is not None
+                assert set(wind_components.data_vars.keys()) == {"u100", "v100"}
 
-            # Test wind components
-            wind_components = era5_dataset.get_wind_components()
-            assert wind_components is not None
-            assert set(wind_components.data_vars.keys()) == {"u100", "v100"}
+                # Test time range
+                time_range = era5_dataset.get_time_range()
+                assert time_range is not None
+                assert "start" in time_range
+                assert "end" in time_range
 
-            # Test time range
-            time_range = era5_dataset.get_time_range()
-            assert time_range is not None
-            assert "start" in time_range
-            assert "end" in time_range
-
-            # Test spatial bounds
-            spatial_bounds = era5_dataset.get_spatial_bounds()
-            assert spatial_bounds is not None
-            assert "lat_min" in spatial_bounds
-            assert "lat_max" in spatial_bounds
-            assert "lon_min" in spatial_bounds
-            assert "lon_max" in spatial_bounds
+                # Test spatial bounds
+                spatial_bounds = era5_dataset.get_spatial_bounds()
+                assert spatial_bounds is not None
+                assert "lat_min" in spatial_bounds
+                assert "lat_max" in spatial_bounds
+                assert "lon_min" in spatial_bounds
+                assert "lon_max" in spatial_bounds
 
     def test_data_validation_with_real_dataset(self):
         """Test validation logic with a real xarray dataset"""

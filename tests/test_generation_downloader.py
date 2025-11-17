@@ -33,7 +33,7 @@ from weather.core.data_downloader import GenerationDataDownloader
 @pytest.fixture
 def test_data_dir() -> Path:
     """Return path to test data directory."""
-    return Path(__file__).parent / "data"
+    return Path(__file__).parent / "samples"
 
 
 @pytest.fixture
