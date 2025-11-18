@@ -1,0 +1,45 @@
+name: CI
+
+# When to run the workflow
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                python-version: ["3.12"]
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v3
+              with:
+                  version: "latest"
+
+            - name: Set up Python
+              run: uv python install ${{ matrix.python-version }}
+
+            - name: Install dependencies
+              run: |
+                  uv sync --group dev
+
+            - name: Run ruff linting and formatting
+              run: |
+                  uv run ruff format weather/ tests/
+                  uv run ruff check weather/ tests/
+
+            - name: Run type checking with basedpyright
+              run: |
+                  uv run basedpyright --warnings
+
+            - name: Run tests with coverage
+              run: |
+                  uv run pytest tests/ -v
+

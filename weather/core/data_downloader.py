@@ -5,9 +5,11 @@ from typing import Any
 
 import cdsapi
 import certifi
+import numpy as np
 import pandas as pd
 import requests
 import xarray as xr
+from tqdm import tqdm
 
 from weather.utils.constants import (
     AREA_BOUNDING_BOX_COORDINATES,
@@ -16,14 +18,18 @@ from weather.utils.constants import (
     CDS_API_KEY,
     CDS_API_URL,
     CFD_BMU_CSV_URL,
-    CFD_DATA_FILE_NAME,
     CFD_REGISTER_API_URL,
-    CFD_WIND_TECHNOLOGIES,
+    DEFAULT_SOLAR_VARIABLES,
+    DEFAULT_WIND_VARIABLES,
     DOWNLOAD_DATA_DIR,
     ELEXON_API_URL,
     ERA5_DATASET,
     ERA5_PRODUCT_TYPE,
-    ERA_VARIABLES,
+    GENERATION_DATE_FILE_NAME,
+    MARCH_FORWARD_MINUTES,
+    NORMAL_DAY_MINUTES,
+    OCTOBER_BACK_MINUTES,
+    PLANT_DATA_FILE_NAME,
 )
 from weather.utils.logger import get_logger
 from weather.utils.types import ParsedURL
@@ -60,7 +66,7 @@ class DataDownloader(ABC):
         """
         self.output_dir = self.output_dir / stem if stem else self.output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.logger.info(f"Data will be saved to: {self.output_dir}")
+        self.logger.debug(f"Data will be saved to: {self.output_dir}")
 
     @abstractmethod
     def download(self, *args: Any, **kwargs: Any) -> None:
@@ -120,7 +126,7 @@ class ERA5DataDownloader(DataDownloader):
 
             # Generate list of years from start to end (inclusive)
             years = list(range(start_year, end_year + 1))
-            self.logger.info(f"Extracted calibration years from date range: {years}")
+            self.logger.debug(f"Extracted calibration years from date range: {years}")
             return years
         except Exception as e:
             self.logger.error(f"Error extracting calibration years: {e}")
@@ -141,7 +147,7 @@ class ERA5DataDownloader(DataDownloader):
             Exception: If client initialization fails.
         """
         try:
-            self.logger.info(f"Initializing CDS API client for {self._api.domain}...")
+            self.logger.debug(f"Initializing CDS API client for {self._api.domain}...")
             if self._client is None:
                 if not self._api_key:
                     self.logger.error("CDS API key not found in environment variables.")
@@ -162,7 +168,7 @@ class ERA5DataDownloader(DataDownloader):
 
         Downloads hourly ERA5 data for all days and months of the specified year
         within the configured geographical bounding box. Data includes all
-        variables defined in ERA_VARIABLES constant.
+        standard wind and solar variables.
 
         Args:
             year: Year to download data for.
@@ -173,9 +179,12 @@ class ERA5DataDownloader(DataDownloader):
         """
         self.logger.info(f"Downloading ERA5 data for {year}...")
 
+        # Combine wind and solar variables for download
+        all_variables = DEFAULT_WIND_VARIABLES + DEFAULT_SOLAR_VARIABLES
+
         request = {
             "product_type": ERA5_PRODUCT_TYPE,
-            "variable": ERA_VARIABLES,
+            "variable": all_variables,
             "year": str(year),
             "month": [f"{m:02d}" for m in range(1, 13)],
             "day": [f"{d:02d}" for d in range(1, 32)],
@@ -208,6 +217,7 @@ class ERA5DataDownloader(DataDownloader):
             KeyError: If no datetime-like coordinate is found in the dataset.
             Exception: If file verification or metadata update fails.
         """
+        # Progress bar shows which year is being processed
         try:
             ds = xr.open_dataset(file_path)
 
@@ -216,7 +226,7 @@ class ERA5DataDownloader(DataDownloader):
                 self.logger.error(f"No datetime-like coordinate found in {file_path}.")
                 raise KeyError("No datetime-like coordinate found (expected 'time' or similar).")
 
-            self.logger.info(
+            self.logger.debug(
                 f"{year}.nc date range: {ds[datetime_coord].values[0]}  →  {ds[datetime_coord].values[-1]}"
             )
 
@@ -227,7 +237,7 @@ class ERA5DataDownloader(DataDownloader):
             ds.load()
             ds.close()
             ds.to_netcdf(file_path, mode="w")
-            self.logger.info(f"File verified and metadata updated: {file_path}")
+            self.logger.debug(f"File verified and metadata updated: {file_path}")
 
         except Exception as e:
             self.logger.error(f"Error verifying {year}: {e}")
@@ -259,18 +269,40 @@ class ERA5DataDownloader(DataDownloader):
         is saved as a separate NetCDF file in the era5 subdirectory.
         """
         years = self._extract_calibration_years()
+        existing_files = 0
+        downloaded_files = 0
 
-        for year in years:
-            file_path = self.output_dir / f"{year}.nc"
+        # Create logger-styled progress bar format
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with tqdm(
+            years,
+            desc="Processing ERA5 data",
+            unit="year",
+            bar_format="[INFO] - {desc}: {percentage:3.0f}%|{bar:20}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix} - [data_downloader] - "
+            + current_time,
+        ) as pbar:
+            for year in pbar:
+                file_path = self.output_dir / f"{year}.nc"
 
-            if file_path.exists():
-                self.logger.info(f"File already exists for {year}, verifying timestamps...")
-            else:
-                self._download_year(year, str(file_path))
+                if file_path.exists():
+                    pbar.set_postfix_str(f"verifying {year}.nc")
+                    self.logger.debug(f"File already exists for {year}, verifying timestamps...")
+                    existing_files += 1
+                else:
+                    pbar.set_postfix_str(f"downloading {year}.nc")
+                    self._download_year(year, str(file_path))
+                    downloaded_files += 1
 
-            self._verify_and_update_metadata(year, str(file_path))
+                pbar.set_postfix_str(f"verifying {year}.nc")
+                self._verify_and_update_metadata(year, str(file_path))
 
-        self.logger.info("ERA5 data saved and verified.")
+        total_files = len(years)
+        if downloaded_files > 0:
+            self.logger.info(
+                f"ERA5 data complete: {downloaded_files} downloaded, {existing_files} verified ({total_files} total files)"
+            )
+        else:
+            self.logger.info(f"ERA5 data verified: {total_files} files ({min(years)}-{max(years)})")
 
 
 class CfDDataDownloader(DataDownloader):
@@ -292,7 +324,7 @@ class CfDDataDownloader(DataDownloader):
         self._cfd_register_api = ParsedURL(CFD_REGISTER_API_URL)
         self._cfd_to_bmu_api = ParsedURL(CFD_BMU_CSV_URL)
 
-        self._update_output_directory(stem="cfd")
+        self._update_output_directory(stem="plant")
 
     def _download_cfd_bmu_csv(self) -> pd.DataFrame:
         """Download the CfD to BMU mapping CSV from the LCCC data portal.
@@ -312,7 +344,8 @@ class CfDDataDownloader(DataDownloader):
                 f"Reading CfD to BMU mapping CSV from {self._cfd_to_bmu_api.domain}..."
             )
             bmu_mapping = pd.read_csv(self._cfd_to_bmu_api.url)
-            bmu_mapping = bmu_mapping.filter(["CFD_Id", "BMU_Id"])
+            bmu_mapping.rename(columns={"CFD_Id": "cfd_id", "BMU_Id": "bmu_id"}, inplace=True)
+            bmu_mapping = bmu_mapping.filter(["cfd_id", "bmu_id"])
             self.logger.info("Loaded CSV into dataframe memory.")
             return bmu_mapping
         except Exception as e:
@@ -345,10 +378,8 @@ class CfDDataDownloader(DataDownloader):
             df = pd.DataFrame(data)
             self.logger.info(f"Loaded {len(df)} records into dataframe memory.")
 
-            # Filter for wind technologies and transform - no copy needed
-            tech_mask = df["technology_type"].isin(CFD_WIND_TECHNOLOGIES)
             cfd_df = df.loc[
-                tech_mask,
+                :,
                 [
                     "contract_id",
                     "latitude",
@@ -358,11 +389,9 @@ class CfDDataDownloader(DataDownloader):
                 ],
             ].rename(
                 columns={
-                    "contract_id": "CFD_Id",
-                    "latitude": "Latitude",
-                    "longitude": "Longitude",
-                    "technology_type": "Technology",
-                    "current_installed_capacity": "Maximum Capacity",
+                    "contract_id": "cfd_id",
+                    "technology_type": "technology",
+                    "current_installed_capacity": "capacity",
                 }
             )
 
@@ -376,20 +405,20 @@ class CfDDataDownloader(DataDownloader):
         """Download and merge CfD register and BMU mapping data.
 
         Downloads both the CfD register and BMU mapping datasets, merges them
-        on CFD_Id, and saves the combined dataset as a CSV file. If the output
+        on cfd_id, and saves the combined dataset as a CSV file. If the output
         file already exists, the download is skipped.
         """
-        if (self.output_dir / "cfd_with_bmu.csv").exists():
-            self.logger.info("Skipping downloading existing CfD data with BMU mapping...")
+        if (self.output_dir / PLANT_DATA_FILE_NAME).exists():
+            self.logger.debug("Skipping downloading existing CfD data with BMU mapping...")
 
         else:
             self.logger.info("Downloading CfD data with BMU mapping...")
             bmu_mapping = self._download_cfd_bmu_csv()
             cfd_register = self._download_cfd_register()
-            cfd_df = cfd_register.merge(bmu_mapping, on="CFD_Id", how="inner")
-            cfd_df.to_csv(self.output_dir / CFD_DATA_FILE_NAME, index=False)
+            cfd_df = cfd_register.merge(bmu_mapping, on="cfd_id", how="inner")
+            cfd_df.to_csv(self.output_dir / PLANT_DATA_FILE_NAME, index=False)
             self.logger.info(
-                f"CfD data with BMU mapping saved to {self.output_dir / CFD_DATA_FILE_NAME}"
+                f"CfD data with BMU mapping saved to {self.output_dir / PLANT_DATA_FILE_NAME}"
             )
 
 
@@ -410,22 +439,18 @@ class GenerationDataDownloader(DataDownloader):
         super().__init__()
         self._api = ParsedURL(ELEXON_API_URL)
 
-    def _get_bmu_ids(self) -> list[str]:
-        """Get BMU IDs from previously downloaded CfD data.
+    def _get_cfd_plants(self) -> pd.DataFrame:
+        """Load CfD plant data with BMU mapping from local CSV file.
 
-        Loads the CfD dataset with BMU mapping and extracts unique BMU
-        identifiers for generation data download. Requires that CfD data
-        has been downloaded previously.
+        Reads the previously downloaded CfD dataset containing plant
+        information and BMU identifiers. This data is used to identify
+        which BMU units to download generation data for.
 
         Returns:
-            List of unique BMU ID strings.
-
-        Raises:
-            FileNotFoundError: If CfD data file doesn't exist.
+            DataFrame containing CfD plant data with BMU mapping.
         """
-        self.logger.info("Loading BMU IDs from CfD data...")
-
-        cfd_data_path = self.output_dir / "cfd" / CFD_DATA_FILE_NAME
+        self.logger.info("Loading CfD plant data with BMU mapping...")
+        cfd_data_path = self.output_dir / "plant" / PLANT_DATA_FILE_NAME
         if not cfd_data_path.exists():
             self.logger.error(
                 f"CfD data file not found at {cfd_data_path}. Please download CfD data first."
@@ -433,11 +458,12 @@ class GenerationDataDownloader(DataDownloader):
             raise FileNotFoundError(f"CfD data file not found at {cfd_data_path}.")
 
         cfd_df = pd.read_csv(cfd_data_path)
-        bmu_ids = cfd_df["BMU_Id"].unique().tolist()
-        self.logger.info(f"Found {len(bmu_ids)} unique BMU IDs.")
-        return bmu_ids
+        self.bmu_ids: list[str] = cfd_df["bmu_id"].unique().tolist()
+        self.logger.info(f"Found {len(self.bmu_ids)} unique BMU IDs.")
 
-    def _download_generation_data(self, bmu_ids: list[str]) -> pd.DataFrame:
+        return cfd_df
+
+    def _download_generation_data(self) -> pd.DataFrame:
         """Download generation data from Elexon API for specified BMU units.
 
         Retrieves settled generation data for all provided BMU IDs within
@@ -454,14 +480,14 @@ class GenerationDataDownloader(DataDownloader):
         Raises:
             Exception: If API request fails or returns invalid data.
         """
-        self.logger.info("Downloading generation data...")
+        self.logger.info("Downloading generation data for CfD-associated BMUs...")
         try:
             self.logger.info(f"Fetching settled Elexon generation data from {self._api.url}...")
 
             params = {
                 "from": CALIBRATION_START_DATE,
                 "to": CALIBRATION_END_DATE,
-                "bmUnit": bmu_ids,
+                "bmUnit": self.bmu_ids,
                 "format": "json",
             }
 
@@ -481,6 +507,152 @@ class GenerationDataDownloader(DataDownloader):
             self.logger.error(f"Error downloading generation data: {e}")
             raise
 
+    def _get_day_type_from_period_counts(self, generation_df: pd.DataFrame) -> pd.Series:
+        """Determine day type by counting settlement periods per date.
+
+        - 48 periods = Normal day ('n')
+        - 46 periods = Short day/March forward ('s')
+        - 50 periods = Long day/October back ('l')
+
+        Returns 'n', 's', or 'l' for each row.
+        """
+        period_counts = generation_df.groupby("settlement_date")["settlement_period"].nunique()
+
+        # Create day type lookup per date using explicit mapping
+        date_to_day_type = pd.Series(index=period_counts.index, dtype=str)
+        date_to_day_type[period_counts == 48] = "n"
+        date_to_day_type[period_counts == 46] = "s"
+        date_to_day_type[period_counts == 50] = "l"
+
+        # We shouldn't have any other counts, log unexpected cases
+        unexpected_mask = date_to_day_type.isna()
+        if unexpected_mask.any():
+            unexpected_counts = period_counts[unexpected_mask]
+            self.logger.warning(f"Unexpected settlement period counts: {dict(unexpected_counts)}")
+            date_to_day_type = date_to_day_type.fillna("n")
+
+        day_type_series = generation_df["settlement_date"].map(
+            lambda x: date_to_day_type.get(x, "n")
+        )
+
+        return pd.Series(day_type_series, index=generation_df.index, dtype="category")
+
+    def _create_hourly_utc_datetime(self, generation_df: pd.DataFrame) -> pd.Series:
+        """Create hourly UTC datetimes from UK settlement periods using Elexon rules.
+
+        Converts UK settlement periods to UTC using official Elexon settlement period
+        bmu_mapping. This accounts for daylight saving time changes and ensures
+        correct hour alignment.
+
+        Reference: https://www.elexon.co.uk/bsc/settlement/
+
+        Expected outputs based on period counts:
+        - 48 periods ('n'): → 24 UTC hours
+        - 46 periods ('s'): → 23 UTC hours (periods 3&4 missing)
+        - 50 periods ('l'): → 25 UTC hours (periods 3&4 duplicated)
+
+        Args:
+            generation_df: DataFrame with settlement_date and settlement_period columns.
+
+        Returns:
+            Series of UTC datetime objects floored to hour boundaries.
+        """
+
+        # Create working copy with day type from period counts
+        df = generation_df.copy()
+        df["day_type"] = self._get_day_type_from_period_counts(df)
+
+        # Log day type distribution for debugging
+        day_type_counts = df["day_type"].value_counts()
+        self.logger.debug(f"Day type distribution: {day_type_counts.to_dict()}")
+
+        # Convert to numpy arrays for vectorized operations
+        normal_minuates_array = np.array(NORMAL_DAY_MINUTES)
+        short_minutes_array = np.array(MARCH_FORWARD_MINUTES)
+        long_minutes_array = np.array(OCTOBER_BACK_MINUTES)
+
+        # Vectorized lookup with proper array bounds for each day type
+        minutes_from_midnight = np.zeros(len(df), dtype=int)
+        periods_idx = df["settlement_period"] - 1  # Convert to 0-based indexing
+
+        # Apply correct array for each day type
+        normal_day_mask = df["day_type"] == "n"
+        short_day_mask = df["day_type"] == "s"
+        long_day_mask = df["day_type"] == "l"
+
+        minutes_from_midnight[normal_day_mask] = normal_minuates_array[periods_idx[normal_day_mask]]
+        minutes_from_midnight[short_day_mask] = short_minutes_array[periods_idx[short_day_mask]]
+        minutes_from_midnight[long_day_mask] = long_minutes_array[periods_idx[long_day_mask]]
+
+        df["minutes_from_midnight"] = minutes_from_midnight
+
+        # Build UK local datetimes
+        base_datetime = pd.to_datetime(df["settlement_date"])
+        settlement_datetime_naive = base_datetime + pd.to_timedelta(
+            df["minutes_from_midnight"].values,
+            unit="min",
+        )
+
+        # Localize to UK timezone
+        uk_timezone = settlement_datetime_naive.dt.tz_localize(
+            "Europe/London",
+            ambiguous="infer",  # Handle fall back duplicates
+            nonexistent="raise",  # Should never occur with proper Elexon mapping
+        )
+
+        # Convert to UTC and floor to hours
+        utc_datetime = uk_timezone.dt.tz_convert("UTC")
+        return utc_datetime.dt.floor("h")
+
+    def _aggregate_bmu_generation_to_cfd(
+        self, cfd_df: pd.DataFrame, generation_df: pd.DataFrame
+    ) -> pd.DataFrame:
+        """Process and aggregate generation data by CFD ID.
+
+        Merges the CFD plant data with the raw generation data on BMU ID,
+        then aggregates the generation quantities by CFD ID and hourly UTC datetime.
+        This accounts for cases where multiple BMUs are associated with a single
+        CFD contract.
+
+        Args:
+            cfd_df: DataFrame containing CFD plant data with BMU mapping.
+            generation_df: DataFrame containing raw generation data from Elexon.
+        Returns:
+            DataFrame with aggregated generation data by CFD ID and hourly UTC datetime.
+        """
+        generation_df = generation_df.copy()
+        generation_df = generation_df.rename(
+            columns={
+                "bmUnit": "bmu_id",
+                "settlementDate": "settlement_date",
+                "settlementPeriod": "settlement_period",
+            }
+        )
+
+        # Merge with CFD data first
+        generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id"]], on="bmu_id", how="left")
+
+        # Aggregate BMU data by CFD and settlement period first
+        aggregated_df = (
+            generation_df.groupby(
+                ["cfd_id", "settlement_date", "settlement_period"], as_index=False
+            )
+            .agg({"quantity": "sum"})
+            .round(2)
+        )
+
+        # Now create datetimes for the aggregated data
+        aggregated_df["time"] = self._create_hourly_utc_datetime(aggregated_df)
+
+        # Final aggregation to hourly by summing periods within each UTC hour
+        result = (
+            aggregated_df.groupby(["cfd_id", "time"], as_index=False)
+            .agg({"quantity": "sum"})
+            .round(2)
+        )
+
+        return result  # type: ignore[return-value]
+
     def download(self) -> None:
         """Download generation data for all CfD-associated BMU units.
 
@@ -489,16 +661,17 @@ class GenerationDataDownloader(DataDownloader):
         generation subdirectory. If the file already exists, download
         is skipped.
         """
-        bmu_ids = self._get_bmu_ids()
+        cfd_df = self._get_cfd_plants()
 
         self._update_output_directory(stem="generation")
-        output_file = self.output_dir / "generation_data.csv"
+        output_file = self.output_dir / GENERATION_DATE_FILE_NAME
         if output_file.exists():
-            self.logger.info("Generation data already exists, skipping download...")
+            self.logger.debug("Generation data already exists, skipping download...")
             return
 
-        df = self._download_generation_data(bmu_ids)
-        df.to_csv(output_file, index=False)
+        bmu_generation_df = self._download_generation_data()
+        generation_df = self._aggregate_bmu_generation_to_cfd(cfd_df, bmu_generation_df)
+        generation_df.to_csv(output_file, index=False)
         self.logger.info(f"Generation data saved to {output_file}")
 
 

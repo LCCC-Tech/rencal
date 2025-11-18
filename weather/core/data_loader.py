@@ -1,227 +1,196 @@
-import os
 from abc import ABC, abstractmethod
-from typing import List, Optional, Union, Dict, Any
 from pathlib import Path
-import pandas as pd
-import requests
-from datetime import datetime, timedelta, timezone
 
-from .dataset import Dataset
+import pandas as pd
+import xarray as xr
+
+from weather.models import ERA5DatasetModel, GenerationDatasetModel, PlantDatasetModel
+from weather.utils.constants import (
+    DEFAULT_SOLAR_VARIABLES,
+    DEFAULT_WIND_VARIABLES,
+    DOWNLOAD_DATA_DIR,
+    ERA5_VARIABLE_MAPPING,
+    GENERATION_DATE_FILE_NAME,
+    PLANT_DATA_FILE_NAME,
+    PLANT_ID_COLUMN,
+)
+from weather.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class DataLoader(ABC):
     """Abstract base class for loading different data sources"""
-    
-    @property
+
     @abstractmethod
-    def base_path(self) -> str:
+    def load_plant_data(self) -> PlantDatasetModel:
+        """Load CfD register with location/capacity data"""
         pass
 
     @abstractmethod
-    def load_cfd_register(self) -> Dataset:
-        """Load CfD register with location/capacity data"""
-        pass
-    
-    @abstractmethod 
-    def load_bmu_mapping(self) -> Dataset:
-        """Load CfD to BMU mapping"""
-        pass
-    
-    @abstractmethod
-    def load_generation_data(self, 
-                           cfd_ids: Optional[List[str]] = None,
-                           date_range: Optional[tuple] = None) -> Dataset:
+    def load_generation_data(self) -> GenerationDatasetModel:
         """Load settlement/generation time series"""
         pass
-    
+
     @abstractmethod
-    def load_era5_data(self, 
-                      variables: List[str],
-                      date_range: tuple,
-                      location_bounds: Optional[Dict[str, float]] = None) -> Dataset:
-        """Load ERA5 weather data"""
+    def load_era5_data(self) -> ERA5DatasetModel:
+        """Load ERA5 weather data using standard wind and solar variables"""
         pass
 
 
 class LocalDataLoader(DataLoader):
-    def __init__(self, data_path: Union[str, Path] = "./data"):
+    def __init__(self, data_path: str = DOWNLOAD_DATA_DIR) -> None:
         self._base_path = Path(data_path)
 
-    @property
-    def base_path(self) -> str:
-        return str(self._base_path)
-
-    @base_path.setter
-    def base_path(self, path: str):
-        self._base_path = Path(path)
-
-    def load_cfd_register(self) -> Dataset:
+    def load_plant_data(self, id_column: str = PLANT_ID_COLUMN) -> PlantDatasetModel:
         """Load CfD register with location/capacity data from Excel file"""
-        file_path = self._base_path / "CfD_Register.xlsx"
+        file_path = self._base_path / "plant" / PLANT_DATA_FILE_NAME
         if not file_path.exists():
-            raise FileNotFoundError(f"CfD Register file not found at {file_path}")
-        
-        df = pd.read_excel(file_path)
-        
-        # Apply filtering logic from notebook - only wind technologies
-        df_filtered = df[df["technology_type"].isin(["Onshore Wind", "Offshore Wind"])]
-        
-        # Standardize column names
-        df_filtered = df_filtered.rename(columns={
-            "contract_id": "CFD_Id", 
-            "latitude": "Latitude",
-            "longitude": "Longitude", 
-            "technology_type": "Technology",
-            "current_installed_capacity": "Maximum Capacity"
-        })
-        
-        # Select relevant columns
-        result_df = df_filtered[["CFD_Id", "Latitude", "Longitude", "Technology", "Maximum Capacity"]].copy()
-        
-        return Dataset(
-            data=result_df,
-            data_type="cfd_register",
+            raise FileNotFoundError(f"Plant data file not found at {file_path}")
+
+        df = pd.read_csv(file_path)
+        df = df.rename(columns={id_column: "plant_id"})
+
+        # Log summary info
+        total_plants = len(df)
+        total_capacity = df["capacity"].sum() if "capacity" in df.columns else 0
+
+        logger.info(
+            f"Plant data loaded: {total_plants} plants, {total_capacity:.1f}MW total capacity"
+        )
+
+        return PlantDatasetModel(
+            data=df,
             metadata={
                 "source": "local_excel",
                 "file_path": str(file_path),
-                "filtered": True,
-                "filter_criteria": "Onshore Wind, Offshore Wind only",
-                "original_rows": len(df),
-                "filtered_rows": len(result_df)
-            }
+            },
         )
-    
-    def load_bmu_mapping(self) -> Dataset:
-        """Load CfD to BMU mapping from CSV URL or local file"""
-        local_file = self._base_path / "cfd_to_bm_unit_mapping.csv"
-        
-        if local_file.exists():
-            df = pd.read_csv(local_file)
-            source_info = {"source": "local_csv", "file_path": str(local_file)}
-        else:
-            # Fallback to URL from notebook
-            url = "https://dp.lowcarboncontracts.uk/dataset/be8c542a-c66c-4a06-a3df-bc46db7416c0/resource/9316f493-365c-4abc-a40e-3a5e67119a0a/download/cfd_to_bm_unit_mapping.csv"
-            df = pd.read_csv(url)
-            source_info = {"source": "remote_csv", "url": url}
-        
-        # Select relevant columns
-        result_df = df[["CFD_Id", "BMU_Id"]].copy()
-        
-        return Dataset(
-            data=result_df,
-            data_type="bmu_mapping",
-            metadata=source_info
-        )
-    
-    def load_generation_data(self, 
-                           cfd_ids: Optional[List[str]] = None,
-                           date_range: Optional[tuple] = None) -> Dataset:
-        """Load generation data from BMRS API"""
-        if cfd_ids is None:
-            # Load all available CfD IDs from register and mapping
-            cfd_register = self.load_cfd_register()
-            bmu_mapping = self.load_bmu_mapping()
-            merged = cfd_register.merge_with(bmu_mapping, on="CFD_Id", how="inner")
-            bmu_ids = merged.data["BMU_Id"].unique().tolist()
-        else:
-            # Get BMU IDs for specified CfD IDs
-            bmu_mapping = self.load_bmu_mapping()
-            bmu_ids = bmu_mapping.data[bmu_mapping.data["CFD_Id"].isin(cfd_ids)]["BMU_Id"].tolist()
-        
-        if not bmu_ids:
-            raise ValueError("No BMU IDs found for the specified CfD IDs")
-        
-        # Set date range
-        if date_range is None:
-            start_utc = "2023-01-01T00:00:00Z"
-            end_utc = (datetime.now(timezone.utc) - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        else:
-            start_utc = date_range[0]
-            end_utc = date_range[1]
-        
-        # Fetch data from BMRS API
-        url = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
-        params = {
-            "from": start_utc,
-            "to": end_utc,
-            "bmUnit": bmu_ids,
-            "format": "json"
-        }
-        
-        response = requests.get(url, params=params, timeout=60, verify=False)
-        response.raise_for_status()
-        payload = response.json()
-        
-        # Parse response
-        rows = payload if isinstance(payload, list) else payload.get("data", [])
-        df = pd.DataFrame(rows)
-        
-        if df.empty:
-            raise ValueError("No generation data returned from BMRS API")
-        
-        # Clean and standardize data
-        df["settlementDate"] = pd.to_datetime(df["settlementDate"]).dt.date
-        df["settlementPeriod"] = pd.to_numeric(df["settlementPeriod"], errors="coerce")
-        df["quantity"] = pd.to_numeric(df["quantity"], errors="coerce")
-        df.rename(columns={"bmUnit": "BMU_Id"}, inplace=True)
-        
-        # Merge with CfD mapping to add CFD_Id
-        bmu_mapping = self.load_bmu_mapping()
-        df_with_cfd = df.merge(bmu_mapping.data[["BMU_Id", "CFD_Id"]], on="BMU_Id", how="left")
-        
-        # Aggregate by CFD_Id if multiple BMUs per CfD
-        df_aggregated = (
-            df_with_cfd.groupby(["CFD_Id", "settlementDate", "settlementPeriod"], as_index=False)["quantity"]
-            .sum()
-            .round(2)
-        )
-        
-        return Dataset(
-            data=df_aggregated,
-            data_type="generation",
-            metadata={
-                "source": "bmrs_api",
-                "date_range": {"start": start_utc, "end": end_utc},
-                "bmu_count": len(bmu_ids),
-                "api_url": url,
-                "aggregated": True
-            }
-        )
-    
-    def load_era5_data(self, 
-                      variables: List[str],
-                      date_range: tuple,
-                      location_bounds: Optional[Dict[str, float]] = None) -> Dataset:
-        """Load ERA5 weather data from NetCDF files"""
-        # This is a stub implementation - users need to implement based on their ERA5 data structure
-        # Expected variables: ['u100', 'v100'] for wind, ['ssrd', 't2m'] for solar
-        
-        era5_files = list(self._base_path.glob("*.nc"))
-        if not era5_files:
-            raise FileNotFoundError(f"No ERA5 NetCDF files found in {self._base_path}")
-        
-        # Placeholder implementation - would need xarray to properly load NetCDF
-        # For now, return a minimal structure
-        df = pd.DataFrame({
-            'time': pd.date_range(date_range[0], date_range[1], freq='h'),
-            'latitude': [55.0] * pd.date_range(date_range[0], date_range[1], freq='h').shape[0],
-            'longitude': [-4.0] * pd.date_range(date_range[0], date_range[1], freq='h').shape[0],
-        })
-        
-        # Add requested variables with placeholder data
-        for var in variables:
-            df[var] = 0.0  # Placeholder - real implementation would load from NetCDF
-        
-        return Dataset(
+
+    def load_generation_data(self, id_column: str = PLANT_ID_COLUMN) -> GenerationDatasetModel:
+        """Load settlement/generation time series from CSV file
+
+        Args:
+            id_column (str): Column name for plant ID in the generation dataset
+        Returns:
+            GenerationDataset: Dataset containing generation time series
+        """
+        file_path = self._base_path / "generation" / GENERATION_DATE_FILE_NAME
+        if not file_path.exists():
+            raise FileNotFoundError(f"Generation data file not found at {file_path}")
+
+        df = pd.read_csv(file_path, parse_dates=["time"])
+        df = df.rename(columns={id_column: "plant_id"})
+
+        # Log summary info
+        total_records = len(df)
+        unique_plants = df["plant_id"].nunique() if "plant_id" in df.columns else 0
+
+        logger.info(f"Generation data loaded: {total_records} records, {unique_plants} plants")
+
+        return GenerationDatasetModel(
             data=df,
-            data_type="era5",
+            metadata={
+                "source": "elexon_api",
+                "aggregated": True,
+            },
+        )
+
+    def _check_time_dimension(self, ds: xr.Dataset) -> None:
+        """Check if the dataset has a valid time dimension"""
+        if "valid_time" not in ds.dims:
+            raise ValueError(
+                "Dataset does not contain a valid time dimension ('valid_time' or 'time')"
+            )
+
+    def _combine_datasets_on_time_dimension(self, datasets: list[xr.Dataset]) -> xr.Dataset:
+        """Combine multiple xarray Datasets on the time dimension"""
+        combined_ds: xr.Dataset
+        if len(datasets) > 1:
+            # Assume files are split by time and concatenate along valid_time dimension
+            try:
+                combined_ds = xr.concat(datasets, dim="valid_time")
+                # Sort by time to ensure chronological order
+                combined_ds = combined_ds.sortby("valid_time")
+                logger.debug(f"Successfully concatenated and sorted {len(datasets)} NetCDF files")
+            except Exception as e:
+                logger.error(f"Failed to concatenate datasets on time dimension: {e}")
+                raise ValueError(f"Failed to concatenate NetCDF files: {e}") from e
+        else:
+            combined_ds = datasets[0]
+            logger.debug("Using single NetCDF file")
+        return combined_ds
+
+    def _filter_dataset_variables(self, ds: xr.Dataset) -> xr.Dataset:
+        # Find available ERA5 variables in the dataset (checking both naming conventions)
+        available_vars = list(ds.data_vars.keys())
+        requested_vars: list[str] = []
+        logger.debug(f"Available variables in dataset: {available_vars}")
+
+        # Check for standard wind and solar variables
+        standard_variables = DEFAULT_WIND_VARIABLES + DEFAULT_SOLAR_VARIABLES
+        for era5_var in standard_variables:
+            name = ERA5_VARIABLE_MAPPING.get(era5_var)
+            if name is not None and name in available_vars:
+                requested_vars.append(name)
+
+        if not requested_vars:
+            raise ValueError(
+                f"No standard ERA5 variables found in data. Available variables: {available_vars}"
+            )
+
+        ds = ds[requested_vars]
+        logger.debug(f"Filtered dataset to ERA5 variables: {requested_vars}")
+        return ds
+
+    def load_era5_data(self) -> ERA5DatasetModel:
+        """Load ERA5 weather data from NetCDF files using standard variables
+
+        Automatically discovers and loads all available NetCDF files, filtering for
+        standard ERA5 variables defined in DEFAULT_WIND_VARIABLES and DEFAULT_SOLAR_VARIABLES.
+        No date filtering is applied - users can filter post-load using the dataset's filter methods.
+
+        Returns:
+            ERA5Dataset: Dataset containing all available ERA5 weather data
+
+        Raises:
+            FileNotFoundError: If no NetCDF files found in the data path
+            ValueError: If no standard ERA5 variables are found in the data
+        """
+        directory_path = self._base_path / "era5"
+        era5_files = list(directory_path.glob("*.nc"))
+        if not era5_files:
+            raise FileNotFoundError(f"No ERA5 NetCDF files found in {directory_path}")
+
+        # Load all NetCDF files and concatenate if multiple files exist
+        datasets: list[xr.Dataset] = []
+        for file_path in era5_files:
+            try:
+                ds = xr.open_dataset(file_path)
+                self._check_time_dimension(ds)
+                datasets.append(ds)
+                logger.debug(f"Successfully loaded {file_path}")
+            except Exception as e:
+                logger.warning(f"Failed to load {file_path}: {e}")
+                continue
+
+        if not datasets:
+            raise ValueError("Failed to load any NetCDF files successfully")
+
+        combined_ds = self._combine_datasets_on_time_dimension(datasets)
+        combined_ds = self._filter_dataset_variables(combined_ds)
+        combined_ds = combined_ds.rename({"valid_time": "time"})
+
+        # Summary log
+        logger.info(
+            f"ERA5 data loaded: {len(era5_files)} files, {combined_ds.sizes['time']} time periods"
+        )
+
+        return ERA5DatasetModel(
+            data=combined_ds,
             metadata={
                 "source": "local_netcdf",
-                "data_path": str(self._base_path),
-                "variables": variables,
-                "date_range": date_range,
-                "location_bounds": location_bounds,
-                "files_found": len(era5_files),
-                "note": "Stub implementation - implement NetCDF loading with xarray"
-            }
+                "total_files_found": len(era5_files),
+                "dimensions": dict(combined_ds.sizes),
+            },
         )

@@ -8,11 +8,11 @@
 # There is no main output, as the class functions more like an abstract class template of shared logic.
 
 import datetime
-import numpy as np
 
+import numpy as np
 from scipy.optimize import minimize
 from scipy.special import rel_entr
-from bisect import bisect_left
+
 
 class BucketedData:
     """
@@ -24,9 +24,9 @@ class BucketedData:
 
     There is no main output, as the class functions more like an abstract class template of shared logic.
     """
+
     def __init__(self):
         pass
-
 
     def crop_Time_Margins_To_Full_Years(self):
         """
@@ -48,28 +48,34 @@ class BucketedData:
 
         # We need at least a year's worth of data to create unbiased yearly distributions:
         if (self.historical_End_Date - start_date) < datetime.timedelta(365.2425):
-            raise ValueError("There is insufficient historical data to have a full picture of the yearly distribution")
+            raise ValueError(
+                "There is insufficient historical data to have a full picture of the yearly distribution"
+            )
 
         return start_date
 
     # Function returns a summary of the discrete PDF of the historical (cropped) data:
-    def get_Historical_PDF(self, plant_no = None):
+    def get_Historical_PDF(self, plant_no=None):
         """
         Function returns a summary of the discrete PDF of the historical (cropped) data.
 
         Args:
             plant_no (int): The plant number to get the historical PDF for. Defaults to None.
         """
-        if plant_no != None:
+        if plant_no is not None:
             historical_data = self.historical_Data[:, plant_no]
         else:
             historical_data = self.historical_Data
-            
-        weights = np.ones_like(historical_data) / len(historical_data) # Used these weights for the histogram such that the sum of all of the columns it yields is 1
-        auto_bins = np.histogram_bin_edges(historical_data, bins = 100) # Use "auto" for the best of both worlds (both small and large samples) in terms of minimizing the differences in area between the histogram and the theoretical continuous PDF
+
+        weights = (
+            np.ones_like(historical_data) / len(historical_data)
+        )  # Used these weights for the histogram such that the sum of all of the columns it yields is 1
+        auto_bins = np.histogram_bin_edges(
+            historical_data, bins=100
+        )  # Use "auto" for the best of both worlds (both small and large samples) in terms of minimizing the differences in area between the histogram and the theoretical continuous PDF
 
         # np.histogram returns us the histogram column values as well as the bins in the second variable:
-        hist1, hist2 = np.histogram(historical_data, weights = weights, bins = auto_bins)
+        hist1, hist2 = np.histogram(historical_data, weights=weights, bins=auto_bins)
 
         return hist1.astype(np.float64), hist2.astype(np.float64)
 
@@ -93,8 +99,9 @@ class BucketedData:
             future_end_date (datetime.datetime): The adjusted end date of the future horizon.
             hours_needed (int): The actual number of hours we need to return on a ``random_Sample()`` call to make sure we fill only the user-requested horizon and nothing more.
         """
-        return future_end_date + datetime.timedelta(days = self.draw_Period), int((future_end_date - future_start_date).total_seconds() // 3600 + 24)
-
+        return future_end_date + datetime.timedelta(days=self.draw_Period), int(
+            (future_end_date - future_start_date).total_seconds() // 3600 + 24
+        )
 
     @staticmethod
     def compute_Time_Margins(dataframe):
@@ -111,9 +118,13 @@ class BucketedData:
             end_date (pandas.Timestamp): The datetime of the last entry in the dataframe, rounded backward 2 previous midnights, unless already 11PM, in which case we round to just the previous midnight.
         """
         start_datetime = dataframe.iloc[0, 0]
-        start_date = start_datetime + datetime.timedelta(hours = 24 - (24 if start_datetime.hour == 0 else start_datetime.hour))
+        start_date = start_datetime + datetime.timedelta(
+            hours=24 - (24 if start_datetime.hour == 0 else start_datetime.hour)
+        )
         end_datetime = dataframe.iloc[len(dataframe.iloc[:, 0]) - 1, 0]
-        end_date = end_datetime - datetime.timedelta(hours = (24 if end_datetime.hour != 23 else 0) + end_datetime.hour)
+        end_date = end_datetime - datetime.timedelta(
+            hours=(24 if end_datetime.hour != 23 else 0) + end_datetime.hour
+        )
 
         return start_datetime, start_date, end_datetime, end_date
 
@@ -125,20 +136,29 @@ class BucketedData:
     # Returns a distribution promised to be "just like" the previous_distribution in terms of information content, but with a different desired_average:
     @staticmethod
     def compute_Optimized_Distribution(previous_distribution, bins, desired_average):
-        avg = bins[:len(bins) - 1] + ((bins[1:] - bins[:len(bins) - 1]) / 2) # This computes the midpoints of each bin in the histogram
+        avg = bins[: len(bins) - 1] + (
+            (bins[1:] - bins[: len(bins) - 1]) / 2
+        )  # This computes the midpoints of each bin in the histogram
 
-        cons=({'type': 'eq',
-               'fun': lambda x: sum(x) - 1},
-              {'type': 'eq',
-               'fun': lambda x: np.sum(avg * x) - desired_average})
+        cons = (
+            {"type": "eq", "fun": lambda x: sum(x) - 1},
+            {"type": "eq", "fun": lambda x: np.sum(avg * x) - desired_average},
+        )
 
-        x0 = previous_distribution # The initial guess matches our initial probability distribution
+        x0 = previous_distribution  # The initial guess matches our initial probability distribution
         bnds = [(0, 1) for _ in range(len(x0))]
-        
-        res = minimize(lambda new_distribution: BucketedData.KL_Divergence(previous_distribution, new_distribution), x0, constraints = cons, bounds = bnds, options = {"maxiter": 5000})
 
-        if res.success == True:
+        res = minimize(
+            lambda new_distribution: BucketedData.KL_Divergence(
+                previous_distribution, new_distribution
+            ),
+            x0,
+            constraints=cons,
+            bounds=bnds,
+            options={"maxiter": 5000},
+        )
+
+        if res.success:
             return res.x
         else:
             raise ValueError("Optimization is not working properly")
-
