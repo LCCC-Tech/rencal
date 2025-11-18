@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 import xarray as xr
+from pydantic import ValidationError
 
 from weather.core.data_loader import LocalDataLoader
 from weather.models import ERA5DatasetModel
@@ -67,8 +68,8 @@ class TestERA5DataLoaderIntegration:
     def test_era5_dataset_validation_wrong_type(self):
         """Test that ERA5DatasetModel validates input type"""
         # Should raise Pydantic ValidationError for wrong type
-        with pytest.raises(Exception):  # Pydantic ValidationError
-            ERA5DatasetModel(data=MagicMock())  # type: ignore
+        with pytest.raises(ValidationError):
+            ERA5DatasetModel(data=MagicMock())
 
     def test_error_handling_with_invalid_files(self):
         """Test that errors are properly handled with invalid NetCDF files"""
@@ -81,8 +82,8 @@ class TestERA5DataLoaderIntegration:
 
             loader = LocalDataLoader(data_path=tmpdir)
 
-            # Should raise some exception during loading
-            with pytest.raises(Exception):
+            # Should raise ValueError when unable to load invalid NetCDF files
+            with pytest.raises(ValueError):
                 loader.load_era5_data()
 
 
@@ -126,13 +127,14 @@ class TestERA5DataLoaderFunctional:
 
             # Patch xr.open_dataset to use scipy engine to avoid netCDF4 compatibility issues
             original_open_dataset = xr.open_dataset
+
             def patched_open_dataset(path, **kwargs):
                 # Force scipy engine if no engine specified
-                if 'engine' not in kwargs:
-                    kwargs['engine'] = 'scipy'
+                if "engine" not in kwargs:
+                    kwargs["engine"] = "scipy"
                 return original_open_dataset(path, **kwargs)
-            
-            with patch('xarray.open_dataset', side_effect=patched_open_dataset):
+
+            with patch("xarray.open_dataset", side_effect=patched_open_dataset):
                 # Test the ERA5 loading API
                 loader = LocalDataLoader(data_path=str(tmpdir_path))
                 era5_dataset = loader.load_era5_data()

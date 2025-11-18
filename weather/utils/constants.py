@@ -90,16 +90,16 @@ NORMAL_DAY_MINUTES = [i * 30 for i in range(50)]  # [0, 30, 60, 90, ...] up to p
 # March Forward Day (s): 46 periods, skip 01:00-02:00 UK time
 # Periods 1-2: normal timing, Periods 3-46: add 60-minute offset for missing hour
 MARCH_FORWARD_MINUTES = (
-    [0, 30] +  # Periods 1-2: 00:00, 00:30
-    [(i * 30) + 60 for i in range(2, 46)]  # Periods 3-46: skip missing hour
+    [0, 30]  # Periods 1-2: 00:00, 00:30
+    + [(i * 30) + 60 for i in range(2, 46)]  # Periods 3-46: skip missing hour
 )
 
 # October Back Day (l): 50 periods, duplicate 01:00-02:00 UK time
 # Periods 1-4: normal, 5-6: duplicate hour, 7+: continue normally
 OCTOBER_BACK_MINUTES = (
-    [i * 30 for i in range(4)] +  # Periods 1-4: [0, 30, 60, 90]
-    [60, 90] +  # Periods 5-6: duplicate 01:00-02:00
-    [(i * 30) for i in range(4, 48)]  # Periods 7-50: [120, 150, ..., 1410]
+    [i * 30 for i in range(4)]  # Periods 1-4: [0, 30, 60, 90]
+    + [60, 90]  # Periods 5-6: duplicate 01:00-02:00
+    + [(i * 30) for i in range(4, 48)]  # Periods 7-50: [120, 150, ..., 1410]
 )
 
 # Logging Configuration

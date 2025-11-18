@@ -9,4 +9,4 @@ PLANT_ID_COLUMN: "cfd_id"
 
 # Logging Configuration
 QUIET_MODE: false
-VERBOSE_MODE: true
+VERBOSE_MODE: false
