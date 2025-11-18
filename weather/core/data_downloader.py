@@ -531,7 +531,9 @@ class GenerationDataDownloader(DataDownloader):
             self.logger.warning(f"Unexpected settlement period counts: {dict(unexpected_counts)}")
             date_to_day_type = date_to_day_type.fillna("n")
 
-        day_type_series = generation_df["settlement_date"].map(date_to_day_type)
+        day_type_series = generation_df["settlement_date"].map(
+            lambda x: date_to_day_type.get(x, "n")
+        )
 
         return pd.Series(day_type_series, index=generation_df.index, dtype="category")
 
@@ -627,12 +629,24 @@ class GenerationDataDownloader(DataDownloader):
             }
         )
 
-        generation_df["time"] = self._create_hourly_utc_datetime(generation_df)
+        # Merge with CFD data first
         generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id"]], on="bmu_id", how="left")
 
-        # Aggregate to hourly by summing periods within each UTC hour
+        # Aggregate BMU data by CFD and settlement period first
+        aggregated_df = (
+            generation_df.groupby(
+                ["cfd_id", "settlement_date", "settlement_period"], as_index=False
+            )
+            .agg({"quantity": "sum"})
+            .round(2)
+        )
+
+        # Now create datetimes for the aggregated data
+        aggregated_df["time"] = self._create_hourly_utc_datetime(aggregated_df)
+
+        # Final aggregation to hourly by summing periods within each UTC hour
         result = (
-            generation_df.groupby(["cfd_id", "time"], as_index=False)
+            aggregated_df.groupby(["cfd_id", "time"], as_index=False)
             .agg({"quantity": "sum"})
             .round(2)
         )
