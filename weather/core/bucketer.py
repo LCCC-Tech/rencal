@@ -52,7 +52,7 @@ class Bucketer:
         # Represents the number of categories the bucketer needs for additional filtering
         self._categories = categories
 
-        if not isinstance(bucket_definition, list):
+        if not type(bucket_definition) == list:
             raise TypeError("The bucket definition provided is not a list")
         if not len(bucket_definition) >= 2:
             raise ValueError("The bucket definition does not define a proper partition of a year")

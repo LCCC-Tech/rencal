@@ -57,7 +57,6 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "openpyxl>=3.1.0",
     "zarr>=2.16.1",
-    "tqdm>=4.62.0",
 ]
 
 [dependency-groups]
@@ -109,16 +108,16 @@ weather = ["data/*.csv", "data/*.json", "calibration/templates/*"]
 
 [tool.basedpyright]
 include = ["weather"]
-exclude = [".venv", "build", "dist", "weather/simulation/intermittent_bucketer.py", "weather/core/bucketed_data.py",]
+exclude = [".venv", "build", "dist"]
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"
-typeCheckingMode = "basic"  # Changed from strict to basic to reduce false positives
+typeCheckingMode = "strict"
 reportMissingImports = true
 reportMissingTypeStubs = false
 reportUnusedImport = true
-reportUnusedClass = false  # Reduce noise for now
-reportUnusedFunction = false  # Reduce noise for now
+reportUnusedClass = true
+reportUnusedFunction = true
 reportUnusedVariable = true
 # Less strict about third-party library types
 reportUnknownMemberType = false
@@ -126,8 +125,6 @@ reportUnknownVariableType = false
 reportUnknownArgumentType = false
 # Disable overly strict argument type checking for third-party libraries
 reportArgumentType = false
-# Additional settings to help with import resolution
-extraPaths = ["."]
 
 [tool.ruff]
 line-length = 100
