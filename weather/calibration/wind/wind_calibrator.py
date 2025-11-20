@@ -3,29 +3,29 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from matplotlib import pyplot as plt
+
 import numpy as np
 import pandas as pd
-from scipy.stats import weibull_min
-from scipy.optimize import curve_fit
+from matplotlib import pyplot as plt
 from scipy.integrate import quad
-
-from ..calibrator import Calibrator
+from scipy.optimize import curve_fit
+from scipy.stats import weibull_min
 
 from ...utils.constants import (
-    DEFAULT_LOGISTIC_FN_XLOC,
     DEFAULT_LOGISTIC_FN_ASYMMETRY,
     DEFAULT_LOGISTIC_FN_STEEPNESS,
-    LOGISTIC_FN_STEEPNESS_LBOUND,
-    LOGISTIC_FN_STEEPNESS_HBOUND,
-    LOGISTIC_FN_XLOC_LBOUND,
-    LOGISTIC_FN_XLOC_HBOUND,
-    LOGISTIC_FN_ASYMMETRY_LBOUND,
+    DEFAULT_LOGISTIC_FN_XLOC,
     LOGISTIC_FN_ASYMMETRY_HBOUND,
+    LOGISTIC_FN_ASYMMETRY_LBOUND,
     LOGISTIC_FN_MAXEVAL,
-    WIND_SPEED_LBOUND,
+    LOGISTIC_FN_STEEPNESS_HBOUND,
+    LOGISTIC_FN_STEEPNESS_LBOUND,
+    LOGISTIC_FN_XLOC_HBOUND,
+    LOGISTIC_FN_XLOC_LBOUND,
     WIND_SPEED_HBOUND,
+    WIND_SPEED_LBOUND,
 )
+from ..calibrator import Calibrator
 
 
 class WindCalibrator(Calibrator):
