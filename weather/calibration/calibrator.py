@@ -9,6 +9,17 @@ from ..utils.constants import NOT_IMPLEMENTED_ERROR_DESC
 class Calibrator(ABC):
 
     def __init__(self, data_path: str = None, plant_id_col: str = None):
+        """
+        Initialise a calibrator instance.
+
+        The Calibrator is an abstract class that specifies the methods any intermittent
+        generator's calibration should include, as well as setting up and loading input
+        datasets from the configuration file or user-specified paths.
+
+        Args:
+            data_path (str): Path to the directory containing the input data files.
+            plant_id_col (str): Name of the ID column designating a power plant in the input.
+        """
         self.loader = LocalDataLoader(data_path)
         self.plant_data = self.loader.load_plant_data(plant_id_col) \
             if plant_id_col else self.loader.load_plant_data()
@@ -30,12 +41,12 @@ class Calibrator(ABC):
     def estimate_load_factors_for_resource(self) -> None:
         """Estimates load factors based on historical distribution and full resource availability."""
         raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
-    
+
     @abstractmethod
     def output_estimated_load_factors_tabular(self) -> None:
         """Outputs table of estimated load factors."""
         raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
-    
+
     @abstractmethod
     def output_estimated_load_factors_visual(self) -> None:
         """Outputs a series of plots of estimated load factors and calibrated curves."""
