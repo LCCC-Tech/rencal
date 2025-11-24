@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 import xarray as xr
+from numpy import float32, float64
 
 from weather.models import ERA5DatasetModel, GenerationDatasetModel, PlantDatasetModel
 from weather.utils.constants import (
@@ -96,22 +97,25 @@ class LocalDataLoader(DataLoader):
             },
         )
 
-    def _check_time_dimension(self, ds: xr.Dataset) -> None:
+    def _get_time_dimension(self, ds: xr.Dataset) -> None:
         """Check if the dataset has a valid time dimension"""
-        if "valid_time" not in ds.dims:
-            raise ValueError(
-                "Dataset does not contain a valid time dimension ('valid_time' or 'time')"
-            )
+        if "time" in ds.dims:
+            return "time"
+        if "valid_time" in ds.dims:
+            return "valid_time"
+        raise ValueError(
+            "Dataset does not contain a valid time dimension ('valid_time' or 'time')"
+        )
 
     def _combine_datasets_on_time_dimension(self, datasets: list[xr.Dataset]) -> xr.Dataset:
         """Combine multiple xarray Datasets on the time dimension"""
         combined_ds: xr.Dataset
         if len(datasets) > 1:
-            # Assume files are split by time and concatenate along valid_time dimension
+            # Assume files are split by time and concatenate along time dimension
             try:
-                combined_ds = xr.concat(datasets, dim="valid_time")
+                combined_ds = xr.concat(datasets, dim="time")
                 # Sort by time to ensure chronological order
-                combined_ds = combined_ds.sortby("valid_time")
+                combined_ds = combined_ds.sortby("time")
                 logger.debug(f"Successfully concatenated and sorted {len(datasets)} NetCDF files")
             except Exception as e:
                 logger.error(f"Failed to concatenate datasets on time dimension: {e}")
@@ -143,6 +147,20 @@ class LocalDataLoader(DataLoader):
         logger.debug(f"Filtered dataset to ERA5 variables: {requested_vars}")
         return ds
 
+    def _cast_data_variables_to_float32(self, ds: xr.Dataset) -> xr.Dataset:
+        """Casts all data variables to np.float32 if they are in np.float64.
+
+        Args:
+            ds (xr.Dataset): Dataset to convert data variables of.
+
+        Returns:
+            xr.Dataset: Dataset with float64 data variables converted to float32.
+        """
+        for data_var in ds.data_vars:
+            if ds[data_var].dtype == float64:
+                ds[data_var] = ds[data_var].astype(float32, casting="same_kind")
+        return ds
+
     def load_era5_data(self) -> ERA5DatasetModel:
         """Load ERA5 weather data from NetCDF files using standard variables
 
@@ -167,7 +185,9 @@ class LocalDataLoader(DataLoader):
         for file_path in era5_files:
             try:
                 ds = xr.open_dataset(file_path)
-                self._check_time_dimension(ds)
+                time_dim = self._get_time_dimension(ds)
+                ds.rename({time_dim: "time"})
+                ds = self._cast_data_variables_to_float32(ds)
                 datasets.append(ds)
                 logger.debug(f"Successfully loaded {file_path}")
             except Exception as e:
@@ -179,7 +199,6 @@ class LocalDataLoader(DataLoader):
 
         combined_ds = self._combine_datasets_on_time_dimension(datasets)
         combined_ds = self._filter_dataset_variables(combined_ds)
-        combined_ds = combined_ds.rename({"valid_time": "time"})
 
         # Summary log
         logger.info(
