@@ -45,10 +45,22 @@ class WindCalibrator(Calibrator):
             plant_id_col = PLANT_ID_COLUMN
         super().__init__(**super_args)
         self.plant_id_col = plant_id_col
-        self.plants = self.plants[self.plants["technology"] in WIND_TECHNOLOGY_TYPES]
+        self.plants.data = self.plants.data[self.plants.data["technology"].isin(WIND_TECHNOLOGY_TYPES)]
         self.all_cfd_ids = self.generation.data[self.plant_id_col].unique()
         self.output_path = output_path
         self.visual_output = visual_output
+        self.plant_wind_speeds = None
+
+    def calibrate(self) -> None:
+        """Triggers calibration workflow."""
+        self.plant_wind_speeds = self.extract_resource_timeseries_for_plants()
+        self.aggregate_generation_hourly()
+        self.calculate_historical_load_factors()
+        self.fit_historical_load_factor_distribution()
+        self.estimate_load_factors_for_resource()
+        self.output_estimated_load_factors_tabular(self.output_path)
+        if self.visual_output:
+            self.output_estimated_load_factors_visual(self.output_path)
 
     def extract_resource_timeseries_for_plants(self) -> pd.DataFrame:
         """Extracts resource data for plants into a DataFrame."""
