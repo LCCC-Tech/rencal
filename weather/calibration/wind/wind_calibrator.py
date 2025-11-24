@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 from matplotlib import pyplot as plt
 from scipy.integrate import quad
 from scipy.optimize import curve_fit
@@ -22,8 +23,10 @@ from ...utils.constants import (
     LOGISTIC_FN_STEEPNESS_LBOUND,
     LOGISTIC_FN_XLOC_HBOUND,
     LOGISTIC_FN_XLOC_LBOUND,
+    PLANT_ID_COLUMN,
     WIND_SPEED_HBOUND,
     WIND_SPEED_LBOUND,
+    WIND_TECHNOLOGY_TYPES,
 )
 from ..calibrator import Calibrator
 
@@ -31,12 +34,35 @@ from ..calibrator import Calibrator
 class WindCalibrator(Calibrator):
     """Calibrates wind power curves for a set of timestamps and CFD IDs."""
 
-    def __init__(self, data_path: str | Path | None, output_path: str | Path, visual_output: bool) -> None:
+    def __init__(self, data_path: str = None, plant_id_col: str = None, output_path: str = Path.cwd(), visual_output: bool = False) -> None:
         """Constructor for the WindCalibrator class."""
-        super().__init__(data_path)
-        self.all_cfd_ids = self.generation.data["CFD_Id"].unique()
+        super_args = {}
+        if data_path:
+            super_args["data_path"] = data_path
+        if plant_id_col:
+            super_args["plant_id_col"] = plant_id_col
+        else:
+            plant_id_col = PLANT_ID_COLUMN
+        super().__init__(**super_args)
+        self.plant_id_col = plant_id_col
+        self.plants = self.plants[self.plants["technology"] in WIND_TECHNOLOGY_TYPES]
+        self.all_cfd_ids = self.generation.data[self.plant_id_col].unique()
         self.output_path = output_path
         self.visual_output = visual_output
+
+    def extract_resource_timeseries_for_plants(self) -> pd.DataFrame:
+        """Extracts resource data for plants into a DataFrame."""
+        unique_plant_locations = self.plants.data[
+            self.plants.data[PLANT_ID_COLUMN].isin(self.all_cfd_ids)
+        ].drop_duplicates(PLANT_ID_COLUMN)[[PLANT_ID_COLUMN, "latitude", "longitude"]]
+        unique_plant_dim = xr.DataArray(unique_plant_locations[PLANT_ID_COLUMN].to_numpy(), dims=PLANT_ID_COLUMN)
+        plant_wind_speeds = self.resource.data.sel(
+            longitude=xr.DataArray(unique_plant_locations["longitude"].to_numpy(), dims=PLANT_ID_COLUMN),
+            latitude=xr.DataArray(unique_plant_locations["latitude"].to_numpy(), dims=PLANT_ID_COLUMN),
+            method="nearest"
+        )
+        plant_wind_speeds[PLANT_ID_COLUMN] = unique_plant_dim
+        return plant_wind_speeds.to_dataframe().reset_index(drop=False)[["time", PLANT_ID_COLUMN, "wind_speed"]]
 
     def aggregate_generation_hourly(self) -> None:
         """Calculates hourly generation data."""
