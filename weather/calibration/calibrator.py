@@ -21,11 +21,16 @@ class Calibrator(ABC):
             plant_id_col (str): Name of the ID column designating a power plant in the input.
         """
         self.loader = LocalDataLoader(data_path)
-        self.plant_data = self.loader.load_plant_data(plant_id_col) \
+        self.plants = self.loader.load_plant_data(plant_id_col) \
             if plant_id_col else self.loader.load_plant_data()
-        self.generation_data = self.loader.load_generation_data(plant_id_col) \
+        self.generation = self.loader.load_generation_data(plant_id_col) \
             if plant_id_col else self.loader.load_generation_data()
-        self.era5_data = self.loader.load_era5_data()
+        self.resource = self.loader.load_era5_data()
+
+    @abstractmethod
+    def extract_resource_timeseries_for_plants(self) -> None:
+        """Extracts resource time series for plants."""
+        raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
 
     @abstractmethod
     def calculate_historical_load_factors(self) -> None:
