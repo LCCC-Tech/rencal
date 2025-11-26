@@ -56,15 +56,17 @@ class WindCalibrator(Calibrator):
         self.all_plant_ids = self.generation.data[INTERNAL_PLANT_ID].unique()
         self.output_path = output_path
         self.visual_output = visual_output
-        self.plant_wind_speeds = None
+        self.plant_wind_speeds: pd.DataFrame
+        self.historical_load_factors: pd.DataFrame
+        self.historical_load_factor_distributions: pd.DataFrame
 
     def calibrate(self) -> None:
         """Triggers calibration workflow."""
         logger.info("Starting calibration process...")
         self.plant_wind_speeds = self.extract_resource_timeseries_for_plants()
-        self.calculate_historical_load_factors()
-        self.fit_historical_load_factor_distribution()
-        self.estimate_load_factors_for_resource()
+        self.historical_load_factors = self.calculate_historical_load_factors()
+        self.historical_load_factor_distributions = self.fit_historical_load_factor_distribution()
+        self.summary = self.estimate_load_factors_for_resource()
         self.output_estimated_load_factors_tabular(self.output_path)
         if self.visual_output:
             self.output_estimated_load_factors_visual(self.output_path)
@@ -91,11 +93,6 @@ class WindCalibrator(Calibrator):
         return plant_wind_speed_res
 
     @staticmethod
-    def _get_unique_plant_ids_from_generation(generation_data: pd.DataFrame) -> pd.Series:
-        """Extracts a series of all the unique plant ids featured in the generation data."""
-        return generation_data[INTERNAL_PLANT_ID].unique()
-
-    @staticmethod
     def _get_plant_generation_temporal_bounds(generation_data:pd.DataFrame) -> pd.DataFrame:
         """Gets the first and last timestamp a plant has generation data for."""
         return (
@@ -111,31 +108,31 @@ class WindCalibrator(Calibrator):
             [INTERNAL_PLANT_ID, "time"], as_index=False, sort=False
         ).agg({"quantity": "sum"})
 
-    def calculate_historical_load_factors(self) -> None:
+    def calculate_historical_load_factors(self) -> pd.DataFrame:
         """Calculates historical load factors based on resource availability and generation data for each plant."""
         self.plant_wind_speeds[INTERNAL_PLANT_ID] = self.plant_wind_speeds[INTERNAL_PLANT_ID].astype(str)
         self.generation.data[INTERNAL_PLANT_ID] = self.generation.data[INTERNAL_PLANT_ID].astype(str)
         self.generation.data = self._remove_duplicate_plant_time_from_generation(self.generation.data)
         coverage = self._get_plant_generation_temporal_bounds(self.generation.data)
-        valid_cfds = self._get_unique_plant_ids_from_generation(self.generation.data)
-        self.plant_wind_speeds = self.plant_wind_speeds[self.plant_wind_speeds[INTERNAL_PLANT_ID].isin(valid_cfds)].copy()
+        self.plant_wind_speeds = self.plant_wind_speeds[self.plant_wind_speeds[INTERNAL_PLANT_ID].isin(self.all_plant_ids)].copy()
         self.plant_wind_speeds = self.plant_wind_speeds.merge(coverage, on=INTERNAL_PLANT_ID, how="left")
         mask = self.plant_wind_speeds["time"].between(
             self.plant_wind_speeds["hourly_start"], self.plant_wind_speeds["hourly_end"]
         )
         self.plant_wind_speeds = self.plant_wind_speeds.loc[mask, ["time", INTERNAL_PLANT_ID, "wind_speed"]].copy()
-        self.wind_speed_generation_merged = pd.merge(
+        wind_speed_generation_merged = pd.merge(
             self.plant_wind_speeds,
             self.generation.data,
             on=["time", INTERNAL_PLANT_ID],
             how="left"
         )
-        self.wind_speed_generation_merged["load_factor"] = (
-            self.wind_speed_generation_merged["quantity"].fillna(0)
-            / self.wind_speed_generation_merged.groupby(INTERNAL_PLANT_ID)["quantity"].transform("max")
+        wind_speed_generation_merged["load_factor"] = (
+            wind_speed_generation_merged["quantity"].fillna(0)
+            / wind_speed_generation_merged.groupby(INTERNAL_PLANT_ID)["quantity"].transform("max")
         )
-        numeric_cols = self.wind_speed_generation_merged.select_dtypes(include=["float", "int"]).columns
-        self.wind_speed_generation_merged[numeric_cols] = self.wind_speed_generation_merged[numeric_cols].round(2)
+        numeric_cols = wind_speed_generation_merged.select_dtypes(include=["number"]).columns
+        wind_speed_generation_merged[numeric_cols] = wind_speed_generation_merged[numeric_cols].round(2)
+        return wind_speed_generation_merged
 
     @staticmethod
     def fit_weibull_dist_to_plant(item):
@@ -146,61 +143,53 @@ class WindCalibrator(Calibrator):
         k, _, lamb = weibull_min.fit(clean_speeds, floc=0)
         return cfd_id, k, lamb
 
-    def fit_historical_load_factor_distribution(self) -> None:
+    def fit_historical_load_factor_distribution(self) -> pd.DataFrame:
         """Fits probability distribution to historical load factors and resource availability."""
-        wind_speeds = self.generation.data.groupby("CFD_Id", sort=False)["Wind Speed"]
-        wind_speed_stats = wind_speeds.agg(mean_wind_speed="mean", wind_speed_stdev="std")
+        wind_speeds = self.historical_load_factors.groupby(INTERNAL_PLANT_ID, sort=False)["wind_speed"]
+        wind_speed_stats = wind_speeds.agg(wind_speed_mean="mean", wind_speed_stdev="std")
         with ThreadPoolExecutor(max_workers=8)as ex:
             fits = list(ex.map(self.fit_weibull_dist_to_plant, wind_speeds))
-        fitted_distributions = pd.DataFrame(fits, columns=["CFD_Id", "k", "Lambda"])
-        self.weibull_params = wind_speed_stats.reset_index().merge(
-            fitted_distributions, on="CFD_Id", sort=False
+        fitted_distributions = pd.DataFrame(fits, columns=[INTERNAL_PLANT_ID, "k", "lambda"])
+        weibull_params = wind_speed_stats.reset_index().merge(
+            fitted_distributions, on=INTERNAL_PLANT_ID, sort=False
         )
+        return weibull_params
 
-    def estimate_load_factors_for_resource(self) -> None:
+    def estimate_load_factors_for_resource(self) -> pd.DataFrame:
         """Estimates load factors based on the historical distribution and the whole resource availability history."""
-        self.summary = pd.DataFrame(columns=[
-            "CFD_Id", "a", "b", "c", "d", "g", "Estimated Load Factor"
+        summary = pd.DataFrame(columns=[
+            INTERNAL_PLANT_ID, "a", "b", "c", "d", "g", "estimated_load_factor"
         ])
-        for cfd_id in self.all_plant_ids:
-            merged_cfd_data = self.era5_generation_merged[self.era5_generation_merged["CFD_Id"] == cfd_id].copy()
-            cfd_weibull_params = self.weibull_params[self.weibull_params["CFD_Id"] == cfd_id]
-            if merged_cfd_data.empty():
-                print(f"Skipping {cfd_id} (no data or Weibull params).")
+        for plant_id in self.all_plant_ids:
+            single_plant_load_factors = self.historical_load_factors[self.historical_load_factors[INTERNAL_PLANT_ID] == plant_id].copy()
+            single_plant_load_factor_dist_params = self.historical_load_factor_distributions[
+                self.historical_load_factor_distributions[INTERNAL_PLANT_ID] == plant_id
+            ]
+            if single_plant_load_factors.empty or single_plant_load_factor_dist_params.empty:
+                logger.warning(f"Skipping {plant_id} (no data or Weibull params).")
                 continue
-            merged_cfd_data = self.drop_invalid_rows(merged_cfd_data)
-            if merged_cfd_data.empty():
-                print(f"Skipping {cfd_id} (no valid numeric data).")
-            merged_cfd_data = self.clip_extreme_wind_speeds(merged_cfd_data)
-            lambda_val = cfd_weibull_params["Lambda"].iloc[0]
-            k_val = cfd_weibull_params["k"].iloc[0]
+            single_plant_load_factors = self.drop_invalid_rows(single_plant_load_factors)
+            if single_plant_load_factors.empty:
+                logger.warning(f"Skipping {plant_id} (no valid numeric data).")
+                continue
+            single_plant_load_factors = self.clip_extreme_wind_speeds(single_plant_load_factors)
+            lambda_val = single_plant_load_factor_dist_params["lambda"].iloc[0]
+            k_val = single_plant_load_factor_dist_params["k"].iloc[0]
 
             try:
-                logistic_params, _ = curve_fit(
+                logistic_params, covmat = curve_fit(
                     self.logistic_function,
-                    merged_cfd_data["Wind Speed"],
-                    merged_cfd_data["Load Factor"],
-                    p0=[
-                        DEFAULT_LOGISTIC_FN_STEEPNESS,
-                        DEFAULT_LOGISTIC_FN_XLOC,
-                        DEFAULT_LOGISTIC_FN_ASYMMETRY
-                    ],  # Initial guess for params -> default generic wind turbine power curve params
+                    single_plant_load_factors["wind_speed"].to_numpy(),
+                    single_plant_load_factors["load_factor"].to_numpy(),
+                    p0=[DEFAULT_LOGISTIC_FN_STEEPNESS, DEFAULT_LOGISTIC_FN_XLOC, DEFAULT_LOGISTIC_FN_ASYMMETRY],
                     bounds=[
-                        [
-                            LOGISTIC_FN_STEEPNESS_LBOUND,
-                            LOGISTIC_FN_XLOC_LBOUND,
-                            LOGISTIC_FN_ASYMMETRY_LBOUND
-                        ],
-                        [
-                            LOGISTIC_FN_STEEPNESS_HBOUND,
-                            LOGISTIC_FN_XLOC_HBOUND,
-                            LOGISTIC_FN_ASYMMETRY_HBOUND
-                        ]
-                    ], # change upper bound to 500 to coincide with currently used scripts
+                        [LOGISTIC_FN_STEEPNESS_LBOUND, LOGISTIC_FN_XLOC_LBOUND, LOGISTIC_FN_ASYMMETRY_LBOUND],
+                        [LOGISTIC_FN_STEEPNESS_HBOUND, LOGISTIC_FN_XLOC_HBOUND, LOGISTIC_FN_ASYMMETRY_HBOUND]
+                    ],
                     maxfev=LOGISTIC_FN_MAXEVAL
                 )
             except Exception as e:
-                print(f"Skipping {cfd_id} (curve fit failed: {e})")
+                logger.warning(f"Skipping {plant_id} (curve fit failed: {e})")
                 continue
 
             try:
@@ -212,11 +201,11 @@ class WindCalibrator(Calibrator):
                     0, np.inf
                 )[0]
             except Exception as e:
-                print(f"Integration failed for {cfd_id}: {e}")
+                logger.warning(f"Integration failed for {plant_id}: {e}")
                 continue
 
-            self.summary.loc[len(self.summary)] = [
-                cfd_id,
+            summary.loc[len(summary)] = [
+                plant_id,
                 0,
                 logistic_params[0],
                 logistic_params[1],
@@ -224,7 +213,8 @@ class WindCalibrator(Calibrator):
                 logistic_params[2],
                 estimated_load_factor
             ]
-            self.summary["Estimated Load Factor"] = self.summary["Estimated Load Factor"].round(4)
+            summary["estimated_load_factor"] = summary["estimated_load_factor"].round(4)
+        return summary
 
     @staticmethod
     def logistic_function(x, b, c, g):
@@ -236,12 +226,12 @@ class WindCalibrator(Calibrator):
     @staticmethod
     def drop_invalid_rows(cfd_data: pd.DataFrame) -> pd.DataFrame:
         """Drops rows with no valid data."""
-        return cfd_data.replace([np.inf, -np.inf], np.nan).dropna(subset=["Wind Speed", "Load Factor"])
+        return cfd_data.replace([np.inf, -np.inf], np.nan).dropna(subset=["wind_speed", "load_factor"])
 
     @staticmethod
     def clip_extreme_wind_speeds(cfd_wind_data: pd.DataFrame) -> pd.DataFrame:
         """Clips wind speeds above and below sensible thresholds to avoid overflow in power."""
-        return cfd_wind_data[cfd_wind_data["Wind Speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)]
+        return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)]
 
     def output_estimated_load_factors_tabular(self, out_path: str | Path) -> None:
         """Outputs table of estimated load factors for whole resource availability history."""
@@ -252,9 +242,9 @@ class WindCalibrator(Calibrator):
         for row in self.summary.iterrows():
             x_vals = np.linspace(0, 25, 300)
             y_vals = self.logistic_function(x_vals, row["b"], row["c"], row["g"])
-            mean_wind_speed = cfd_data["Wind Speed"].mean()
+            mean_wind_speed = cfd_data["wind_speed"].mean()
             plt.figure(figsize=(10, 6))
-            plt.scatter(cfd_data["Wind Speed"], cfd_data["Load Factor"], s=10, color="blue", alpha=0.6, label="Observed Data")
+            plt.scatter(cfd_data["wind_speed"], cfd_data["Load Factor"], s=10, color="blue", alpha=0.6, label="Observed Data")
             plt.plot(x_vals, y_vals, color="orange", lw=3, label="Fitted Curve")
             plt.axvline(mean_wind_speed, color="green", linestyle="--", lw=2, label=f"Mean Wind Speed = {mean_wind_speed:.2f} m/s")
             plt.title(f"Power Curve Fit - {summary_data["CFD_Id"]}")
