@@ -12,6 +12,7 @@ from weather.utils.constants import (
     DOWNLOAD_DATA_DIR,
     ERA5_VARIABLE_MAPPING,
     GENERATION_DATE_FILE_NAME,
+    INTERNAL_PLANT_ID,
     PLANT_DATA_FILE_NAME,
     PLANT_ID_COLUMN,
 )
@@ -50,7 +51,7 @@ class LocalDataLoader(DataLoader):
             raise FileNotFoundError(f"Plant data file not found at {file_path}")
 
         df = pd.read_csv(file_path)
-        df = df.rename(columns={id_column: "plant_id"})
+        df = df.rename(columns={id_column: INTERNAL_PLANT_ID})
 
         # Log summary info
         total_plants = len(df)
@@ -81,11 +82,11 @@ class LocalDataLoader(DataLoader):
             raise FileNotFoundError(f"Generation data file not found at {file_path}")
 
         df = pd.read_csv(file_path, parse_dates=["time"])
-        df = df.rename(columns={id_column: "plant_id"})
+        df = df.rename(columns={id_column: INTERNAL_PLANT_ID})
 
         # Log summary info
         total_records = len(df)
-        unique_plants = df["plant_id"].nunique() if "plant_id" in df.columns else 0
+        unique_plants = df[INTERNAL_PLANT_ID].nunique() if INTERNAL_PLANT_ID in df.columns else 0
 
         logger.info(f"Generation data loaded: {total_records} records, {unique_plants} plants")
 
