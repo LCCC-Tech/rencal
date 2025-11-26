@@ -16,6 +16,9 @@ from ...utils.constants import (
     DEFAULT_LOGISTIC_FN_ASYMMETRY,
     DEFAULT_LOGISTIC_FN_STEEPNESS,
     DEFAULT_LOGISTIC_FN_XLOC,
+    DEFAULT_WIND_VARIABLES,
+    ERA5_VARIABLE_MAPPING,
+    INTERNAL_PLANT_ID,
     LOGISTIC_FN_ASYMMETRY_HBOUND,
     LOGISTIC_FN_ASYMMETRY_LBOUND,
     LOGISTIC_FN_MAXEVAL,
@@ -28,7 +31,10 @@ from ...utils.constants import (
     WIND_SPEED_LBOUND,
     WIND_TECHNOLOGY_TYPES,
 )
+from ...utils.logger import get_logger
 from ..calibrator import Calibrator
+
+logger = get_logger(__name__)
 
 
 class WindCalibrator(Calibrator):
@@ -41,90 +47,95 @@ class WindCalibrator(Calibrator):
             super_args["data_path"] = data_path
         if plant_id_col:
             super_args["plant_id_col"] = plant_id_col
+            logger.debug("Runtime-specified plant id column: %s", plant_id_col)
         else:
             plant_id_col = PLANT_ID_COLUMN
+            logger.debug("Config-specified plant id column: %s", PLANT_ID_COLUMN)
         super().__init__(**super_args)
-        self.plant_id_col = plant_id_col
         self.plants.data = self.plants.data[self.plants.data["technology"].isin(WIND_TECHNOLOGY_TYPES)]
-        self.all_cfd_ids = self.generation.data[self.plant_id_col].unique()
+        self.all_plant_ids = self.generation.data[INTERNAL_PLANT_ID].unique()
         self.output_path = output_path
         self.visual_output = visual_output
         self.plant_wind_speeds = None
 
     def calibrate(self) -> None:
         """Triggers calibration workflow."""
+        logger.info("Starting calibration process...")
         self.plant_wind_speeds = self.extract_resource_timeseries_for_plants()
-        self.aggregate_generation_hourly()
         self.calculate_historical_load_factors()
         self.fit_historical_load_factor_distribution()
         self.estimate_load_factors_for_resource()
         self.output_estimated_load_factors_tabular(self.output_path)
         if self.visual_output:
             self.output_estimated_load_factors_visual(self.output_path)
+        logger.info("Calibration finished!")
 
     def extract_resource_timeseries_for_plants(self) -> pd.DataFrame:
         """Extracts resource data for plants into a DataFrame."""
+        self.resource.data["wind_speed"] = np.sqrt(
+            self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[0]]] ** 2
+            + self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[1]]] ** 2
+        )
         unique_plant_locations = self.plants.data[
-            self.plants.data[PLANT_ID_COLUMN].isin(self.all_cfd_ids)
-        ].drop_duplicates(PLANT_ID_COLUMN)[[PLANT_ID_COLUMN, "latitude", "longitude"]]
-        unique_plant_dim = xr.DataArray(unique_plant_locations[PLANT_ID_COLUMN].to_numpy(), dims=PLANT_ID_COLUMN)
+            self.plants.data[INTERNAL_PLANT_ID].isin(self.all_plant_ids)
+        ].drop_duplicates(INTERNAL_PLANT_ID)[[INTERNAL_PLANT_ID, "latitude", "longitude"]]
+        unique_plant_dim = xr.DataArray(unique_plant_locations[INTERNAL_PLANT_ID].to_numpy(), dims=INTERNAL_PLANT_ID)
         plant_wind_speeds = self.resource.data.sel(
-            longitude=xr.DataArray(unique_plant_locations["longitude"].to_numpy(), dims=PLANT_ID_COLUMN),
-            latitude=xr.DataArray(unique_plant_locations["latitude"].to_numpy(), dims=PLANT_ID_COLUMN),
+            longitude=xr.DataArray(unique_plant_locations["longitude"].to_numpy(), dims=INTERNAL_PLANT_ID),
+            latitude=xr.DataArray(unique_plant_locations["latitude"].to_numpy(), dims=INTERNAL_PLANT_ID),
             method="nearest"
         )
-        plant_wind_speeds[PLANT_ID_COLUMN] = unique_plant_dim
-        return plant_wind_speeds.to_dataframe().reset_index(drop=False)[["time", PLANT_ID_COLUMN, "wind_speed"]]
+        plant_wind_speeds[INTERNAL_PLANT_ID] = unique_plant_dim
+        plant_wind_speed_res = plant_wind_speeds.to_dataframe().reset_index(drop=False)[["time", INTERNAL_PLANT_ID, "wind_speed"]]
+        plant_wind_speed_res["time"] = pd.to_datetime(plant_wind_speed_res["time"], utc=True)
+        return plant_wind_speed_res
 
-    def aggregate_generation_hourly(self) -> None:
-        """Calculates hourly generation data."""
-        sp_counts = self.generation.data.groupby("settlementDate")["settlementPeriod"].max().reset_index()
-        sp_counts.rename(columns={"settlementPeriod": "num_periods"}, inplace=True)
-        self.generation.data = self.generation.data.merge(sp_counts, on="settlementDate", how="left")
-        self.generation.data["hour_index"] = (
-            (self.generation.data["settlementPeriod"] - 1) * 24 / self.generation.data["num_periods"]
-        ).astype(int)
-        self.generation.data = self.generation.data.groupby(["settlementDate", "hour_index", "CFD_Id"], as_index=False)["quantity"].mean()
-        self.generation.data["Times"] = (
-            pd.to_datetime(self.generation.data["settlementDate"])
-            + pd.to_datetime(self.generation.data["hour_index"], unit="h")
-        ).dt.tz_localize("UTC")
-        self.generation.data = self.generation.data[["Times", "CFD_Id", "quantity"]].sort_values(by=["Times", "CFD_Id"])
+    @staticmethod
+    def _get_unique_plant_ids_from_generation(generation_data: pd.DataFrame) -> pd.Series:
+        """Extracts a series of all the unique plant ids featured in the generation data."""
+        return generation_data[INTERNAL_PLANT_ID].unique()
+
+    @staticmethod
+    def _get_plant_generation_temporal_bounds(generation_data:pd.DataFrame) -> pd.DataFrame:
+        """Gets the first and last timestamp a plant has generation data for."""
+        return (
+            generation_data.groupby(INTERNAL_PLANT_ID)["time"]
+            .agg(hourly_start="min", hourly_end="max")
+            .reset_index()
+        )
+
+    @staticmethod
+    def _remove_duplicate_plant_time_from_generation(generation_data: pd.DataFrame) -> pd.DataFrame:
+        """Aggregates generation quantities for potentialy rows where plant id and timestamp are equal."""
+        return generation_data.groupby(
+            [INTERNAL_PLANT_ID, "time"], as_index=False, sort=False
+        ).agg({"quantity": "sum"})
 
     def calculate_historical_load_factors(self) -> None:
         """Calculates historical load factors based on resource availability and generation data for each plant."""
-        self.era5_data.data["Times"] = pd.to_datetime(self.era5_data.data["Times"], utc=True)
-        self.generation.data["Times"] = pd.to_datetime(self.generation.data["Times"], utc=True)
-        self.era5_data.data["CFD_Id"] = self.era5_data.data["CFD_Id"].astype(str)
-        self.generation.data["CFD_Id"] = self.generation.data["CFD_Id"].astype(str)
-        self.generation.data = (
-            self.generation.data.groupby(["CFD_Id", "Times"], as_index=False, sort=False)
-                .agg({"quantity": "sum"})
+        self.plant_wind_speeds[INTERNAL_PLANT_ID] = self.plant_wind_speeds[INTERNAL_PLANT_ID].astype(str)
+        self.generation.data[INTERNAL_PLANT_ID] = self.generation.data[INTERNAL_PLANT_ID].astype(str)
+        self.generation.data = self._remove_duplicate_plant_time_from_generation(self.generation.data)
+        coverage = self._get_plant_generation_temporal_bounds(self.generation.data)
+        valid_cfds = self._get_unique_plant_ids_from_generation(self.generation.data)
+        self.plant_wind_speeds = self.plant_wind_speeds[self.plant_wind_speeds[INTERNAL_PLANT_ID].isin(valid_cfds)].copy()
+        self.plant_wind_speeds = self.plant_wind_speeds.merge(coverage, on=INTERNAL_PLANT_ID, how="left")
+        mask = self.plant_wind_speeds["time"].between(
+            self.plant_wind_speeds["hourly_start"], self.plant_wind_speeds["hourly_end"]
         )
-        coverage = (
-            self.generation.data.groupby("CFD_Id")["Times"]
-                .agg(hourly_start="min", hourly_end="max")
-                .reset_index()
-        )
-        valid_cfds = set(coverage["CFD_Id"].unique())
-        self.era5_data.data = self.era5_data.data[self.era5_data.data["CFD_Id"].isin(valid_cfds)].copy()
-        self.era5_data.data = self.era5_data.data.merge(coverage, on="CFD_Id", how="left")
-        mask = self.era5_data.data["Times"].between(
-            self.era5_data.data["hourly_start"], self.era5_data.data["hourly_end"]
-        )
-        self.era5_data.data = self.era5_data.data.loc[mask, ["Times", "CFD_Id", "Wind Speed"]].copy()
-        self.era5_generation_merged = pd.merge(
-            self.era5_data.data,
+        self.plant_wind_speeds = self.plant_wind_speeds.loc[mask, ["time", INTERNAL_PLANT_ID, "wind_speed"]].copy()
+        self.wind_speed_generation_merged = pd.merge(
+            self.plant_wind_speeds,
             self.generation.data,
-            on=["Times", "CFD_Id"],
+            on=["time", INTERNAL_PLANT_ID],
             how="left"
         )
-        self.era5_generation_merged["Load Factor"] = (
-            self.era5_generation_merged["quantity"].fillna(0)
-            / self.era5_generation_merged.groupby("CFD_Id")["quantity"].transform("max")
+        self.wind_speed_generation_merged["load_factor"] = (
+            self.wind_speed_generation_merged["quantity"].fillna(0)
+            / self.wind_speed_generation_merged.groupby(INTERNAL_PLANT_ID)["quantity"].transform("max")
         )
-        numeric_cols = self.era5_generation_merged.select_dtypes(include=["float", "int"]).columns
-        self.era5_generation_merged[numeric_cols] = self.era5_generation_merged[numeric_cols].round(2)
+        numeric_cols = self.wind_speed_generation_merged.select_dtypes(include=["float", "int"]).columns
+        self.wind_speed_generation_merged[numeric_cols] = self.wind_speed_generation_merged[numeric_cols].round(2)
 
     @staticmethod
     def fit_weibull_dist_to_plant(item):
@@ -151,7 +162,7 @@ class WindCalibrator(Calibrator):
         self.summary = pd.DataFrame(columns=[
             "CFD_Id", "a", "b", "c", "d", "g", "Estimated Load Factor"
         ])
-        for cfd_id in self.all_cfd_ids:
+        for cfd_id in self.all_plant_ids:
             merged_cfd_data = self.era5_generation_merged[self.era5_generation_merged["CFD_Id"] == cfd_id].copy()
             cfd_weibull_params = self.weibull_params[self.weibull_params["CFD_Id"] == cfd_id]
             if merged_cfd_data.empty():
