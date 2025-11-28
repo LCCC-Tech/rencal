@@ -27,6 +27,7 @@ from ...utils.constants import (
     LOGISTIC_FN_XLOC_HBOUND,
     LOGISTIC_FN_XLOC_LBOUND,
     PLANT_ID_COLUMN,
+    PLANT_ID_OUTPUT,
     WIND_SPEED_HBOUND,
     WIND_SPEED_LBOUND,
     WIND_TECHNOLOGY_TYPES,
@@ -67,9 +68,10 @@ class WindCalibrator(Calibrator):
         self.historical_load_factors = self.calculate_historical_load_factors()
         self.historical_load_factor_distributions = self.fit_historical_load_factor_distribution()
         self.summary = self.estimate_load_factors_for_resource()
-        self.output_estimated_load_factors_tabular(self.output_path)
         if self.visual_output:
-            self.output_estimated_load_factors_visual(self.output_path)
+            self.output_estimated_load_factors_visual()
+        self._rename_output_summary_columns()
+        self.output_estimated_load_factors_tabular()
         logger.info("Calibration finished!")
 
     def extract_resource_timeseries_for_plants(self) -> pd.DataFrame:
@@ -177,7 +179,7 @@ class WindCalibrator(Calibrator):
             k_val = single_plant_load_factor_dist_params["k"].iloc[0]
 
             try:
-                logistic_params, covmat = curve_fit(
+                logistic_params, _ = curve_fit(
                     self.logistic_function,
                     single_plant_load_factors["wind_speed"].to_numpy(),
                     single_plant_load_factors["load_factor"].to_numpy(),
@@ -233,23 +235,30 @@ class WindCalibrator(Calibrator):
         """Clips wind speeds above and below sensible thresholds to avoid overflow in power."""
         return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)]
 
-    def output_estimated_load_factors_tabular(self, out_path: str | Path) -> None:
-        """Outputs table of estimated load factors for whole resource availability history."""
-        self.summary.to_csv(out_path / f"PowerCurveFitSummary_{datetime.now()}.csv", index=False)
+    def _rename_output_summary_columns(self) -> None:
+        """Renames output table columns to expected and/or more human-readable values."""
+        self.summary.columns.rename({
+            INTERNAL_PLANT_ID: PLANT_ID_OUTPUT,
+            "estimated_load_factor": "Estimated Load Factor",
+        })
 
-    def output_estimated_load_factors_visual(self, summary_data: pd.DataFrame, cfd_data: pd.DataFrame) -> None:
+    def output_estimated_load_factors_tabular(self) -> None:
+        """Outputs table of estimated load factors for whole resource availability history."""
+        self.summary.to_csv(self.output_path / f"PowerCurveFitSummary_{datetime.now()}.csv", index=False)
+
+    def output_estimated_load_factors_visual(self) -> None:
         """Outputs a series of plots of estimated load and fitted curves per CfD plant."""
         for row in self.summary.iterrows():
             x_vals = np.linspace(0, 25, 300)
             y_vals = self.logistic_function(x_vals, row["b"], row["c"], row["g"])
             mean_wind_speed = cfd_data["wind_speed"].mean()
             plt.figure(figsize=(10, 6))
-            plt.scatter(cfd_data["wind_speed"], cfd_data["Load Factor"], s=10, color="blue", alpha=0.6, label="Observed Data")
+            plt.scatter(cfd_data["wind_speed"], cfd_data["load_factor"], s=10, color="blue", alpha=0.6, label="Observed Data")
             plt.plot(x_vals, y_vals, color="orange", lw=3, label="Fitted Curve")
             plt.axvline(mean_wind_speed, color="green", linestyle="--", lw=2, label=f"Mean Wind Speed = {mean_wind_speed:.2f} m/s")
-            plt.title(f"Power Curve Fit - {summary_data["CFD_Id"]}")
+            plt.title(f"Power Curve Fit - {self.summary[PLANT_ID_COLUMN]}")
             plt.xlabel("Wind Speed (m/s)")
             plt.ylabel("Load Factor")
             plt.legend()
             plt.grid(True)
-            plt.savefig(self.output_path / f"PowerCurveFit_{summary_data["CFD_Id"]}.png")
+            plt.savefig(self.output_path / f"PowerCurveFit_{self.summary[PLANT_ID_OUTPUT]}.png")
