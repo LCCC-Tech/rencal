@@ -125,3 +125,5 @@ WIND_SPEED_HBOUND = 40
 
 NOT_IMPLEMENTED_ERROR_DESC = "This method must be implemented by child classes."
 INTERNAL_PLANT_ID = "plant_id" # for easier maintenance of internal calculations
+
+PLANT_ID_OUTPUT = run_config.get("PLANT_ID_OUTPUT", "CFD ID")
