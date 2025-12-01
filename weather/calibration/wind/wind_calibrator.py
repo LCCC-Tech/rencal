@@ -41,7 +41,7 @@ logger = get_logger(__name__)
 class WindCalibrator(Calibrator):
     """Calibrates wind power curves for a set of timestamps and CFD IDs."""
 
-    def __init__(self, data_path: str = None, plant_id_col: str = None, output_path: str = Path.cwd(), visual_output: bool = False) -> None:
+    def __init__(self, data_path: str = None, plant_id_col: str = None, output_path: str | Path = Path.cwd(), visual_output: bool = False) -> None:
         """Constructor for the WindCalibrator class."""
         super_args = {}
         if data_path:
@@ -55,11 +55,12 @@ class WindCalibrator(Calibrator):
         super().__init__(**super_args)
         self.plants.data = self.plants.data[self.plants.data["technology"].isin(WIND_TECHNOLOGY_TYPES)]
         self.all_plant_ids = self.generation.data[INTERNAL_PLANT_ID].unique()
-        self.output_path = output_path
+        self.output_path = output_path if isinstance(output_path, Path) else Path(output_path)
         self.visual_output = visual_output
         self.plant_wind_speeds: pd.DataFrame
         self.historical_load_factors: pd.DataFrame
         self.historical_load_factor_distributions: pd.DataFrame
+        self.historical_combined: pd.DataFrame
 
     def calibrate(self) -> None:
         """Triggers calibration workflow."""
@@ -68,9 +69,8 @@ class WindCalibrator(Calibrator):
         self.historical_load_factors = self.calculate_historical_load_factors()
         self.historical_load_factor_distributions = self.fit_historical_load_factor_distribution()
         self.summary = self.estimate_load_factors_for_resource()
-        if self.visual_output:
-            self.output_estimated_load_factors_visual()
         self._rename_output_summary_columns()
+        self.output_path.mkdir(parents=True, exist_ok=True)
         self.output_estimated_load_factors_tabular()
         logger.info("Calibration finished!")
 
@@ -137,7 +137,7 @@ class WindCalibrator(Calibrator):
         return wind_speed_generation_merged
 
     @staticmethod
-    def fit_weibull_dist_to_plant(item):
+    def _fit_weibull_dist_to_plant(item):
         cfd_id, speeds = item
         clean_speeds = speeds.dropna().values
         if len(clean_speeds) < 3:  # skip if not enough points
@@ -150,7 +150,7 @@ class WindCalibrator(Calibrator):
         wind_speeds = self.historical_load_factors.groupby(INTERNAL_PLANT_ID, sort=False)["wind_speed"]
         wind_speed_stats = wind_speeds.agg(wind_speed_mean="mean", wind_speed_stdev="std")
         with ThreadPoolExecutor(max_workers=8)as ex:
-            fits = list(ex.map(self.fit_weibull_dist_to_plant, wind_speeds))
+            fits = list(ex.map(self._fit_weibull_dist_to_plant, wind_speeds))
         fitted_distributions = pd.DataFrame(fits, columns=[INTERNAL_PLANT_ID, "k", "lambda"])
         weibull_params = wind_speed_stats.reset_index().merge(
             fitted_distributions, on=INTERNAL_PLANT_ID, sort=False
@@ -162,19 +162,16 @@ class WindCalibrator(Calibrator):
         summary = pd.DataFrame(columns=[
             INTERNAL_PLANT_ID, "a", "b", "c", "d", "g", "estimated_load_factor"
         ])
+        self.historical_load_factors = self._clip_extreme_wind_speeds(self.historical_load_factors)
+        self.historical_load_factors = self._drop_invalid_rows(self.historical_load_factors)
         for plant_id in self.all_plant_ids:
-            single_plant_load_factors = self.historical_load_factors[self.historical_load_factors[INTERNAL_PLANT_ID] == plant_id].copy()
+            single_plant_load_factors = self.historical_load_factors[self.historical_load_factors[INTERNAL_PLANT_ID] == plant_id]
             single_plant_load_factor_dist_params = self.historical_load_factor_distributions[
                 self.historical_load_factor_distributions[INTERNAL_PLANT_ID] == plant_id
             ]
             if single_plant_load_factors.empty or single_plant_load_factor_dist_params.empty:
-                logger.warning(f"Skipping {plant_id} (no data or Weibull params).")
+                logger.warning(f"Skipping {plant_id} (no valid data or Weibull params).")
                 continue
-            single_plant_load_factors = self.drop_invalid_rows(single_plant_load_factors)
-            if single_plant_load_factors.empty:
-                logger.warning(f"Skipping {plant_id} (no valid numeric data).")
-                continue
-            single_plant_load_factors = self.clip_extreme_wind_speeds(single_plant_load_factors)
             lambda_val = single_plant_load_factor_dist_params["lambda"].iloc[0]
             k_val = single_plant_load_factor_dist_params["k"].iloc[0]
 
@@ -206,6 +203,9 @@ class WindCalibrator(Calibrator):
                 logger.warning(f"Integration failed for {plant_id}: {e}")
                 continue
 
+            if self.visual_output:
+                self.output_estimated_load_factors_visual(logistic_params, single_plant_load_factors)
+
             summary.loc[len(summary)] = [
                 plant_id,
                 0,
@@ -226,18 +226,18 @@ class WindCalibrator(Calibrator):
         return d + (a - d) / ((1 + (x / c)**b)**g)
 
     @staticmethod
-    def drop_invalid_rows(cfd_data: pd.DataFrame) -> pd.DataFrame:
+    def _drop_invalid_rows(cfd_data: pd.DataFrame) -> pd.DataFrame:
         """Drops rows with no valid data."""
         return cfd_data.replace([np.inf, -np.inf], np.nan).dropna(subset=["wind_speed", "load_factor"])
 
     @staticmethod
-    def clip_extreme_wind_speeds(cfd_wind_data: pd.DataFrame) -> pd.DataFrame:
+    def _clip_extreme_wind_speeds(cfd_wind_data: pd.DataFrame) -> pd.DataFrame:
         """Clips wind speeds above and below sensible thresholds to avoid overflow in power."""
         return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)]
 
     def _rename_output_summary_columns(self) -> None:
         """Renames output table columns to expected and/or more human-readable values."""
-        self.summary.columns.rename({
+        self.summary = self.summary.rename(columns={
             INTERNAL_PLANT_ID: PLANT_ID_OUTPUT,
             "estimated_load_factor": "Estimated Load Factor",
         })
@@ -246,19 +246,20 @@ class WindCalibrator(Calibrator):
         """Outputs table of estimated load factors for whole resource availability history."""
         self.summary.to_csv(self.output_path / f"PowerCurveFitSummary_{datetime.now()}.csv", index=False)
 
-    def output_estimated_load_factors_visual(self) -> None:
+    def output_estimated_load_factors_visual(self, logistic_params: np.ndarray, load_factors: pd.DataFrame) -> None:
         """Outputs a series of plots of estimated load and fitted curves per CfD plant."""
-        for row in self.summary.iterrows():
-            x_vals = np.linspace(0, 25, 300)
-            y_vals = self.logistic_function(x_vals, row["b"], row["c"], row["g"])
-            mean_wind_speed = cfd_data["wind_speed"].mean()
-            plt.figure(figsize=(10, 6))
-            plt.scatter(cfd_data["wind_speed"], cfd_data["load_factor"], s=10, color="blue", alpha=0.6, label="Observed Data")
-            plt.plot(x_vals, y_vals, color="orange", lw=3, label="Fitted Curve")
-            plt.axvline(mean_wind_speed, color="green", linestyle="--", lw=2, label=f"Mean Wind Speed = {mean_wind_speed:.2f} m/s")
-            plt.title(f"Power Curve Fit - {self.summary[PLANT_ID_COLUMN]}")
-            plt.xlabel("Wind Speed (m/s)")
-            plt.ylabel("Load Factor")
-            plt.legend()
-            plt.grid(True)
-            plt.savefig(self.output_path / f"PowerCurveFit_{self.summary[PLANT_ID_OUTPUT]}.png")
+        x_vals = np.linspace(0, 25, 300)
+        y_vals = self.logistic_function(x_vals, b=logistic_params[0], c=logistic_params[1], g=logistic_params[2])
+        mean_wind_speed = load_factors["wind_speed"].mean()
+        plt.figure(figsize=(10, 6))
+        plt.scatter(load_factors["wind_speed"], load_factors["load_factor"], s=10, color="blue", alpha=0.6, label="Observed Data")
+        plt.plot(x_vals, y_vals, color="orange", lw=3, label="Fitted Curve")
+        plt.axvline(mean_wind_speed, color="green", linestyle="--", lw=2, label=f"Mean Wind Speed = {mean_wind_speed:.2f} m/s")
+        logger.info(load_factors[INTERNAL_PLANT_ID].iloc[0])
+        plt.title(f"Power Curve Fit - {load_factors[INTERNAL_PLANT_ID].iloc[0]}")
+        plt.xlabel("Wind Speed (m/s)")
+        plt.ylabel("Load Factor")
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(self.output_path / f"PowerCurveFit_{load_factors[INTERNAL_PLANT_ID].iloc[0]}.png")
+        plt.close()
