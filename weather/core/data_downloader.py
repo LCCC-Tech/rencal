@@ -192,7 +192,7 @@ class ERA5DataDownloader(DataDownloader):
             "month": [f"{m:02d}" for m in range(1, 13)],
             "day": [f"{d:02d}" for d in range(1, 32)],
             "time": [f"{h:02d}:00" for h in range(24)],
-            "format": "netcdf",
+            "format": "netcdf_legacy",
             "area": AREA_BOUNDING_BOX_COORDINATES,
         }
 
@@ -203,7 +203,7 @@ class ERA5DataDownloader(DataDownloader):
             "month": [f"{m:02d}" for m in range(1, 13)],
             "day": [f"{d:02d}" for d in range(1, 32)],
             "time": [f"{h:02d}:00" for h in range(24)],
-            "format": "netcdf",
+            "format": "netcdf_legacy",
             "area": AREA_BOUNDING_BOX_COORDINATES,
         }
 
