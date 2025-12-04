@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
@@ -163,12 +164,13 @@ class ERA5DataDownloader(DataDownloader):
             self.logger.error(f"Error initializing CDS API client: {e}")
             raise
 
-    def _download_year(self, year: int, file_path: str) -> None:
+    def _download_year(self, year: int, file_path: str, download_parts: str) -> None:
         """Download ERA5 data for a specific year.
 
         Downloads hourly ERA5 data for all days and months of the specified year
         within the configured geographical bounding box. Data includes all
-        standard wind and solar variables.
+        standard wind and solar variables. Due to request size constraints,
+        the data is downloaded as two, half yearly requests.
 
         Args:
             year: Year to download data for.
@@ -182,24 +184,57 @@ class ERA5DataDownloader(DataDownloader):
         # Combine wind and solar variables for download
         all_variables = DEFAULT_WIND_VARIABLES + DEFAULT_SOLAR_VARIABLES
 
-        request = {
+        path_filepath = Path(file_path)
+        file_path_first_half = str(path_filepath.parent / (path_filepath.stem + "_1" + path_filepath.suffix))
+        file_path_second_half = str(path_filepath.parent / (path_filepath.stem + "_2" + path_filepath.suffix))
+
+        request_first_half = {
             "product_type": ERA5_PRODUCT_TYPE,
             "variable": all_variables,
             "year": str(year),
-            "month": [f"{m:02d}" for m in range(1, 13)],
+            "month": [f"{m:02d}" for m in range(1, 7)],
             "day": [f"{d:02d}" for d in range(1, 32)],
             "time": [f"{h:02d}:00" for h in range(24)],
             "format": "netcdf",
+            "download_format": "unarchived",
+            "area": AREA_BOUNDING_BOX_COORDINATES,
+        }
+
+        request_second_half = {
+            "product_type": ERA5_PRODUCT_TYPE,
+            "variable": all_variables,
+            "year": str(year),
+            "month": [f"{m:02d}" for m in range(7, 13)],
+            "day": [f"{d:02d}" for d in range(1, 32)],
+            "time": [f"{h:02d}:00" for h in range(24)],
+            "format": "netcdf",
+            "download_format": "unarchived",
             "area": AREA_BOUNDING_BOX_COORDINATES,
         }
 
         try:
-            result = self.client.retrieve(ERA5_DATASET, request)
-            result.download(target=file_path)
-            self.logger.info(f"Download complete: {file_path}")
+            if download_parts in ["first_half", "both_halves"]:
+                result_first_half = self.client.retrieve(ERA5_DATASET, request_first_half)
+                result_first_half.download(target=file_path_first_half)
+                self.logger.info("Download complete: %s", file_path_first_half)
+            if download_parts in ["second_half", "both_halves"]:
+                result_second_half = self.client.retrieve(ERA5_DATASET, request_second_half)
+                result_second_half.download(target=file_path_second_half)
+                self.logger.info("Download complete: %s", file_path_second_half)
         except Exception as e:
             self.logger.error(f"Error downloading {year}: {e}")
             raise
+
+        with xr.open_mfdataset([file_path_first_half, file_path_second_half]) as ds:
+            ds.to_netcdf(file_path)
+            self.logger.info("Files %s and %s combined into %s", file_path_first_half, file_path_second_half, file_path)
+        for fpath in [file_path_first_half, file_path_second_half]:
+            try:
+                os.remove(fpath)
+                self.logger.info("Auxiliary file deleted: %s", fpath)
+            except Exception as e:
+                self.logger.error("Error deleting download artefacts for %s: %s", year, e)
+                raise
 
     def _verify_and_update_metadata(self, year: int, file_path: str) -> None:
         """Verify downloaded file and update metadata.
@@ -282,15 +317,47 @@ class ERA5DataDownloader(DataDownloader):
             + current_time,
         ) as pbar:
             for year in pbar:
+                # TODO: Make sure that the current year is redownloaded if full and only second half is refreshed if it is halves in the second half of the year.
+                # Scenarios for not downloading all files for a year:
+                # is current year first half and nothing is downloaded for it -> download first half
+                # is current year second half and first half is downloaded for it -> download second half only
+                # is current year and there is yera data, not half year data, downloaded -> delete year data and download first or both depending on month
+                # is current year first half and first half is downloaded -> redownload first half
+                # is current year second half and both are downloaded -> redownload second half
                 file_path = self.output_dir / f"{year}.nc"
+                half_file_paths = [
+                    file_path.parent / (file_path.stem + "_1" + file_path.suffix),
+                    file_path.parent / (file_path.stem + "_2" + file_path.suffix)
+                ]
+                current_date = datetime.now()
+                is_current_year = True if current_date.year == year else False
+                is_second_half = True if current_date.month > 6 else False
+                if file_path.exists() and is_current_year:
+                    self.delete_current_year_file()
 
-                if file_path.exists():
-                    pbar.set_postfix_str(f"verifying {year}.nc")
-                    self.logger.debug(f"File already exists for {year}, verifying timestamps...")
+                match [file_path.exists(), half_file_paths[0].exists(), half_file_paths[1].exists(), is_current_year, is_second_half]:
+                    case [_, _, _, True, False]:
+                        download = "first_half"
+                    case [_, True, _, True, True]:
+                        download = "second_half"
+                    case [_, False, _, True, True]:
+                        download = "both_halves"
+                    case [False, False, False, False, _]:
+                        download = "both_halves"
+                    case [False, True, False, False, _]:
+                        download = "second_half"
+                    case [False, False, True, False, _]:
+                        download = "first_half"
+                    case _:
+                        download = "none"
+
+                if download == "none":
+                    pbar.set_postfix_str(f"verifying file for {year}")
+                    self.logger.debug(f"File already exist for {year}, verifying timestamps...")
                     existing_files += 1
                 else:
-                    pbar.set_postfix_str(f"downloading {year}.nc")
-                    self._download_year(year, str(file_path))
+                    pbar.set_postfix_str(f"downloading file for {year}")
+                    self._download_year(year, str(file_path), download)
                     downloaded_files += 1
 
                 pbar.set_postfix_str(f"verifying {year}.nc")
