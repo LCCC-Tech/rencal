@@ -32,7 +32,7 @@ except yaml.YAMLError as e:
 
 # Absolute path to download data directory
 DOWNLOAD_DATA_DIR = run_config.get(
-    "DOWNLOAD_DATA_DIR", str(Path(__file__).parent.parent.parent / "data")
+    "DOWNLOAD_DATA_DIR", str(Path(__file__).parents[2] / "data")
 )
 
 # Dates
