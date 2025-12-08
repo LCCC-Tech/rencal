@@ -1,0 +1,117 @@
+---
+title: OilPrice
+description: A reference page for the OilPrice class.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+This class handles oil price simulation using deterministic (non-stochastic) methods. Oil prices for energy applications are often based on forward curves or indexed pricing rather than full stochastic simulation.
+
+#### Simple Example
+
+Here's how to simulate oil prices:
+
+```python
+from quantlib.commodities.CommodityPriceSimulation import OilPrice
+from quantlib.database.DatabaseDelta import DatabaseDelta
+import datetime as dt
+
+# Create database connection
+connection = DatabaseDelta()
+
+# Create oil price simulation
+oil = OilPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2024, 12, 31),
+    connection=connection
+)
+
+# Get daily fuel prices
+daily_prices = oil.run()  # Returns prices in £/MWh
+```
+
+#### Advanced Example with Carbon Impact
+
+Oil prices are used in carbon calculations:
+
+```python
+# Oil is used for carbon price calculations in power generation
+from quantlib.commodities.CommodityPriceSimulation import CarbonPrice
+
+# Create oil price instance
+oil = OilPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2025, 12, 31),
+    connection=connection
+)
+
+# Get oil prices
+oil_prices = oil.run()
+
+# Oil characteristics in energy markets:
+# - Used primarily for peaking power plants
+# - High carbon content affects carbon pricing
+# - Transport costs typically lower than coal/biomass
+# - Liquid fuel advantages for remote locations
+# - Price often correlated with Brent crude oil
+
+# These prices are used in carbon cost calculations
+carbon_sim = CarbonPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2024, 12, 31),
+    number_of_simulations=100,
+    connection=connection
+)
+
+coal_carbon, gas_carbon, oil_carbon = carbon_sim.run()
+```
+
+Oil is less commonly used for baseload power generation but remains important for peaking plants and carbon calculations.
+</Section>
+
+---
+
+## Constructor
+
+<Segment>
+<Section type="signature">
+```python
+class OilPrice(start_date: datetime, end_date: datetime, 
+connection: DatabaseDelta): OilPrice
+```
+</Section>
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">start_date</code> <code class="primitive">datetime</code></p>
+  The start date for the simulation.
+
+- <p><code class="key">end_date</code> <code class="primitive">datetime</code></p>
+  The end date for the simulation.
+
+- <p><code class="key">connection</code> [<code class="type">DatabaseDelta</code>](#DatabaseDelta)</p>
+  Database connection object.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">OilPrice</code>](#OilPrice)
+</InlineSection>
+</Segment>
+
+## Inherited Methods
+
+This class inherits all methods from [NonStochasticCommodityPrice](#NonStochasticCommodityPrice):
+
+- `run()`: Returns daily fuel prices
+- `daily_Fuel_Price()`: Converts raw prices to £/MWh
+- `generate_Daily_Fuel_Price()`: Processes historical data
+- `generate_Variable_Price_List()`: Interpolates price data
+
+</div>

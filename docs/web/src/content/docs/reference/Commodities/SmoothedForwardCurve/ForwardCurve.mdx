@@ -1,0 +1,313 @@
+---
+title: ForwardCurve
+description: A reference page for the ForwardCurve class.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+This class generates smoothed forward curves for commodity prices. It extracts market data and applies various smoothing techniques including the SOFM (Self-Organizing Feature Map) method and polynomial curve fitting to create daily price curves from monthly contract data.
+
+#### Simple Example
+
+Here's how to create a forward curve:
+
+```python
+from quantlib.commodities.SmoothedForwardCurve import ForwardCurve
+from quantlib.database.DatabaseDelta import DatabaseDelta
+import datetime as dt
+
+# Create database connection
+connection = DatabaseDelta()
+
+# Create forward curve for gas
+gas_curve = ForwardCurve(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2024, 12, 31),
+    commodity="Gas",
+    connection=connection
+)
+
+# Build the smoothed forward curve
+dates, prices = gas_curve.build_Forward_Curve()
+```
+
+#### Advanced Example with Different Smoothing Methods
+
+This example shows the different smoothing approaches:
+
+```python
+# Create forward curve
+coal_curve = ForwardCurve(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2025, 12, 31),
+    commodity="Coal",
+    connection=connection
+)
+
+# Different smoothing methods available:
+
+# 1. SOFM Method - Advanced self-organizing smoothing
+dates1, prices1 = coal_curve.forward_Curve_Smoothing_SOFM_Method()
+
+# 2. Polynomial smoothing
+dates2, prices2 = coal_curve.forward_Curve_Smoothing_Polynomial()
+
+# 3. SOFM + Polynomial combination
+dates3, prices3 = coal_curve.forward_Curve_Smoothing_SOFM_And_Polynomial()
+
+# 4. No smoothing - just forward fill
+dates4, prices4 = coal_curve.forward_Curve_No_Smoothing()
+
+# Plot results to compare
+coal_curve.plot_Results()
+
+# The forward curve handles:
+# - Monthly, quarterly, seasonal, and yearly contracts
+# - Missing data interpolation
+# - Price smoothing between contract periods
+# - Carbon-specific simplified curves
+```
+
+Forward curves are essential for commodity price simulation and risk management.
+</Section>
+
+---
+
+## Constructor
+
+<Segment>
+<Section type="signature">
+```python
+class ForwardCurve(start_date: datetime, end_date: datetime, 
+commodity: str, connection: Database): ForwardCurve
+```
+</Section>
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">start_date</code> <code class="primitive">datetime</code></p>
+  Start date for the simulation.
+
+- <p><code class="key">end_date</code> <code class="primitive">datetime</code></p>
+  End date for the simulation.
+
+- <p><code class="key">commodity</code> <code class="primitive">str</code></p>
+  Name of commodity (e.g., "Gas", "Coal", "Carbon", "Power").
+
+- <p><code class="key">connection</code> [<code class="type">Database</code>](#Database)</p>
+  Database connection object.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">ForwardCurve</code>](#ForwardCurve)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### build_Forward_Curve
+
+<Segment>
+<Section type="signature">
+```ts
+build_Forward_Curve(): tuple
+```
+</Section>
+
+The main method called in CommodityPriceSimulation to generate forward curves. Returns different formats based on commodity type:
+- Power: Returns contract dates and prices (no smoothing)
+- Gas/Carbon/Coal: Returns daily smoothed curves
+
+<InlineSection>
+**Returns** A tuple containing:
+- For Power: (contract_list, price_list)
+- For others: (daily_dataframe, daily_price_list)
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">tuple</code>
+</InlineSection>
+</Segment>
+
+### build_Monthly_Dataframe_Carbon
+
+<Segment>
+<Section type="signature">
+```ts
+build_Monthly_Dataframe_Carbon(): DataFrame
+```
+</Section>
+
+Returns a dataframe with monthly forward prices for Carbon. Carbon is simpler than other commodities as it only has yearly contracts.
+
+<InlineSection>
+**Returns** A dataframe with monthly forward prices for Carbon.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### build_Monthly_Dataframe_Gas_Coal_Power
+
+<Segment>
+<Section type="signature">
+```ts
+build_Monthly_Dataframe_Gas_Coal_Power(): DataFrame
+```
+</Section>
+
+Returns a dataframe with forward prices for the desired commodity. Forward price hierarchy:
+1. Monthly futures (if available)
+2. Quarterly prices
+3. Seasonal or yearly prices
+
+<InlineSection>
+**Returns** A dataframe with monthly forward prices.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### forward_Curve_Smoothing_Polynomial
+
+<Segment>
+<Section type="signature">
+```ts
+forward_Curve_Smoothing_Polynomial(): tuple
+```
+</Section>
+
+Uses simple polynomial curve fitting instead of the SOFM method.
+
+<InlineSection>
+**Returns** A tuple containing:
+- daily_dataframe (pd.DataFrame): Daily values representing the smoothed curve
+- daily_price_list (list): List of prices for those periods
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">tuple</code>
+</InlineSection>
+</Segment>
+
+### forward_Curve_No_Smoothing
+
+<Segment>
+<Section type="signature">
+```ts
+forward_Curve_No_Smoothing(): tuple
+```
+</Section>
+
+Produces daily commodity values with no smoothing. Forward fills daily data from monthly values.
+
+<InlineSection>
+**Returns** A tuple containing:
+- contract_list (list): List of dates of price changes
+- daily_commodity_price (np.ndarray): Daily commodity price without smoothing
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">tuple</code>
+</InlineSection>
+</Segment>
+
+### forward_Curve_Smoothing_SOFM_And_Polynomial
+
+<Segment>
+<Section type="signature">
+```ts
+forward_Curve_Smoothing_SOFM_And_Polynomial(): tuple
+```
+</Section>
+
+Uses polynomial curve fitting to further smooth the output from the SOFM method.
+
+<InlineSection>
+**Returns** A tuple containing:
+- daily_dataframe (pd.DataFrame): Daily smoothed curve values
+- daily_price_list (list): List of prices for those periods
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">tuple</code>
+</InlineSection>
+</Segment>
+
+### forward_Curve_Smoothing_SOFM_Method
+
+<Segment>
+<Section type="signature">
+```ts
+forward_Curve_Smoothing_SOFM_Method(): tuple
+```
+</Section>
+
+Calculates values for fracture point dates or plateau prices for each month using the Self-Organizing Feature Map method. Forward fills to give daily values and calculates smoothed values for peak and non-peak periods.
+
+<InlineSection>
+**Returns** A tuple containing:
+- daily_dataframe (pd.DataFrame): Daily smoothed curve values
+- daily_price_list (list): List of prices for those periods
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">tuple</code>
+</InlineSection>
+</Segment>
+
+### group_Consecutive_Months_Of_Same_Price
+
+<Segment>
+<Section type="signature">
+```ts
+group_Consecutive_Months_Of_Same_Price(monthly_dataframe: DataFrame): DataFrame
+```
+</Section>
+
+Groups consecutive months with the same price to create periods of constant pricing.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">monthly_dataframe</code> <code class="primitive">pd.DataFrame</code></p>
+  A dataframe of monthly forward prices.
+</Section>
+
+<InlineSection>
+**Returns** A dataframe with rows for each period of constant price, including start and end dates.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### plot_Results
+
+<Segment>
+<Section type="signature">
+```ts
+plot_Results(): None
+```
+</Section>
+
+Plots the forward curve and the smoothed forward curve for visual comparison.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+</div>
