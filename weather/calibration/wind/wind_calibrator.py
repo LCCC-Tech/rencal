@@ -83,10 +83,10 @@ class WindCalibrator(Calibrator):
         unique_plant_locations = self.plants.data[
             self.plants.data[INTERNAL_PLANT_ID].isin(self.all_plant_ids)
         ].drop_duplicates(INTERNAL_PLANT_ID)[[INTERNAL_PLANT_ID, "latitude", "longitude"]]
-        unique_plant_dim = xr.DataArray(unique_plant_locations[INTERNAL_PLANT_ID].to_numpy(), dims=INTERNAL_PLANT_ID)
+        unique_plant_dim = xr.DataArray(unique_plant_locations[INTERNAL_PLANT_ID], dims=INTERNAL_PLANT_ID)
         plant_wind_speeds = self.resource.data.sel(
-            longitude=xr.DataArray(unique_plant_locations["longitude"].to_numpy(), dims=INTERNAL_PLANT_ID),
-            latitude=xr.DataArray(unique_plant_locations["latitude"].to_numpy(), dims=INTERNAL_PLANT_ID),
+            longitude=xr.DataArray(unique_plant_locations["longitude"], dims=INTERNAL_PLANT_ID),
+            latitude=xr.DataArray(unique_plant_locations["latitude"], dims=INTERNAL_PLANT_ID),
             method="nearest"
         )
         plant_wind_speeds[INTERNAL_PLANT_ID] = unique_plant_dim
@@ -138,23 +138,33 @@ class WindCalibrator(Calibrator):
 
     @staticmethod
     def _fit_weibull_dist_to_plant(item):
+        """Fits a Weibull distribution to an array of wind speeds."""
         cfd_id, speeds = item
-        clean_speeds = speeds.dropna().values
-        if len(clean_speeds) < 3:  # skip if not enough points
+        if len(speeds) < 3:  # skip if not enough points
             return cfd_id, np.nan, np.nan
-        k, _, lamb = weibull_min.fit(clean_speeds, floc=0)
+        k, _, lamb = weibull_min.fit(speeds, floc=0)
         return cfd_id, k, lamb
 
     def fit_historical_load_factor_distribution(self) -> pd.DataFrame:
         """Fits probability distribution to historical load factors and resource availability."""
+        start = datetime.now()
         wind_speeds = self.historical_load_factors.groupby(INTERNAL_PLANT_ID, sort=False)["wind_speed"]
         wind_speed_stats = wind_speeds.agg(wind_speed_mean="mean", wind_speed_stdev="std")
+        wind_speeds = [(plant_id, wind_speed.dropna().to_numpy()) for plant_id, wind_speed in wind_speeds]
         with ThreadPoolExecutor(max_workers=8)as ex:
-            fits = list(ex.map(self._fit_weibull_dist_to_plant, wind_speeds))
+            fits = list(ex.map(self._fit_weibull_dist_to_plant, wind_speeds)) # TODO: check if list comp and multiprocessing works, test number of max workers
+        # with multiprocessing.Pool(processes=8) as ex:
+        #     fits = ex.map(self._fit_weibull_dist_to_plant, wind_speeds)
+        # with ProcessPoolExecutor(max_workers=8) as ex:
+        #     fits = list(ex.map(self._fit_weibull_dist_to_plant, wind_speeds))
+        # fits = list(joblib.Parallel(n_jobs=8)(joblib.delayed(self._fit_weibull_dist_to_plant)(wind_speed) for wind_speed in wind_speeds))
+        # fits = [self._fit_weibull_dist_to_plant(wind_speed) for wind_speed in wind_speeds]
         fitted_distributions = pd.DataFrame(fits, columns=[INTERNAL_PLANT_ID, "k", "lambda"])
         weibull_params = wind_speed_stats.reset_index().merge(
             fitted_distributions, on=INTERNAL_PLANT_ID, sort=False
         )
+        end = datetime.now()
+        logger.info("End - start = %s", end-start)
         return weibull_params
 
     def estimate_load_factors_for_resource(self) -> pd.DataFrame:
@@ -193,11 +203,11 @@ class WindCalibrator(Calibrator):
 
             try:
                 estimated_load_factor = quad(
-                    lambda x: self.logistic_function(x, *logistic_params)
-                              * (k_val / lambda_val)
-                              * (x / lambda_val)**(k_val - 1)
-                              * np.exp(-((x / lambda_val)**k_val)),
-                    0, np.inf
+                    lambda x, logistic_params, k_val, lambda_val: self.logistic_function(x, *logistic_params)
+                        * (k_val / lambda_val)
+                        * (x / lambda_val)**(k_val - 1)
+                        * np.exp(-((x / lambda_val)**k_val)),
+                    0, np.inf, (logistic_params, k_val, lambda_val)
                 )[0]
             except Exception as e:
                 logger.warning(f"Integration failed for {plant_id}: {e}")
@@ -233,7 +243,7 @@ class WindCalibrator(Calibrator):
     @staticmethod
     def _clip_extreme_wind_speeds(cfd_wind_data: pd.DataFrame) -> pd.DataFrame:
         """Clips wind speeds above and below sensible thresholds to avoid overflow in power."""
-        return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)]
+        return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)] # TODO: check what happens upon replacing instead of dropping
 
     def _rename_output_summary_columns(self) -> None:
         """Renames output table columns to expected and/or more human-readable values."""
@@ -246,8 +256,8 @@ class WindCalibrator(Calibrator):
         """Outputs table of estimated load factors for whole resource availability history."""
         self.summary.to_csv(self.output_path / f"PowerCurveFitSummary_{datetime.now()}.csv", index=False)
 
-    def output_estimated_load_factors_visual(self, logistic_params: np.ndarray, load_factors: pd.DataFrame) -> None:
-        """Outputs a series of plots of estimated load and fitted curves per CfD plant."""
+    def output_estimated_load_factors_visual(self, logistic_params: np.ndarray, load_factors: pd.DataFrame) -> None: # Check plots with Matt, compare to calculating with the original script
+        """Outputs a series of plots of estimated load and fitted curves per plant."""
         x_vals = np.linspace(0, 25, 300)
         y_vals = self.logistic_function(x_vals, b=logistic_params[0], c=logistic_params[1], g=logistic_params[2])
         mean_wind_speed = load_factors["wind_speed"].mean()
