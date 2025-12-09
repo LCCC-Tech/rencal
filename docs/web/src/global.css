@@ -236,6 +236,12 @@ body > .page > header button[data-open-modal] {
   background-color: var(--sl-color-black-alpha);
   line-height: normal;
 }
+body > .page > header button[data-open-modal]:hover {
+  color: var(--sl-color-text);
+}
+body > .page > header button[data-open-modal]:hover > kbd kbd {
+  color: var(--sl-color-text);
+}
 body > .page > header button[data-open-modal] > kbd {
   background-color: transparent;
   padding-inline-end: 0;
