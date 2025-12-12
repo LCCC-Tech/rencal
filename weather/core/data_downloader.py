@@ -637,6 +637,19 @@ class GenerationDataDownloader(DataDownloader):
         utc_datetime = uk_timezone.dt.tz_convert("UTC")
         return utc_datetime.dt.floor("h")
 
+    @staticmethod
+    def _divide_shared_bmu_generation(generation_df: pd.DataFrame) -> pd.DataFrame:
+        "Divides generation for shared BMUs by the number of plants sharing it."
+        bmu_cfd_groups = (generation_df
+                          .groupby(["bmu_id", "settlement_date", "settlement_period"])
+                          .agg({"cfd_id": "count"})
+                          .reset_index()
+                          .rename(columns={"cfd_id": "quantity_divisor"}))
+        generation_df = generation_df.merge(bmu_cfd_groups, on=["bmu_id", "settlement_date", "settlement_period"])
+        generation_df["quantity"] /= generation_df["quantity_divisor"]
+        generation_df = generation_df.drop(columns="quantity_divisor")
+        return generation_df
+
     def _aggregate_bmu_generation_to_cfd(
         self, cfd_df: pd.DataFrame, generation_df: pd.DataFrame
     ) -> pd.DataFrame:
@@ -664,6 +677,9 @@ class GenerationDataDownloader(DataDownloader):
 
         # Merge with CFD data first
         generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id"]], on="bmu_id", how="left")
+
+        # Divide generation of shared bmus between plants
+        generation_df = self._divide_shared_bmu_generation(generation_df)
 
         # Aggregate BMU data by CFD and settlement period first
         aggregated_df = (
