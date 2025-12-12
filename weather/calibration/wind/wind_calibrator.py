@@ -54,7 +54,7 @@ class WindCalibrator(Calibrator):
             logger.debug("Config-specified plant id column: %s", PLANT_ID_COLUMN)
         super().__init__(**super_args)
         self.plants.data = self.plants.data[self.plants.data["technology"].isin(WIND_TECHNOLOGY_TYPES)]
-        self.all_plant_ids = self.generation.data[INTERNAL_PLANT_ID].unique()
+        self.calibration_plant_ids = self.generation.data[INTERNAL_PLANT_ID].unique()
         self.output_path = output_path if isinstance(output_path, Path) else Path(output_path)
         self.visual_output = visual_output
         self.plant_wind_speeds: pd.DataFrame
@@ -66,6 +66,7 @@ class WindCalibrator(Calibrator):
         """Triggers calibration workflow."""
         logger.info("Starting calibration process...")
         self.plant_wind_speeds = self.extract_resource_timeseries_for_plants()
+        self.generation.data = self._clip_generation_to_plant_capacity()
         self.historical_load_factors = self.calculate_historical_load_factors()
         self.historical_load_factor_distributions = self.fit_historical_load_factor_distribution()
         self.summary = self.estimate_load_factors_for_resource()
@@ -80,9 +81,10 @@ class WindCalibrator(Calibrator):
             self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[0]]] ** 2
             + self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[1]]] ** 2
         )
-        unique_plant_locations = self.plants.data[
-            self.plants.data[INTERNAL_PLANT_ID].isin(self.all_plant_ids)
-        ].drop_duplicates(INTERNAL_PLANT_ID)[[INTERNAL_PLANT_ID, "latitude", "longitude"]]
+        # unique_plant_locations = self.plants.data[
+        #     self.plants.data[INTERNAL_PLANT_ID].isin(self.calibration_plant_ids)
+        # ].drop_duplicates(INTERNAL_PLANT_ID)[[INTERNAL_PLANT_ID, "latitude", "longitude"]]
+        unique_plant_locations = self.plants.data.drop_duplicates([INTERNAL_PLANT_ID, "latitude", "longitude"])
         unique_plant_dim = xr.DataArray(unique_plant_locations[INTERNAL_PLANT_ID], dims=INTERNAL_PLANT_ID)
         plant_wind_speeds = self.resource.data.sel(
             longitude=xr.DataArray(unique_plant_locations["longitude"], dims=INTERNAL_PLANT_ID),
@@ -103,6 +105,13 @@ class WindCalibrator(Calibrator):
             .reset_index()
         )
 
+    def _clip_generation_to_plant_capacity(self) -> pd.DataFrame:
+        """Clips maximum generation to the capacity of the plant."""
+        gen_with_capacity = self.generation.data.merge(self.plants.data, how="left", on=INTERNAL_PLANT_ID).drop_duplicates([INTERNAL_PLANT_ID, "time"])
+        over_gen_mask = gen_with_capacity["quantity"] > gen_with_capacity["capacity"]
+        gen_with_capacity.loc[over_gen_mask, "quantity"] = gen_with_capacity.loc[over_gen_mask, "capacity"]
+        return gen_with_capacity[self.generation.data.columns]
+
     @staticmethod
     def _remove_duplicate_plant_time_from_generation(generation_data: pd.DataFrame) -> pd.DataFrame:
         """Aggregates generation quantities for potentialy rows where plant id and timestamp are equal."""
@@ -116,14 +125,14 @@ class WindCalibrator(Calibrator):
         self.generation.data[INTERNAL_PLANT_ID] = self.generation.data[INTERNAL_PLANT_ID].astype(str)
         self.generation.data = self._remove_duplicate_plant_time_from_generation(self.generation.data)
         coverage = self._get_plant_generation_temporal_bounds(self.generation.data)
-        self.plant_wind_speeds = self.plant_wind_speeds[self.plant_wind_speeds[INTERNAL_PLANT_ID].isin(self.all_plant_ids)].copy()
-        self.plant_wind_speeds = self.plant_wind_speeds.merge(coverage, on=INTERNAL_PLANT_ID, how="left")
-        mask = self.plant_wind_speeds["time"].between(
-            self.plant_wind_speeds["hourly_start"], self.plant_wind_speeds["hourly_end"]
+        calibration_plant_wind_speeds = self.plant_wind_speeds[self.plant_wind_speeds[INTERNAL_PLANT_ID].isin(self.calibration_plant_ids)]
+        calibration_plant_wind_speeds = calibration_plant_wind_speeds.merge(coverage, on=INTERNAL_PLANT_ID, how="left")
+        mask = calibration_plant_wind_speeds["time"].between(
+            calibration_plant_wind_speeds["hourly_start"], calibration_plant_wind_speeds["hourly_end"]
         )
-        self.plant_wind_speeds = self.plant_wind_speeds.loc[mask, ["time", INTERNAL_PLANT_ID, "wind_speed"]].copy()
+        calibration_plant_wind_speeds = calibration_plant_wind_speeds.loc[mask, ["time", INTERNAL_PLANT_ID, "wind_speed"]]
         wind_speed_generation_merged = pd.merge(
-            self.plant_wind_speeds,
+            calibration_plant_wind_speeds,
             self.generation.data,
             on=["time", INTERNAL_PLANT_ID],
             how="left"
@@ -174,7 +183,7 @@ class WindCalibrator(Calibrator):
         ])
         self.historical_load_factors = self._clip_extreme_wind_speeds(self.historical_load_factors)
         self.historical_load_factors = self._drop_invalid_rows(self.historical_load_factors)
-        for plant_id in self.all_plant_ids:
+        for plant_id in self.calibration_plant_ids:
             single_plant_load_factors = self.historical_load_factors[self.historical_load_factors[INTERNAL_PLANT_ID] == plant_id]
             single_plant_load_factor_dist_params = self.historical_load_factor_distributions[
                 self.historical_load_factor_distributions[INTERNAL_PLANT_ID] == plant_id
@@ -204,9 +213,7 @@ class WindCalibrator(Calibrator):
             try:
                 estimated_load_factor = quad(
                     lambda x, logistic_params, k_val, lambda_val: self.logistic_function(x, *logistic_params)
-                        * (k_val / lambda_val)
-                        * (x / lambda_val)**(k_val - 1)
-                        * np.exp(-((x / lambda_val)**k_val)),
+                        * (k_val / lambda_val * (x / lambda_val)**(k_val - 1) * np.exp(-((x / lambda_val)**k_val))),
                     0, np.inf, (logistic_params, k_val, lambda_val)
                 )[0]
             except Exception as e:
@@ -244,6 +251,18 @@ class WindCalibrator(Calibrator):
     def _clip_extreme_wind_speeds(cfd_wind_data: pd.DataFrame) -> pd.DataFrame:
         """Clips wind speeds above and below sensible thresholds to avoid overflow in power."""
         return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)] # TODO: check what happens upon replacing instead of dropping
+
+    def create_generic_power_curve(self) -> None:
+        """Generates generic power curve parameters from available fitted data."""
+        self.summary.loc[len(self.summary)] = ["GEN", 0, self.summary["b"].mean(), self.summary["c"].mean(), 1, self.summary["g"].mean(), 0]
+
+    def generate_resource_streams(self) -> None:
+        """Generates wind streams from fitted and/or generalised power curve parameters and long-term wind data."""
+        # Plant wind speeds has all the data on available plants, even those without generation data
+        # Merge it with the params of the logistic curves based on plant id, fill the unmatched ones with the generic params by default
+        # Apply the logistic function with the params to each wind speed iteration
+        # Output to parquet
+        pass
 
     def _rename_output_summary_columns(self) -> None:
         """Renames output table columns to expected and/or more human-readable values."""
