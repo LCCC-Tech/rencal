@@ -66,14 +66,17 @@ class WindCalibrator(Calibrator):
         """Triggers calibration workflow."""
         logger.info("Starting calibration process...")
         self.plant_wind_speeds = self.extract_resource_timeseries_for_plants()
+        self.output_path.mkdir(parents=True, exist_ok=True)
+        self.output_wind_speeds()
         self.generation.data = self._clip_generation_to_plant_capacity()
         self.historical_load_factors = self.calculate_historical_load_factors()
         self.historical_load_factor_distributions = self.fit_historical_load_factor_distribution()
+        self.output_historical_load_factor_distribution_parameters()
         self.summary = self.estimate_load_factors_for_resource()
         self._rename_output_summary_columns()
-        self.generate_resource_streams()
-        self.output_path.mkdir(parents=True, exist_ok=True)
         self.output_estimated_load_factors_tabular()
+        self.wind_streams = self.generate_resource_streams()
+        self.output_wind_streams()
         logger.info("Calibration finished!")
 
     def extract_resource_timeseries_for_plants(self) -> pd.DataFrame:
@@ -295,13 +298,20 @@ class WindCalibrator(Calibrator):
             "estimated_load_factor": "Estimated Load Factor",
         })
 
-    # TODO: output weibull params to Weibull Params.csv
-    # TODO: output plant wind speeds to Wind Speed.csv
-    # TODO: output wind streams to Wind Streams.parquet and/or Wind Speeds.csv
+    def output_historical_load_factor_distribution_parameters(self) -> None:
+        """Writes historical load factor parameters to a CSV file."""
+        self.historical_load_factor_distributions.to_csv(self.output_path / "Weibull Params.csv", index=False)
+
+    def output_wind_speeds(self) -> None:
+        """Writes wind speed for each plant to a CSV file."""
+        self.plant_wind_speeds.to_csv(self.output_path / "Wind Speeds.csv", index=False)
+
+    def output_wind_streams(self) -> None:
+        """Writes wind streams to a parquet file."""
+        self.wind_streams.to_parquet(self.output_path / "Wind Streams.parquet", index=False)
+
     def output_estimated_load_factors_tabular(self) -> None:
         """Outputs table of estimated load factors for whole resource availability history."""
-        self.historical_load_factor_distributions.to_csv(self.output_path / "Weibull Params.csv")
-        self.plant_wind_speeds.to_csv(self.output_path / "Wind Speeds.csv")
         self.summary.to_csv(self.output_path / "Calibration Summary.csv", index=False)
 
     def output_estimated_load_factors_visual(self, logistic_params: np.ndarray, load_factors: pd.DataFrame) -> None: # Check plots with Matt, compare to calculating with the original script
