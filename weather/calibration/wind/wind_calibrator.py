@@ -77,6 +77,10 @@ class WindCalibrator(Calibrator):
 
     def extract_resource_timeseries_for_plants(self) -> pd.DataFrame:
         """Extracts resource data for plants into a DataFrame."""
+        # If there is initial release data (expver=5) downloaded, it gets used to fill NaNs in the verified ERA5 data
+        if "expver" in self.resource.data.coords:
+            logger.info("Combining final and initial release data for resource...")
+            self.resource.data = self.resource.data.sel(expver=1).combine_first(self.resource.data.sel(expver=5))
         self.resource.data["wind_speed"] = np.sqrt(
             self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[0]]] ** 2
             + self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[1]]] ** 2
@@ -196,7 +200,7 @@ class WindCalibrator(Calibrator):
 
             try:
                 logistic_params, _ = curve_fit(
-                    self.logistic_function,
+                    self.logistic_function_log,
                     single_plant_load_factors["wind_speed"].to_numpy(),
                     single_plant_load_factors["load_factor"].to_numpy(),
                     p0=[DEFAULT_LOGISTIC_FN_STEEPNESS, DEFAULT_LOGISTIC_FN_XLOC, DEFAULT_LOGISTIC_FN_ASYMMETRY],
@@ -212,7 +216,7 @@ class WindCalibrator(Calibrator):
 
             try:
                 estimated_load_factor = quad(
-                    lambda x, logistic_params, k_val, lambda_val: self.logistic_function(x, *logistic_params)
+                    lambda x, logistic_params, k_val, lambda_val: self.logistic_function_log(x, *logistic_params)
                         * (k_val / lambda_val * (x / lambda_val)**(k_val - 1) * np.exp(-((x / lambda_val)**k_val))),
                     0, np.inf, (logistic_params, k_val, lambda_val)
                 )[0]
@@ -243,6 +247,11 @@ class WindCalibrator(Calibrator):
         return d + (a - d) / ((1 + (x / c)**b)**g)
 
     @staticmethod
+    def logistic_function_log(x, b, c, g):
+        """Defines a generalised logistic function in the log domain for stability."""
+        return 1.0 - np.exp(-g * np.logaddexp(0.0, b * (np.log(x) - np.log(c))))
+
+    @staticmethod
     def _drop_invalid_rows(cfd_data: pd.DataFrame) -> pd.DataFrame:
         """Drops rows with no valid data."""
         return cfd_data.replace([np.inf, -np.inf], np.nan).dropna(subset=["wind_speed", "load_factor"])
@@ -258,11 +267,25 @@ class WindCalibrator(Calibrator):
 
     def generate_resource_streams(self) -> None:
         """Generates wind streams from fitted and/or generalised power curve parameters and long-term wind data."""
-        # Plant wind speeds has all the data on available plants, even those without generation data
-        # Merge it with the params of the logistic curves based on plant id, fill the unmatched ones with the generic params by default
-        # Apply the logistic function with the params to each wind speed iteration
-        # Output to parquet
-        pass
+        plant_wind_speed_and_params = self.plant_wind_speeds.merge(self.summary, on=INTERNAL_PLANT_ID, how="left", indicator=True)
+        plant_wind_speed_and_params.loc[plant_wind_speed_and_params["_merge"] == "left_only", self.summary.columns] = self.summary.iloc[-1].values
+        plant_wind_speed_and_params.drop(columns="_merge")
+        plant_wind_speed_and_params["load_factor"] = self.logistic_function_log(
+            plant_wind_speed_and_params["wind_speed"],
+            plant_wind_speed_and_params["b"],
+            plant_wind_speed_and_params["c"],
+            plant_wind_speed_and_params["g"]
+        )
+        plant_wind_speed_and_params = plant_wind_speed_and_params.drop(columns=list(self.summary.columns) + ["_merge", "wind_speed"])
+        plant_wind_speed_and_params = (
+            plant_wind_speed_and_params
+                .pivot(index="time", columns=INTERNAL_PLANT_ID, values="load_factor")
+                .sort_index()
+                .reset_index()
+                .rename(columns={"time": "Times"})
+        )
+        return plant_wind_speed_and_params
+
 
     def _rename_output_summary_columns(self) -> None:
         """Renames output table columns to expected and/or more human-readable values."""
@@ -271,14 +294,19 @@ class WindCalibrator(Calibrator):
             "estimated_load_factor": "Estimated Load Factor",
         })
 
+    # TODO: output weibull params to Weibull Params.csv
+    # TODO: output plant wind speeds to Wind Speed.csv
+    # TODO: output wind streams to Wind Streams.parquet and/or Wind Speeds.csv
     def output_estimated_load_factors_tabular(self) -> None:
         """Outputs table of estimated load factors for whole resource availability history."""
+        self.historical_load_factor_distributions.to_csv(self.output_path / "Weibull Params.csv")
+        self.plant_wind_speeds.to_csv(self.output_path / "Wind Speeds.csv")
         self.summary.to_csv(self.output_path / f"PowerCurveFitSummary_{datetime.now()}.csv", index=False)
 
     def output_estimated_load_factors_visual(self, logistic_params: np.ndarray, load_factors: pd.DataFrame) -> None: # Check plots with Matt, compare to calculating with the original script
         """Outputs a series of plots of estimated load and fitted curves per plant."""
         x_vals = np.linspace(0, 25, 300)
-        y_vals = self.logistic_function(x_vals, b=logistic_params[0], c=logistic_params[1], g=logistic_params[2])
+        y_vals = self.logistic_function_log(x_vals, b=logistic_params[0], c=logistic_params[1], g=logistic_params[2])
         mean_wind_speed = load_factors["wind_speed"].mean()
         plt.figure(figsize=(10, 6))
         plt.scatter(load_factors["wind_speed"], load_factors["load_factor"], s=10, color="blue", alpha=0.6, label="Observed Data")
