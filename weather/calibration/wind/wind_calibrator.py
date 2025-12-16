@@ -71,6 +71,7 @@ class WindCalibrator(Calibrator):
         self.historical_load_factor_distributions = self.fit_historical_load_factor_distribution()
         self.summary = self.estimate_load_factors_for_resource()
         self._rename_output_summary_columns()
+        self.generate_resource_streams()
         self.output_path.mkdir(parents=True, exist_ok=True)
         self.output_estimated_load_factors_tabular()
         logger.info("Calibration finished!")
@@ -301,7 +302,7 @@ class WindCalibrator(Calibrator):
         """Outputs table of estimated load factors for whole resource availability history."""
         self.historical_load_factor_distributions.to_csv(self.output_path / "Weibull Params.csv")
         self.plant_wind_speeds.to_csv(self.output_path / "Wind Speeds.csv")
-        self.summary.to_csv(self.output_path / f"PowerCurveFitSummary_{datetime.now()}.csv", index=False)
+        self.summary.to_csv(self.output_path / "Calibration Summary.csv", index=False)
 
     def output_estimated_load_factors_visual(self, logistic_params: np.ndarray, load_factors: pd.DataFrame) -> None: # Check plots with Matt, compare to calculating with the original script
         """Outputs a series of plots of estimated load and fitted curves per plant."""
