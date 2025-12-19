@@ -54,6 +54,11 @@ class Calibrator(ABC):
         raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
 
     @abstractmethod
+    def generate_resource_streams(self) -> None:
+        """Generates load factor streams for available resource time series for each generator."""
+        raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
+
+    @abstractmethod
     def output_estimated_load_factors_tabular(self) -> None:
         """Outputs table of estimated load factors."""
         raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
