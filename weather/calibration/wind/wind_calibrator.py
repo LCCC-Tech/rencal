@@ -204,7 +204,7 @@ class WindCalibrator(Calibrator):
 
             try:
                 logistic_params, _ = curve_fit(
-                    self.logistic_function_log,
+                    self.logistic_function,
                     single_plant_load_factors["wind_speed"].to_numpy(),
                     single_plant_load_factors["load_factor"].to_numpy(),
                     p0=[DEFAULT_LOGISTIC_FN_STEEPNESS, DEFAULT_LOGISTIC_FN_XLOC, DEFAULT_LOGISTIC_FN_ASYMMETRY],
@@ -220,7 +220,7 @@ class WindCalibrator(Calibrator):
 
             try:
                 estimated_load_factor = quad(
-                    lambda x, logistic_params, k_val, lambda_val: self.logistic_function_log(x, *logistic_params)
+                    lambda x, logistic_params, k_val, lambda_val: self.logistic_function(x, *logistic_params)
                         * (k_val / lambda_val * (x / lambda_val)**(k_val - 1) * np.exp(-((x / lambda_val)**k_val))),
                     0, np.inf, (logistic_params, k_val, lambda_val)
                 )[0]
@@ -244,7 +244,7 @@ class WindCalibrator(Calibrator):
         return summary
 
     @staticmethod
-    def logistic_function_log(x, b, c, g):
+    def logistic_function(x, b, c, g):
         """Defines a generalised logistic function in the log domain for stability."""
         return 1.0 - np.exp(-g * np.logaddexp(0.0, b * (np.log(x) - np.log(c))))
 
@@ -256,9 +256,9 @@ class WindCalibrator(Calibrator):
     @staticmethod
     def _clip_extreme_wind_speeds(cfd_wind_data: pd.DataFrame) -> pd.DataFrame:
         """Clips wind speeds above and below sensible thresholds to avoid overflow in power."""
-        return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)] # TODO: check what happens upon replacing instead of dropping
+        return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)]
 
-    def create_generic_power_curve(self) -> None:
+    def _create_generic_power_curve(self) -> None:
         """Generates generic power curve parameters from available fitted data."""
         self.summary.loc[len(self.summary)] = ["GEN", 0, self.summary["b"].mean(), self.summary["c"].mean(), 1, self.summary["g"].mean(), 0]
 
@@ -267,7 +267,7 @@ class WindCalibrator(Calibrator):
         plant_wind_speed_and_params = self.plant_wind_speeds.merge(self.summary, on=INTERNAL_PLANT_ID, how="left", indicator=True)
         plant_wind_speed_and_params.loc[plant_wind_speed_and_params["_merge"] == "left_only", self.summary.columns] = self.summary.iloc[-1].values
         plant_wind_speed_and_params.drop(columns="_merge")
-        plant_wind_speed_and_params["load_factor"] = self.logistic_function_log(
+        plant_wind_speed_and_params["load_factor"] = self.logistic_function(
             plant_wind_speed_and_params["wind_speed"],
             plant_wind_speed_and_params["b"],
             plant_wind_speed_and_params["c"],
@@ -307,10 +307,10 @@ class WindCalibrator(Calibrator):
         """Outputs table of estimated load factors for whole resource availability history."""
         self.summary.to_csv(self.output_path / "Calibration Summary.csv", index=False)
 
-    def output_estimated_load_factors_visual(self, logistic_params: np.ndarray, load_factors: pd.DataFrame) -> None: # Check plots with Matt, compare to calculating with the original script
+    def output_estimated_load_factors_visual(self, logistic_params: np.ndarray, load_factors: pd.DataFrame) -> None:
         """Outputs a series of plots of estimated load and fitted curves per plant."""
         x_vals = np.linspace(0, 25, 300)
-        y_vals = self.logistic_function_log(x_vals, b=logistic_params[0], c=logistic_params[1], g=logistic_params[2])
+        y_vals = self.logistic_function(x_vals, b=logistic_params[0], c=logistic_params[1], g=logistic_params[2])
         mean_wind_speed = load_factors["wind_speed"].mean()
         plt.figure(figsize=(10, 6))
         plt.scatter(load_factors["wind_speed"], load_factors["load_factor"], s=10, color="blue", alpha=0.6, label="Observed Data")
