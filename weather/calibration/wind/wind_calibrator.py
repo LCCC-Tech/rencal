@@ -244,13 +244,6 @@ class WindCalibrator(Calibrator):
         return summary
 
     @staticmethod
-    def logistic_function(x, b, c, g):
-        """Defines a generalised logistic function."""
-        a = 0
-        d = 1
-        return d + (a - d) / ((1 + (x / c)**b)**g)
-
-    @staticmethod
     def logistic_function_log(x, b, c, g):
         """Defines a generalised logistic function in the log domain for stability."""
         return 1.0 - np.exp(-g * np.logaddexp(0.0, b * (np.log(x) - np.log(c))))
