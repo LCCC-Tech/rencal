@@ -264,7 +264,7 @@ class WindCalibrator(Calibrator):
 
     def generate_resource_streams(self) -> None:
         """Generates wind streams from fitted and/or generalised power curve parameters and long-term wind data."""
-        plant_wind_speed_and_params = self.plant_wind_speeds.merge(self.summary, on=INTERNAL_PLANT_ID, how="left", indicator=True)
+        plant_wind_speed_and_params = self.plant_wind_speeds.merge(self.summary, left_on=INTERNAL_PLANT_ID, right_on=PLANT_ID_OUTPUT, how="left", indicator=True)
         plant_wind_speed_and_params.loc[plant_wind_speed_and_params["_merge"] == "left_only", self.summary.columns] = self.summary.iloc[-1].values
         plant_wind_speed_and_params.drop(columns="_merge")
         plant_wind_speed_and_params["load_factor"] = self.logistic_function(
