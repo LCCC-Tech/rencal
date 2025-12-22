@@ -105,7 +105,7 @@ class WindCalibrator(Calibrator):
         return plant_wind_speed_res
 
     @staticmethod
-    def _get_plant_generation_temporal_bounds(generation_data:pd.DataFrame) -> pd.DataFrame:
+    def _get_plant_generation_temporal_bounds(generation_data: pd.DataFrame) -> pd.DataFrame:
         """Gets the first and last timestamp a plant has generation data for."""
         return (
             generation_data.groupby(INTERNAL_PLANT_ID)["time"]
