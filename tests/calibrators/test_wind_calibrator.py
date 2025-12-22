@@ -1,8 +1,9 @@
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-import pytest
 import pandas as pd
+import pytest
 import xarray as xr
 
 from weather.calibration.wind.wind_calibrator import WindCalibrator
@@ -59,3 +60,27 @@ class TestWindCalibrator():
         assert "time" in resources_for_plants.columns
         assert "wind_speed" in resources_for_plants.columns
         assert len(resources_for_plants) == len(default_calibrator.resource.time) * len(default_calibrator.plants.data)
+
+    def test_wind_calibrator_default_get_plant_generation_temporal_bounds(self, default_calibrator):
+        """Tests the _get_plant_generation_temporal_bounds method."""
+        sample_gen_data = pd.DataFrame(
+            {
+                "plant_id": ["A", "A", "A", "B", "B", "B", "C", "C", "C"],
+                "time": [datetime.strptime(dt, format="%Y-%m-%d %H:%M:%S") for dt in ["2000-12-12 01:00:00", "2000-12-12 02:00:00", "2000-12-12 03:00:00"]] * 3,
+                "quantity": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+            }
+        )
+
+        sample_bounds = pd.DataFrame(
+            {
+                "plant_id": ["A", "B", "C"],
+                "hourly_start": [datetime.strptime("2000-12-12 01:00:00", format="%Y-%m-%d %H:%M:%S")] * 3,
+                "hourly_end": [datetime.strptime("2000-12-12 03:00:00", format="%Y-%m-%d %H:%M:%S")] * 3
+            }
+        )
+
+        assert default_calibrator._get_plant_generation_temporal_bounds(sample_gen_data) == sample_bounds
+
+    def test_wind_calibrator_default_clip_generation_to_plant_capacity(self, default_calibrator):
+        """Tests the _clip_generation_to_plant_capacity method."""
+        pass
