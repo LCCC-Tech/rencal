@@ -241,6 +241,8 @@ class WindCalibrator(Calibrator):
                 estimated_load_factor
             ]
             summary["estimated_load_factor"] = summary["estimated_load_factor"].round(4)
+            if len(summary) < 1:
+                raise ValueError("No calibration summary rows were produced.")
         return summary
 
     @staticmethod
