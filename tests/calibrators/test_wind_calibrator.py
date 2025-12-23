@@ -63,24 +63,71 @@ class TestWindCalibrator():
 
     def test_wind_calibrator_default_get_plant_generation_temporal_bounds(self, default_calibrator):
         """Tests the _get_plant_generation_temporal_bounds method."""
-        sample_gen_data = pd.DataFrame(
-            {
-                "plant_id": ["A", "A", "A", "B", "B", "B", "C", "C", "C"],
-                "time": [datetime.strptime(dt, format="%Y-%m-%d %H:%M:%S") for dt in ["2000-12-12 01:00:00", "2000-12-12 02:00:00", "2000-12-12 03:00:00"]] * 3,
-                "quantity": [1, 1, 1, 1, 1, 1, 1, 1, 1]
-            }
-        )
+        sample_gen_data = pd.DataFrame({
+            "plant_id": ["A", "A", "A", "B", "B", "B", "C", "C", "C"],
+            "time": [datetime.strptime(dt, format="%Y-%m-%d %H:%M:%S") for dt in ["2000-12-12 01:00:00", "2000-12-12 02:00:00", "2000-12-12 03:00:00"]] * 3,
+            "quantity": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+        })
 
-        sample_bounds = pd.DataFrame(
-            {
-                "plant_id": ["A", "B", "C"],
-                "hourly_start": [datetime.strptime("2000-12-12 01:00:00", format="%Y-%m-%d %H:%M:%S")] * 3,
-                "hourly_end": [datetime.strptime("2000-12-12 03:00:00", format="%Y-%m-%d %H:%M:%S")] * 3
-            }
-        )
+        sample_bounds = pd.DataFrame({
+            "plant_id": ["A", "B", "C"],
+            "hourly_start": [datetime.strptime("2000-12-12 01:00:00", format="%Y-%m-%d %H:%M:%S")] * 3,
+            "hourly_end": [datetime.strptime("2000-12-12 03:00:00", format="%Y-%m-%d %H:%M:%S")] * 3
+        })
 
         assert default_calibrator._get_plant_generation_temporal_bounds(sample_gen_data) == sample_bounds
 
-    def test_wind_calibrator_default_clip_generation_to_plant_capacity(self, default_calibrator):
-        """Tests the _clip_generation_to_plant_capacity method."""
-        pass
+    def test_wind_calibrator_default_remove_duplicate_plant_time_from_generation(self, default_calibrator):
+        """Tests the _remove_duplicate_plant_time_from_generation method."""
+        duplicated_gen = pd.DataFrame({
+            "plant_id": ["A", "A", "B", "B"],
+            "time": [datetime.strptime("2000-12-12 01:00:00", format="%Y-%m-%d %H:%M:%S")] * 4,
+            "quantity": [1, 3, 5, 7]
+        })
+        expected_output = pd.DataFrame({
+            "plant_id": ["A", "B"],
+            "time": [datetime.strptime("2000-12-12 01:00:00", format="%Y-%m-%d %H:%M:%S")] * 2,
+            "quantity": [4, 12]
+        })
+        deduplicated_gen = default_calibrator._remove_duplicate_plant_time_from_generation(duplicated_gen)
+
+        assert deduplicated_gen == expected_output
+
+    def test_wind_calibrator_default_fit_weibull_dist_to_plant(self, default_calibrator):
+        """Tests the _fit_weibull_dist_to_plant method."""
+        assert default_calibrator._fit_weibull_dist_to_plant(("A", np.array([1.0, 2.0], dtype=np.float32))) == ("A", np.nan, np.nan)
+        assert default_calibrator._fit_weibull_dist_to_plant(("B", np.array([1.0, 2.0, 3.0], dtype=np.float32))) == ("B", pytest.approx(0.31521), pytest.approx(1.64121))
+
+    def test_wind_calibrator_default_logistic_function(self, default_calibrator):
+        """Tests the logistic_function method."""
+        assert default_calibrator.logistic_function(x=1.0, b=1.0, c=1.0, g=-3.0) == pytest.approx(-7.0)
+
+    def test_wind_calibrator_default_drop_invalid_rows(self, default_calibrator):
+        """Tests the _drop_invalid_rows method."""
+        input_data = pd.DataFrame({
+            "plant_id": ["A", "B"],
+            "wind_speed": [10, 20],
+            "quantity": [0.3, -np.inf],
+            "load_factor": [0.5, np.inf]
+        })
+        expected_output = pd.DataFrame({
+            "plant_id": ["A"],
+            "wind_speed": [10],
+            "quantity": [0.3],
+            "load_factor": [0.5]
+        })
+
+        assert default_calibrator._drop_invalid_rows(input_data) == expected_output
+
+    def test_wind_calibrator_default_clip_extreme_wind_speeds(self, default_calibrator):
+        """Tests the _clip_extreme_wind_speeds method."""
+        input_data = pd.DataFrame({
+            "plant_id": ["A", "B"],
+            "wind_speed": [10, 50]
+        })
+        expected_output = pd.DataFrame({
+            "plant_id": ["A", "B"],
+            "wind_speed": [10, 40]
+        })
+
+        assert default_calibrator._clip_extreme_wind_speeds(input_data) == expected_output
