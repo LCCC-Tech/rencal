@@ -9,7 +9,7 @@ import xarray as xr
 from weather.calibration.wind.wind_calibrator import WindCalibrator
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture()
 def temp_output_dir(tmp_path: Path):
     """Temporary output directory."""
     out_dir = tmp_path / "test_wind_calibrator_output"
