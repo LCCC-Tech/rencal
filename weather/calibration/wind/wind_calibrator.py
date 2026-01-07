@@ -89,9 +89,6 @@ class WindCalibrator(Calibrator):
             self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[0]]] ** 2
             + self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[1]]] ** 2
         )
-        # unique_plant_locations = self.plants.data[
-        #     self.plants.data[INTERNAL_PLANT_ID].isin(self.calibration_plant_ids)
-        # ].drop_duplicates(INTERNAL_PLANT_ID)[[INTERNAL_PLANT_ID, "latitude", "longitude"]]
         unique_plant_locations = self.plants.data.drop_duplicates([INTERNAL_PLANT_ID, "latitude", "longitude"])
         unique_plant_dim = xr.DataArray(unique_plant_locations[INTERNAL_PLANT_ID], dims=INTERNAL_PLANT_ID)
         plant_wind_speeds = self.resource.data.sel(
@@ -164,24 +161,15 @@ class WindCalibrator(Calibrator):
 
     def fit_historical_load_factor_distribution(self) -> pd.DataFrame:
         """Fits probability distribution to historical load factors and resource availability."""
-        start = datetime.now()
         wind_speeds = self.historical_load_factors.groupby(INTERNAL_PLANT_ID, sort=False)["wind_speed"]
         wind_speed_stats = wind_speeds.agg(wind_speed_mean="mean", wind_speed_stdev="std")
         wind_speeds = [(plant_id, wind_speed.dropna().to_numpy()) for plant_id, wind_speed in wind_speeds]
         with ThreadPoolExecutor(max_workers=8)as ex:
-            fits = list(ex.map(self._fit_weibull_dist_to_plant, wind_speeds)) # TODO: check if list comp and multiprocessing works, test number of max workers
-        # with multiprocessing.Pool(processes=8) as ex:
-        #     fits = ex.map(self._fit_weibull_dist_to_plant, wind_speeds)
-        # with ProcessPoolExecutor(max_workers=8) as ex:
-        #     fits = list(ex.map(self._fit_weibull_dist_to_plant, wind_speeds))
-        # fits = list(joblib.Parallel(n_jobs=8)(joblib.delayed(self._fit_weibull_dist_to_plant)(wind_speed) for wind_speed in wind_speeds))
-        # fits = [self._fit_weibull_dist_to_plant(wind_speed) for wind_speed in wind_speeds]
+            fits = list(ex.map(self._fit_weibull_dist_to_plant, wind_speeds))
         fitted_distributions = pd.DataFrame(fits, columns=[INTERNAL_PLANT_ID, "k", "lambda"])
         weibull_params = wind_speed_stats.reset_index().merge(
             fitted_distributions, on=INTERNAL_PLANT_ID, sort=False
         )
-        end = datetime.now()
-        logger.info("End - start = %s", end-start)
         return weibull_params
 
     def estimate_load_factors_for_resource(self) -> pd.DataFrame:
@@ -248,7 +236,11 @@ class WindCalibrator(Calibrator):
     @staticmethod
     def logistic_function(x, b, c, g):
         """Defines a generalised logistic function in the log domain for stability."""
-        return 1.0 - np.exp(-g * np.logaddexp(0.0, b * (np.log(x) - np.log(c))))
+        x_arr = np.asarray(x)
+        x_mask = x_arr != 0
+        output = np.zeros_like(x_arr)
+        output[x_mask] = 1.0 - np.exp(-g * np.logaddexp(0.0, b * (np.log(x_arr[x_mask]) - np.log(c))))
+        return output.item() if output.ndim == 0 else output
 
     @staticmethod
     def _drop_invalid_rows(cfd_data: pd.DataFrame) -> pd.DataFrame:
@@ -284,7 +276,6 @@ class WindCalibrator(Calibrator):
                 .rename(columns={"time": "Times"})
         )
         return plant_wind_speed_and_params
-
 
     def _rename_output_summary_columns(self) -> None:
         """Renames output table columns to expected and/or more human-readable values."""
