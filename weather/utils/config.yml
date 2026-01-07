@@ -6,7 +6,7 @@ END_DATE: 2026-12-31T00:00:00
 
 # Data
 PLANT_ID_COLUMN: "cfd_id"
-PLANT_ID_OUTPUT: "CFD ID"
+PLANT_ID_OUTPUT: "PLANT ID"
 
 # Logging Configuration
 QUIET_MODE: false
