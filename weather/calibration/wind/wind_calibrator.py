@@ -1,7 +1,6 @@
 """Extracts data from input files and calibreates wind power curves."""
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -73,6 +72,7 @@ class WindCalibrator(Calibrator):
         self.historical_load_factor_distributions = self.fit_historical_load_factor_distribution()
         self.output_historical_load_factor_distribution_parameters()
         self.summary = self.estimate_load_factors_for_resource()
+        self._create_generic_power_curve()
         self._rename_output_summary_columns()
         self.output_estimated_load_factors_tabular()
         self.wind_streams = self.generate_resource_streams()
