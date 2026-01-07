@@ -154,7 +154,7 @@ class TestWindCalibratorIntegration:
         calibrator.calibrate()
 
         # Post-calibration values
-        assert len(calibrator.summary) == 6
+        assert len(calibrator.summary) == 7
         assert calibrator.summary.isna().values.any() == np.False_
         assert len(calibrator.historical_load_factor_distributions) == 6
         assert calibrator.historical_load_factor_distributions.isna().values.any() == np.False_
