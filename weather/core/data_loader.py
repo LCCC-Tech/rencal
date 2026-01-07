@@ -185,11 +185,11 @@ class LocalDataLoader(DataLoader):
         datasets: list[xr.Dataset] = []
         for file_path in era5_files:
             try:
-                ds = xr.open_dataset(file_path)
-                time_dim = self._get_time_dimension(ds)
-                ds.rename({time_dim: "time"})
-                ds = self._cast_data_variables_to_float32(ds)
-                datasets.append(ds)
+                with xr.open_dataset(file_path) as ds:
+                    time_dim = self._get_time_dimension(ds)
+                    ds.rename({time_dim: "time"})
+                    ds = self._cast_data_variables_to_float32(ds)
+                    datasets.append(ds)
                 logger.debug(f"Successfully loaded {file_path}")
             except Exception as e:
                 logger.warning(f"Failed to load {file_path}: {e}")
