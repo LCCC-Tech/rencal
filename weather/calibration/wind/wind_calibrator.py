@@ -103,7 +103,16 @@ class WindCalibrator(Calibrator):
 
     @staticmethod
     def _get_plant_generation_temporal_bounds(generation_data: pd.DataFrame) -> pd.DataFrame:
-        """Gets the first and last timestamp a plant has generation data for."""
+        """
+        Gets the first and last timestamp a plant has generation data for.
+        
+        Args:
+            generation_data (pd.DataFrame): Generation dataset.
+
+        Returns:
+            pd.DataFrame: DataFrame containing the temporal bounds of generation availability for each plant.
+        
+        """
         return (
             generation_data.groupby(INTERNAL_PLANT_ID)["time"]
             .agg(hourly_start="min", hourly_end="max")
@@ -119,7 +128,16 @@ class WindCalibrator(Calibrator):
 
     @staticmethod
     def _remove_duplicate_plant_time_from_generation(generation_data: pd.DataFrame) -> pd.DataFrame:
-        """Aggregates generation quantities for potentialy rows where plant id and timestamp are equal."""
+        """
+        Aggregates generation quantities for potentialy rows where plant id and timestamp are equal.
+        
+        Args:
+            generation_data (pd.DataFrame): Generation dataset.
+
+        Returns:
+            pd.DataFrame: Generation dataset with potentially duplicated plant-time combinations removed and their quantities summed.
+        
+        """
         return generation_data.groupby(
             [INTERNAL_PLANT_ID, "time"], as_index=False, sort=False
         ).agg({"quantity": "sum"})
@@ -235,7 +253,19 @@ class WindCalibrator(Calibrator):
 
     @staticmethod
     def logistic_function(x, b, c, g):
-        """Defines a generalised logistic function in the log domain for stability."""
+        """
+        Defines a generalised logistic function in the log domain for stability.
+        
+        Args:
+            x (int | float | np.ndarray): Input variable(s), i. e.: wind speed.
+            b (float): Steepness parameter of the generalised logistic function.
+            c (float): X-axis inflection point location parameter of the generalised logistic function.
+            g (float): Asymmetry parameter of the generalised logistic function.
+
+        Returns:
+            int | float | np.ndarray: The outputs of the generalised logistic function for each x value with the specified shape parameters.
+        
+        """
         x_arr = np.asarray(x)
         x_mask = x_arr != 0
         output = np.zeros_like(x_arr)
@@ -244,12 +274,30 @@ class WindCalibrator(Calibrator):
 
     @staticmethod
     def _drop_invalid_rows(cfd_data: pd.DataFrame) -> pd.DataFrame:
-        """Drops rows with no valid data."""
+        """
+        Drops rows with no valid data, eliminating positive and negative infinity values.
+        
+        Args:
+            cfd_data (pd.DataFrame): DataFrame containing potentially invalid rows.
+
+        Returns:
+            pd.DataFrame: DataFrame without invalid rows.
+        
+        """
         return cfd_data.replace([np.inf, -np.inf], np.nan).dropna(subset=["wind_speed", "load_factor"])
 
     @staticmethod
     def _clip_extreme_wind_speeds(cfd_wind_data: pd.DataFrame) -> pd.DataFrame:
-        """Clips wind speeds above and below sensible thresholds to avoid overflow in power."""
+        """
+        Clips wind speeds above and below sensible thresholds to avoid overflow in power.
+        
+        Args:
+            cfd_wind_data (pd.DataFrame): DataFrame containing wind speed data.
+
+        Returns:
+            pd.DataFrame: DataFrame with too low or high wind speeds removed.
+        
+        """
         return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)]
 
     def _create_generic_power_curve(self) -> None:
