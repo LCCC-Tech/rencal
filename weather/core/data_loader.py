@@ -98,8 +98,21 @@ class LocalDataLoader(DataLoader):
             },
         )
 
-    def _get_time_dimension(self, ds: xr.Dataset) -> None:
-        """Check if the dataset has a valid time dimension"""
+    @staticmethod
+    def _get_time_dimension(ds: xr.Dataset) -> str:
+        """
+        Check if the dataset has a valid time dimension.
+        
+        Args:
+            ds (xr.Dataset): Xarray dataset to get the name of the temporal dimension of.
+
+        Returns:
+            str: The name of the tempora dimension.
+
+        Raises:
+            ValueError: When there is no expected time dimension name in the dataset.
+        
+        """
         if "time" in ds.dims:
             return "time"
         if "valid_time" in ds.dims:
