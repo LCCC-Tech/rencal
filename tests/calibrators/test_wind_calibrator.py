@@ -166,3 +166,7 @@ class TestWindCalibratorIntegration:
         assert (calibrator.output_path / "Weibull Params.csv").exists() is True
         assert (calibrator.output_path / "Wind Streams.parquet").exists() is True
         assert (calibrator.output_path / "Wind Speeds.csv").exists() is True
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

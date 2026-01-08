@@ -18,6 +18,7 @@ import datetime
 import os
 import sys
 from pathlib import Path
+from pytz import UTC
 from unittest.mock import patch
 
 import pandas as pd
@@ -250,10 +251,10 @@ class TestGenerationDataDownloader:
             downloader_with_temp_dir.download()
 
             # Read the final output file that was written
-            output_file = downloader_with_temp_dir.output_dir / "generation_data.csv"
+            output_file = downloader_with_temp_dir.output_dir / "generation_data.parquet"
             assert output_file.exists(), f"Output file should exist at {output_file}"
 
-            result = pd.read_csv(output_file)
+            result = pd.read_parquet(output_file)
 
             # Verify new UTC datetime format
             assert not result.empty, "Result should not be empty"
@@ -262,22 +263,17 @@ class TestGenerationDataDownloader:
             # Normal day should have exactly 24 UTC hours
             assert len(result) == 24, f"Expected 24 records for normal day, got {len(result)}"
 
-            # Parse time column and verify it's UTC
-            result["parsed_datetime"] = pd.to_datetime(result["time"])
-
             # Check that all datetimes are on expected date and in UTC
             expected_date = datetime.date(2023, 1, 15)
-            dates = result["parsed_datetime"].dt.date.unique()
+            dates = result["time"].dt.date.unique()
             assert len(dates) <= 2, "Normal day should span at most 2 UTC dates"
             assert expected_date in dates, f"Expected date {expected_date} should be present"
 
             # Verify timezone is UTC (should end with +00:00)
-            assert all(dt_str.endswith("+00:00") for dt_str in result["time"]), (
-                "All datetimes should be in UTC format (+00:00)"
-            )
+            assert result["time"].dt.tz == UTC
 
             # Enhanced UTC time range validation for normal day
-            sorted_times = sorted(result["parsed_datetime"])
+            sorted_times = sorted(result["time"])
             expected_start = pd.Timestamp("2023-01-15 00:00:00+00:00")
             expected_end = pd.Timestamp("2023-01-15 23:00:00+00:00")
             assert sorted_times[0] == expected_start, (
@@ -345,8 +341,8 @@ class TestGenerationDataDownloader:
             downloader_with_temp_dir.download()
 
             # Read and verify results
-            output_file = downloader_with_temp_dir.output_dir / "generation_data.csv"
-            result = pd.read_csv(output_file)
+            output_file = downloader_with_temp_dir.output_dir / "generation_data.parquet"
+            result = pd.read_parquet(output_file)
 
             # Spring forward: 46 periods should produce 23 UTC hours
             # (periods 3&4 are missing per official Elexon rules)
@@ -357,18 +353,15 @@ class TestGenerationDataDownloader:
             )
 
             # Verify all datetimes are UTC format
-            assert all(dt_str.endswith("+00:00") for dt_str in result["time"]), (
-                "All datetimes should be in UTC format (+00:00)"
-            )
+            assert result["time"].dt.tz == UTC
 
             # Parse datetimes to verify date range
-            result["parsed_datetime"] = pd.to_datetime(result["time"])
-            dates = result["parsed_datetime"].dt.date.unique()
+            dates = result["time"].dt.date.unique()
             expected_date = datetime.date(2023, 3, 26)
             assert expected_date in dates, f"Expected date {expected_date} should be present"
 
             # Enhanced UTC time range validation for spring forward day
-            sorted_times = sorted(result["parsed_datetime"])
+            sorted_times = sorted(result["time"])
             expected_start = pd.Timestamp("2023-03-26 00:00:00+00:00")
             expected_end = pd.Timestamp("2023-03-26 22:00:00+00:00")  # Missing 23:00 hour
             assert sorted_times[0] == expected_start, (
@@ -439,8 +432,8 @@ class TestGenerationDataDownloader:
             downloader_with_temp_dir.download()
 
             # Read and verify results
-            output_file = downloader_with_temp_dir.output_dir / "generation_data.csv"
-            result = pd.read_csv(output_file)
+            output_file = downloader_with_temp_dir.output_dir / "generation_data.parquet"
+            result = pd.read_parquet(output_file)
 
             # Fall back: 50 periods should produce 25 UTC hours
             # (spans across UTC midnight due to timezone change)
@@ -450,20 +443,17 @@ class TestGenerationDataDownloader:
             )
 
             # Verify all datetimes are UTC format
-            assert all(dt_str.endswith("+00:00") for dt_str in result["time"]), (
-                "All datetimes should be in UTC format (+00:00)"
-            )
+            assert result["time"].dt.tz == UTC
 
             # Parse datetimes to verify date range spans multiple dates
-            result["parsed_datetime"] = pd.to_datetime(result["time"])
-            dates = result["parsed_datetime"].dt.date.unique()
+            dates = result["time"].dt.date.unique()
             expected_date = datetime.date(2023, 10, 29)
             assert expected_date in dates, f"Expected date {expected_date} should be present"
             # Fall back should span multiple UTC dates
             assert len(dates) > 1, "Fall back should span multiple UTC dates due to timezone change"
 
             # Enhanced UTC time range validation for fall back day
-            sorted_times = sorted(result["parsed_datetime"])
+            sorted_times = sorted(result["time"])
             expected_start = pd.Timestamp("2023-10-28 23:00:00+00:00")  # Starts night before
             expected_end = pd.Timestamp("2023-10-29 23:00:00+00:00")  # Ends at 23:00 next day
             assert sorted_times[0] == expected_start, (
@@ -536,12 +526,12 @@ class TestGenerationDataDownloader:
             downloader_with_temp_dir.download()
 
             # Verify final aggregated file is created (note: download() updates output_dir to include /generation)
-            final_file = downloader_with_temp_dir.output_dir / "generation_data.csv"
+            final_file = downloader_with_temp_dir.output_dir / "generation_data.parquet"
 
             assert final_file.exists(), f"Final aggregated file should exist at {final_file}"
 
             # Verify processed file contains aggregated data with expected structure
-            final_data = pd.read_csv(final_file)
+            final_data = pd.read_parquet(final_file)
             assert "cfd_id" in final_data.columns, "Final data should have cfd_id column"
             assert "time" in final_data.columns, "Final data should have time column"
             assert "quantity" in final_data.columns, "Final data should have quantity column"
@@ -558,7 +548,7 @@ class TestGenerationDataDownloader:
         # Create the generation subdirectory and output file
         generation_dir = downloader_with_temp_dir.output_dir / "generation"
         generation_dir.mkdir(parents=True, exist_ok=True)
-        output_file = generation_dir / "generation_data.csv"
+        output_file = generation_dir / "generation_data.parquet"
         output_file.write_text("cfd_id,time,quantity\nTEST,2023-01-01 00:00:00+00:00,100.0\n")
 
         with (
@@ -636,8 +626,8 @@ class TestGenerationDataDownloader:
             downloader_with_temp_dir.download()
 
             # Verify the result shows proper aggregation occurred
-            output_file = downloader_with_temp_dir.output_dir / "generation_data.csv"
-            result = pd.read_csv(output_file)
+            output_file = downloader_with_temp_dir.output_dir / "generation_data.parquet"
+            result = pd.read_parquet(output_file)
 
             # Check that aggregation worked correctly:
             # - 4 CFDs (every 10 BMUs grouped)

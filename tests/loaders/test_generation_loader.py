@@ -23,7 +23,7 @@ class TestGenerationDataLoader:
             # Create generation subdirectory and CSV file
             gen_dir = Path(tmpdir) / "generation"
             gen_dir.mkdir()
-            gen_file = gen_dir / "generation_data.csv"
+            gen_file = gen_dir / "generation_data.parquet"
 
             # Create sample generation data with UTC timestamps
             generation_data = pd.DataFrame(
@@ -38,7 +38,8 @@ class TestGenerationDataLoader:
                     "quantity": [85.5, 92.1, 156.7, 178.3],
                 }
             )
-            generation_data.to_csv(gen_file, index=False)
+            generation_data["time"] = pd.to_datetime(generation_data["time"], utc=True)
+            generation_data.to_parquet(gen_file, index=False)
 
             # Test loading
             loader = LocalDataLoader(data_path=tmpdir)
@@ -205,7 +206,7 @@ class TestDataLoaderIntegration:
             # Create generation data
             gen_dir = Path(tmpdir) / "generation"
             gen_dir.mkdir()
-            gen_file = gen_dir / "generation_data.csv"
+            gen_file = gen_dir / "generation_data.parquet"
 
             generation_data = pd.DataFrame(
                 {
@@ -214,7 +215,8 @@ class TestDataLoaderIntegration:
                     "quantity": [85.5, 156.7],
                 }
             )
-            generation_data.to_csv(gen_file, index=False)
+            generation_data["time"] = pd.to_datetime(generation_data["time"], utc=True)
+            generation_data.to_parquet(gen_file, index=False)
 
             # Test loading both
             loader = LocalDataLoader(data_path=tmpdir)
