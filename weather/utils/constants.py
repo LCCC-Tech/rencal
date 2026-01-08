@@ -110,7 +110,7 @@ VERBOSE_MODE: bool = run_config.get("VERBOSE_MODE", False)  # Show all DEBUG log
 DEFAULT_LOGISTIC_FN_XLOC = 9
 DEFAULT_LOGISTIC_FN_ASYMMETRY = 1
 DEFAULT_LOGISTIC_FN_STEEPNESS = 4.5
-
+# Minimum bounds chosen to avoid division by zero error in np.log, maximum bounds chosen to avoid overflow
 LOGISTIC_FN_STEEPNESS_LBOUND = 1e-6
 LOGISTIC_FN_STEEPNESS_HBOUND = 50
 LOGISTIC_FN_XLOC_LBOUND = 1e-4
