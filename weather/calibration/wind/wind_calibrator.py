@@ -52,14 +52,14 @@ class WindCalibrator(Calibrator):
             plant_id_col = PLANT_ID_COLUMN
             logger.debug("Config-specified plant id column: %s", PLANT_ID_COLUMN)
         super().__init__(**super_args)
-        self.plants.data = self.plants.data[self.plants.data["technology"].isin(WIND_TECHNOLOGY_TYPES)]
+        self.plants.data = self.plants.data.loc[self.plants.data["technology"].isin(WIND_TECHNOLOGY_TYPES)]
         self.calibration_plant_ids = self.generation.data[INTERNAL_PLANT_ID].unique()
         self.output_path = output_path if isinstance(output_path, Path) else Path(output_path)
         self.visual_output = visual_output
-        self.plant_wind_speeds: pd.DataFrame = None
-        self.historical_load_factors: pd.DataFrame = None
-        self.historical_load_factor_distributions: pd.DataFrame = None
-        self.historical_combined: pd.DataFrame = None
+        self.plant_wind_speeds: pd.DataFrame
+        self.historical_load_factors: pd.DataFrame
+        self.historical_load_factor_distributions: pd.DataFrame
+        self.historical_combined: pd.DataFrame
 
     def calibrate(self) -> None:
         """Triggers calibration workflow."""
