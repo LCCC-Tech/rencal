@@ -66,7 +66,7 @@ class WindCalibrator(Calibrator):
         logger.info("Starting calibration process...")
         self.plant_wind_speeds = self.extract_resource_timeseries_for_plants()
         self.output_path.mkdir(parents=True, exist_ok=True)
-        self.output_wind_speeds()
+        self.output_resource_per_plant()
         self.generation.data = self._clip_generation_to_plant_capacity()
         self.historical_load_factors = self.calculate_historical_load_factors()
         self.historical_load_factor_distributions = self.fit_historical_load_factor_distribution()
@@ -76,7 +76,7 @@ class WindCalibrator(Calibrator):
         self._rename_output_summary_columns()
         self.output_estimated_load_factors_tabular()
         self.wind_streams = self.generate_resource_streams()
-        self.output_wind_streams()
+        self.output_resource_streams()
         logger.info("Calibration finished!")
 
     def extract_resource_timeseries_for_plants(self) -> pd.DataFrame:
@@ -336,12 +336,12 @@ class WindCalibrator(Calibrator):
         """Writes historical load factor parameters to a CSV file."""
         self.historical_load_factor_distributions.to_csv(self.output_path / "Weibull Params.csv", index=False)
 
-    def output_wind_speeds(self) -> None:
-        """Writes wind speed for each plant to a CSV file."""
+    def output_resource_per_plant(self) -> None:
+        """Writes resource time series for each plant to a CSV file."""
         self.plant_wind_speeds.to_csv(self.output_path / "Wind Speeds.csv", index=False)
 
-    def output_wind_streams(self) -> None:
-        """Writes wind streams to a parquet file."""
+    def output_resource_streams(self) -> None:
+        """Writes resource streams to a parquet file."""
         self.wind_streams.to_parquet(self.output_path / "Wind Streams.parquet", index=False)
 
     def output_estimated_load_factors_tabular(self) -> None:
