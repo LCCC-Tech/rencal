@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 
 from ..core.data_loader import LocalDataLoader
-from ..utils.constants import NOT_IMPLEMENTED_ERROR_DESC
 
 
 class Calibrator(ABC):

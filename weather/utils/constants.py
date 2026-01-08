@@ -123,7 +123,6 @@ LOGISTIC_FN_MAXEVAL = 10000
 WIND_SPEED_LBOUND = 0
 WIND_SPEED_HBOUND = 40
 
-NOT_IMPLEMENTED_ERROR_DESC = "This method must be implemented by child classes."
 INTERNAL_PLANT_ID = "plant_id" # for easier maintenance of internal calculations
 
 PLANT_ID_OUTPUT = run_config.get("PLANT_ID_OUTPUT", "CFD ID")
