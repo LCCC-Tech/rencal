@@ -31,39 +31,54 @@ class Calibrator(ABC):
     @abstractmethod
     def calibrate(self) -> None:
         """Triggers calibration workflow."""
-        raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
+        pass
 
     @abstractmethod
     def extract_resource_timeseries_for_plants(self) -> None:
         """Extracts resource time series for plants."""
-        raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
+        pass
 
     @abstractmethod
     def calculate_historical_load_factors(self) -> None:
         """Calculates historical load factors."""
-        raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
+        pass
 
     @abstractmethod
     def fit_historical_load_factor_distribution(self) -> None:
         """Fits a distribution to historical load factors."""
-        raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
+        pass
 
     @abstractmethod
     def estimate_load_factors_for_resource(self) -> None:
         """Estimates load factors based on historical distribution and full resource availability."""
-        raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
+        pass
 
     @abstractmethod
     def generate_resource_streams(self) -> None:
         """Generates load factor streams for available resource time series for each generator."""
-        raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
+        pass
+
+    @abstractmethod
+    def output_historical_load_factor_distribution_parameters(self) -> None:
+        """Writes historical load factor parameters to a CSV file."""
+        pass
+
+    @abstractmethod
+    def output_resource_per_plant(self) -> None:
+        """Writes resource time series for each plant to a CSV file."""
+        pass
+
+    @abstractmethod
+    def output_resource_streams(self) -> None:
+        """Writes resource streams to a parquet file."""
+        pass
 
     @abstractmethod
     def output_estimated_load_factors_tabular(self) -> None:
         """Outputs table of estimated load factors."""
-        raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
+        pass
 
     @abstractmethod
     def output_estimated_load_factors_visual(self) -> None:
         """Outputs a series of plots of estimated load factors and calibrated curves."""
-        raise NotImplementedError(NOT_IMPLEMENTED_ERROR_DESC)
+        pass
