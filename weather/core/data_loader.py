@@ -11,7 +11,7 @@ from weather.utils.constants import (
     DEFAULT_WIND_VARIABLES,
     DOWNLOAD_DATA_DIR,
     ERA5_VARIABLE_MAPPING,
-    GENERATION_DATE_FILE_NAME,
+    GENERATION_DATA_FILE_NAME,
     INTERNAL_PLANT_ID,
     PLANT_DATA_FILE_NAME,
     PLANT_ID_COLUMN,
@@ -77,11 +77,11 @@ class LocalDataLoader(DataLoader):
         Returns:
             GenerationDataset: Dataset containing generation time series
         """
-        file_path = self._base_path / "generation" / GENERATION_DATE_FILE_NAME
+        file_path = self._base_path / "generation" / GENERATION_DATA_FILE_NAME
         if not file_path.exists():
             raise FileNotFoundError(f"Generation data file not found at {file_path}")
 
-        df = pd.read_csv(file_path, parse_dates=["time"])
+        df = pd.read_parquet(file_path)
         df = df.rename(columns={id_column: INTERNAL_PLANT_ID})
 
         # Log summary info
@@ -187,7 +187,7 @@ class LocalDataLoader(DataLoader):
             try:
                 with xr.open_dataset(file_path) as ds:
                     time_dim = self._get_time_dimension(ds)
-                    ds.rename({time_dim: "time"})
+                    ds = ds.rename({time_dim: "time"})
                     ds = self._cast_data_variables_to_float32(ds)
                     datasets.append(ds)
                 logger.debug(f"Successfully loaded {file_path}")
@@ -203,7 +203,7 @@ class LocalDataLoader(DataLoader):
 
         # Summary log
         logger.info(
-            f"ERA5 data loaded: {len(era5_files)} files, {combined_ds.sizes['time']} time periods"
+            f"ERA5 data loaded: {len(era5_files)} files, {combined_ds.sizes["time"]} time periods"
         )
 
         return ERA5DatasetModel(

@@ -82,7 +82,7 @@ WIND_TECHNOLOGY_TYPES = {"Onshore Wind", "Offshore Wind"}
 
 # Elexon API
 ELEXON_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
-GENERATION_DATE_FILE_NAME = "generation_data.csv"
+GENERATION_DATA_FILE_NAME = "generation_data.parquet"
 
 # Normal Day (n): 48 periods, continuous 30-minute intervals
 NORMAL_DAY_MINUTES = [i * 30 for i in range(50)]  # [0, 30, 60, 90, ...] up to period 50

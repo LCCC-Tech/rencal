@@ -26,7 +26,7 @@ from weather.utils.constants import (
     ELEXON_API_URL,
     ERA5_DATASET,
     ERA5_PRODUCT_TYPE,
-    GENERATION_DATE_FILE_NAME,
+    GENERATION_DATA_FILE_NAME,
     MARCH_FORWARD_MINUTES,
     NORMAL_DAY_MINUTES,
     OCTOBER_BACK_MINUTES,
@@ -713,14 +713,14 @@ class GenerationDataDownloader(DataDownloader):
         cfd_df = self._get_cfd_plants()
 
         self._update_output_directory(stem="generation")
-        output_file = self.output_dir / GENERATION_DATE_FILE_NAME
+        output_file = self.output_dir / GENERATION_DATA_FILE_NAME
         if output_file.exists():
             self.logger.debug("Generation data already exists, skipping download...")
             return
 
         bmu_generation_df = self._download_generation_data()
         generation_df = self._aggregate_bmu_generation_to_cfd(cfd_df, bmu_generation_df)
-        generation_df.to_csv(output_file, index=False)
+        generation_df.to_parquet(output_file, index=False)
         self.logger.info(f"Generation data saved to {output_file}")
 
 
