@@ -52,7 +52,7 @@ class WindCalibrator(Calibrator):
             plant_id_col = PLANT_ID_COLUMN
             logger.debug("Config-specified plant id column: %s", PLANT_ID_COLUMN)
         super().__init__(**super_args)
-        self.plants.data = self.plants.data.loc[self.plants.data["technology"].isin(WIND_TECHNOLOGY_TYPES)]
+        self.plants.data = self.plants.data[self.plants.data["technology"].isin(WIND_TECHNOLOGY_TYPES)]
         self.calibration_plant_ids = self.generation.data[INTERNAL_PLANT_ID].unique()
         self.output_path = output_path if isinstance(output_path, Path) else Path(output_path)
         self.visual_output = visual_output
@@ -162,7 +162,7 @@ class WindCalibrator(Calibrator):
         )
         wind_speed_generation_merged["load_factor"] = (
             wind_speed_generation_merged["quantity"].fillna(0)
-            / wind_speed_generation_merged.groupby(INTERNAL_PLANT_ID)["quantity"].transform("max")
+            / wind_speed_generation_merged.groupby(INTERNAL_PLANT_ID)["quantity"].transform("max") # Take max capacity instead of max generation in calibration period
         )
         numeric_cols = wind_speed_generation_merged.select_dtypes(include=["number"]).columns
         wind_speed_generation_merged[numeric_cols] = wind_speed_generation_merged[numeric_cols].round(2)
@@ -195,8 +195,8 @@ class WindCalibrator(Calibrator):
         summary = pd.DataFrame(columns=[
             INTERNAL_PLANT_ID, "a", "b", "c", "d", "g", "estimated_load_factor"
         ])
-        self.historical_load_factors = self._clip_extreme_wind_speeds(self.historical_load_factors)
-        self.historical_load_factors = self._drop_invalid_rows(self.historical_load_factors)
+        self.historical_load_factors = self._clip_extreme_wind_speeds(self.historical_load_factors) # Removing should be earlier than weibull fitting -> around clipping to max capacity
+        self.historical_load_factors = self._drop_invalid_rows(self.historical_load_factors) # Same as above
         for plant_id in self.calibration_plant_ids:
             single_plant_load_factors = self.historical_load_factors[self.historical_load_factors[INTERNAL_PLANT_ID] == plant_id]
             single_plant_load_factor_dist_params = self.historical_load_factor_distributions[
@@ -225,9 +225,11 @@ class WindCalibrator(Calibrator):
                 continue
 
             try:
+                # Integrates the product of the logistic function for x (estimated load factor) and the weibull fuction of x (relative likelihood of x's occurrence)
                 estimated_load_factor = quad(
-                    lambda x, logistic_params, k_val, lambda_val: self.logistic_function(x, *logistic_params)
-                        * (k_val / lambda_val * (x / lambda_val)**(k_val - 1) * np.exp(-((x / lambda_val)**k_val))),
+                    lambda x, logistic_params, k_val, lambda_val: \
+                        self.logistic_function(x, *logistic_params)
+                        * self.weibull_function(x, k_val, lambda_val),
                     0, np.inf, (logistic_params, k_val, lambda_val)
                 )[0]
             except Exception as e:
@@ -252,10 +254,22 @@ class WindCalibrator(Calibrator):
         return summary
 
     @staticmethod
-    def logistic_function(x, b, c, g):
+    def logistic_function(x: int | float| np.ndarray, b: float, c: float, g: float) -> float | np.ndarray:
         """
-        Defines a generalised logistic function in the log domain for stability.
-        
+        Defines a generalised logistic function in the log domain for stability and calculates its
+        value for any numeric input `x`.
+
+        The generalised logistic function has 5 parameters defining its shape;
+        however, this implementation forces the minimum and maximum values
+        the function can take to 0 and 1, respectively, as load factors can vary between those two.
+
+        The non-log-domain logistic function looks like this:
+
+        f(x) = d + (a - d) / ((1 + (x / c) ** b) ** g)
+
+        where `a` is the minimum bound, `b` is the steepness, `c` is the inflection point location,
+        `d` is the maximum bound, and `g` is the asymmetry.
+
         Args:
             x (int | float | np.ndarray): Input variable(s), i. e.: wind speed.
             b (float): Steepness parameter of the generalised logistic function.
@@ -263,7 +277,7 @@ class WindCalibrator(Calibrator):
             g (float): Asymmetry parameter of the generalised logistic function.
 
         Returns:
-            int | float | np.ndarray: The outputs of the generalised logistic function for each x value with the specified shape parameters.
+            float | np.ndarray: The outputs of the generalised logistic function for each x value with the specified shape parameters.
         
         """
         x_arr = np.asarray(x)
@@ -271,6 +285,28 @@ class WindCalibrator(Calibrator):
         output = np.zeros_like(x_arr)
         output[x_mask] = 1.0 - np.exp(-g * np.logaddexp(0.0, b * (np.log(x_arr[x_mask]) - np.log(c))))
         return output.item() if output.ndim == 0 else output
+
+    @staticmethod
+    def weibull_function(x: int | float| np.ndarray, k_val: float, lambda_val: float) -> float | np.ndarray:
+        """
+        Calculates the value of a specified Weibull distribution for any numeric input `x`.
+
+        The equation of the Weibull distribution is as follows:
+
+        f(x) = k / λ * ((x / λ) ** (k - 1)) * (e ** -(x / λ) ** k)
+
+        where `k` is the shape parameter, `λ` is the scale parameter, and `e` is Euler's number.
+
+        Args:
+            x (int | float | np.ndarray): Input variable(s), i. e.: wind speed.
+            k_val (float): Shape parameter of the Weibull distribution.
+            lambda_val (float): Scale parameter of the Weibull distribution.
+
+        Returns:
+            float | np.ndarray: Value of Weibull function at the specified x value(s).
+        
+        """
+        return k_val / lambda_val * (x / lambda_val)**(k_val - 1) * np.exp(-((x / lambda_val)**k_val))
 
     @staticmethod
     def _drop_invalid_rows(cfd_data: pd.DataFrame) -> pd.DataFrame:
@@ -300,11 +336,11 @@ class WindCalibrator(Calibrator):
         """
         return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)]
 
-    def _create_generic_power_curve(self) -> None:
+    def _create_generic_power_curve(self) -> None: # Split curve by offshore and onshore
         """Generates generic power curve parameters from available fitted data."""
         self.summary.loc[len(self.summary)] = ["GEN", 0, self.summary["b"].mean(), self.summary["c"].mean(), 1, self.summary["g"].mean(), 0]
 
-    def generate_resource_streams(self) -> None:
+    def generate_resource_streams(self) -> None: # Partial application of logistic fun for ach plant could elimiinate large df size!
         """Generates wind streams from fitted and/or generalised power curve parameters and long-term wind data."""
         plant_wind_speed_and_params = self.plant_wind_speeds.merge(self.summary, left_on=INTERNAL_PLANT_ID, right_on=PLANT_ID_OUTPUT, how="left", indicator=True)
         plant_wind_speed_and_params.loc[plant_wind_speed_and_params["_merge"] == "left_only", self.summary.columns] = self.summary.iloc[-1].values
