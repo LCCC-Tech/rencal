@@ -1,6 +1,7 @@
 """Extracts data from input files and calibreates wind power curves."""
 
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -99,6 +100,7 @@ class WindCalibrator(Calibrator):
         plant_wind_speeds[INTERNAL_PLANT_ID] = unique_plant_dim
         plant_wind_speed_res = plant_wind_speeds.to_dataframe().reset_index(drop=False)[["time", INTERNAL_PLANT_ID, "wind_speed"]]
         plant_wind_speed_res["time"] = pd.to_datetime(plant_wind_speed_res["time"], utc=True)
+        plant_wind_speed_res = self._replace_extreme_wind_speeds(plant_wind_speed_res)
         return plant_wind_speed_res
 
     @staticmethod
@@ -154,18 +156,18 @@ class WindCalibrator(Calibrator):
             calibration_plant_wind_speeds["hourly_start"], calibration_plant_wind_speeds["hourly_end"]
         )
         calibration_plant_wind_speeds = calibration_plant_wind_speeds.loc[mask, ["time", INTERNAL_PLANT_ID, "wind_speed"]]
-        wind_speed_generation_merged = pd.merge(
-            calibration_plant_wind_speeds,
-            self.generation.data,
-            on=["time", INTERNAL_PLANT_ID],
-            how="left"
+        wind_speed_generation_merged = (
+            calibration_plant_wind_speeds
+            .merge(self.generation.data, on=["time", INTERNAL_PLANT_ID], how="left")
+            .merge(self.plants.data, on=INTERNAL_PLANT_ID, how="left")
         )
         wind_speed_generation_merged["load_factor"] = (
             wind_speed_generation_merged["quantity"].fillna(0)
-            / wind_speed_generation_merged.groupby(INTERNAL_PLANT_ID)["quantity"].transform("max") # Take max capacity instead of max generation in calibration period
+            / wind_speed_generation_merged["capacity"]
         )
         numeric_cols = wind_speed_generation_merged.select_dtypes(include=["number"]).columns
         wind_speed_generation_merged[numeric_cols] = wind_speed_generation_merged[numeric_cols].round(2)
+        wind_speed_generation_merged = self._drop_invalid_rows(wind_speed_generation_merged)
         return wind_speed_generation_merged
 
     @staticmethod
@@ -195,8 +197,6 @@ class WindCalibrator(Calibrator):
         summary = pd.DataFrame(columns=[
             INTERNAL_PLANT_ID, "a", "b", "c", "d", "g", "estimated_load_factor"
         ])
-        self.historical_load_factors = self._clip_extreme_wind_speeds(self.historical_load_factors) # Removing should be earlier than weibull fitting -> around clipping to max capacity
-        self.historical_load_factors = self._drop_invalid_rows(self.historical_load_factors) # Same as above
         for plant_id in self.calibration_plant_ids:
             single_plant_load_factors = self.historical_load_factors[self.historical_load_factors[INTERNAL_PLANT_ID] == plant_id]
             single_plant_load_factor_dist_params = self.historical_load_factor_distributions[
@@ -323,24 +323,31 @@ class WindCalibrator(Calibrator):
         return cfd_data.replace([np.inf, -np.inf], np.nan).dropna(subset=["wind_speed", "load_factor"])
 
     @staticmethod
-    def _clip_extreme_wind_speeds(cfd_wind_data: pd.DataFrame) -> pd.DataFrame:
+    def _replace_extreme_wind_speeds(cfd_wind_data: pd.DataFrame) -> pd.DataFrame:
         """
-        Clips wind speeds above and below sensible thresholds to avoid overflow in power.
+        Replaces wind speeds above and below sensible thresholds with threshold values.
         
         Args:
             cfd_wind_data (pd.DataFrame): DataFrame containing wind speed data.
 
         Returns:
-            pd.DataFrame: DataFrame with too low or high wind speeds removed.
+            pd.DataFrame: DataFrame with too low or high wind speeds replaced.
         
         """
-        return cfd_wind_data[cfd_wind_data["wind_speed"].between(WIND_SPEED_LBOUND, WIND_SPEED_HBOUND)]
+        cfd_wind_data[cfd_wind_data["wind_speed"] < WIND_SPEED_LBOUND]['wind_speed'] = WIND_SPEED_LBOUND
+        cfd_wind_data[cfd_wind_data["wind_speed"] > WIND_SPEED_HBOUND]['wind_speed'] = WIND_SPEED_HBOUND
+        return cfd_wind_data
 
     def _create_generic_power_curve(self) -> None: # Split curve by offshore and onshore
         """Generates generic power curve parameters from available fitted data."""
         self.summary.loc[len(self.summary)] = ["GEN", 0, self.summary["b"].mean(), self.summary["c"].mean(), 1, self.summary["g"].mean(), 0]
 
-    def generate_resource_streams(self) -> None: # Partial application of logistic fun for ach plant could elimiinate large df size!
+    def parameterised_logistic_function(self, plant_id: str):
+        """Returns a logistic function with the params from the summary for the plant."""
+        plant_summary = self.summary[self.summary[PLANT_ID_OUTPUT] == plant_id][["b", "c", "g"]] or self.summary[self.summary[PLANT_ID_OUTPUT] == "GEN"][["b", "c", "g"]]
+        return partial(self.logistic_function(b=plant_summary["b"].item, c=plant_summary["c"].item, g=plant_summary["g"].item))
+
+    def generate_resource_streams(self) -> None: # TODO: Partial application of logistic fun for ach plant could elimiinate large df size!
         """Generates wind streams from fitted and/or generalised power curve parameters and long-term wind data."""
         plant_wind_speed_and_params = self.plant_wind_speeds.merge(self.summary, left_on=INTERNAL_PLANT_ID, right_on=PLANT_ID_OUTPUT, how="left", indicator=True)
         plant_wind_speed_and_params.loc[plant_wind_speed_and_params["_merge"] == "left_only", self.summary.columns] = self.summary.iloc[-1].values
@@ -351,7 +358,8 @@ class WindCalibrator(Calibrator):
             plant_wind_speed_and_params["c"],
             plant_wind_speed_and_params["g"]
         )
-        plant_wind_speed_and_params = plant_wind_speed_and_params.drop(columns=list(self.summary.columns) + ["_merge", "wind_speed"])
+        # plant_wind_speed_and_params["load_factor"] = self.parameterised_logistic_function(plant_wind_speed_and_params[INTERNAL_PLANT_ID])(plant_wind_speed_and_params["wind_speed"])
+        plant_wind_speed_and_params = plant_wind_speed_and_params.drop(columns=list(self.summary.columns) + ["wind_speed"])
         plant_wind_speed_and_params = (
             plant_wind_speed_and_params
                 .pivot(index="time", columns=INTERNAL_PLANT_ID, values="load_factor")
