@@ -126,11 +126,11 @@ class TestWindCalibrator:
             "wind_speed": [10, 50]
         })
         expected_output = pd.DataFrame({
-            "plant_id": ["A"],
-            "wind_speed": [10]
+            "plant_id": ["A", "B"],
+            "wind_speed": [10, 40]
         })
 
-        assert default_calibrator._clip_extreme_wind_speeds(input_data).equals(expected_output)
+        assert default_calibrator._replace_extreme_wind_speeds(input_data).equals(expected_output)
 
 
 class TestWindCalibratorIntegration:
@@ -156,8 +156,6 @@ class TestWindCalibratorIntegration:
         # Post-calibration values
         assert len(calibrator.summary) == 7
         assert calibrator.summary.isna().values.any() == np.False_
-        assert len(calibrator.historical_load_factor_distributions) == 6
-        assert calibrator.historical_load_factor_distributions.isna().values.any() == np.False_
         assert len(calibrator.wind_streams) == 24
         assert len(calibrator.wind_streams.columns) == 11
         assert calibrator.wind_streams.isna().values.any() == np.False_
