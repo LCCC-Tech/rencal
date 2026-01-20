@@ -4,9 +4,8 @@ description: A page to test all the markdown content test cases
 draft: true
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from "@astrojs/starlight/components";
 import VideoAside from "../../../components/VideoAside.astro";
-
 
 The more data a web page transfers, the more energy resources it requires. In April 2023, the median web page required a user to download more than 2,000 KB according to data from the HTTP Archive.
 
@@ -19,6 +18,12 @@ Lorem Ipsum is a placeholder text commonly used in the design and printing indus
 ### Links
 
 Here are some [links](/), [link-b](/), and [a really really long link to look at](/).
+
+### Mathematical Functions
+
+$$
+\int_0^\infty = \frac{1}{x^2+1} \;dx=\frac{\pi}{2}
+$$
 
 ### Paragraph 1
 
@@ -95,7 +100,6 @@ Let's add another line below.
 
 Code blocks can be rendered inside a window-like frame.
 
-
 ```python title="my-test-file.py"
 print('Hello World!');
 ```
@@ -164,8 +168,8 @@ Combine syntax highlighting with `diff`-like syntax.
 You can display a tabbed interface using the `<Tabs>` and `<TabItem>` components.
 
 <Tabs>
-  <TabItem label="Stars">Sirius, Vega, Betelgeuse</TabItem>
-  <TabItem label="Moons">Io, Europa, Ganymede</TabItem>
+    <TabItem label="Stars">Sirius, Vega, Betelgeuse</TabItem>
+    <TabItem label="Moons">Io, Europa, Ganymede</TabItem>
 </Tabs>
 
 ### Code Blocks
@@ -237,11 +241,15 @@ yarn create astro --template starlight
 
 ```js
 {
-  url: {
-    cors: {
-      allowOrigins: ["https://www.example.com", "http://localhost:60905", "http://localhost:60905"]
+    url: {
+        cors: {
+            allowOrigins: [
+                "https://www.example.com",
+                "http://localhost:60905",
+                "http://localhost:60905",
+            ];
+        }
     }
-  }
 }
 ```
 
@@ -250,8 +258,8 @@ yarn create astro --template starlight
 ### Ordered List
 
 1. First item
-   1. First sub item
-   2. Second sub item
+    1. First sub item
+    2. Second sub item
 2. Second item
 3. Third item
 
@@ -280,23 +288,23 @@ yarn create astro --template starlight
 
 1. The more data a web page transfers, the more energy resources it requires. In April 2023, the median web page required a user to download more than 2,000 KB according to data from the HTTP Archive.
 
-   :::tip
-   Make sure to [read this](/) extra resource on this topic.
-   :::
+    :::tip
+    Make sure to [read this](/) extra resource on this topic.
+    :::
 
-   Here's some additional data on it that's relevant to the subject.
+    Here's some additional data on it that's relevant to the subject.
 
 2. The more data a web page transfers, the more energy resources it requires. In April 2023, the median web page required a user to download more than 2,000 KB according to data from the HTTP Archive.
 
-   Here's some additional data on it that's relevant to the subject.
+    Here's some additional data on it that's relevant to the subject.
 
 3. The more data a web page transfers, the more energy resources it requires. In April 2023, the median web page required a user to download more than 2,000 KB according to data from the HTTP Archive.
 
 ### Unordered List
 
 - First item
-  - First sub item
-  - Second sub item
+    - First sub item
+    - Second sub item
 - Second item
 - Third item
 
@@ -310,11 +318,11 @@ yarn create astro --template starlight
 
 - The more data a web page transfers, the more energy resources it requires. In April 2023, the median web page required a user to download more than 2,000 KB according to data from the HTTP Archive.
 
-  :::tip
-  Make sure to [read this](/) extra resource on this topic.
-  :::
+    :::tip
+    Make sure to [read this](/) extra resource on this topic.
+    :::
 
-  Here's some additional data on it that's relevant to the subject.
+    Here's some additional data on it that's relevant to the subject.
 
 - The more data a web page transfers, the more energy resources it requires. In April 2023, the median web page required a user to download more than 2,000 KB according to data from the HTTP Archive.
 - The more data a web page transfers, the more energy resources it requires. In April 2023, the median web page required a user to download more than 2,000 KB according to data from the HTTP Archive.
@@ -329,11 +337,11 @@ Use the `---` to add a divider. It inserts an `<hr>` tag.
 
 Let's test some tables. Testing the table and the spacing between it and the neighboring paragraphs.
 
-| Syntax | Description |
-| ----------- | ----------- |
-| Header | Title |
-| Paragraph | Text |
-| Link | URL |
+| Syntax    | Description |
+| --------- | ----------- |
+| Header    | Title       |
+| Paragraph | Text        |
+| Link      | URL         |
 
 The more data a web page transfers, the more energy resources it requires. In April 2023, the median web page required a user to download more than 2,000 KB according to data from the HTTP Archive.
 
@@ -413,7 +421,10 @@ Astro helps you build faster websites with [“Islands Architecture”](https://
 
 ### Video Asides
 
-<VideoAside title="Watch a video about LCCC" href="https://www.youtube.com/watch?v=L6eWBXTkR10" />
+<VideoAside
+    title="Watch a video about LCCC"
+    href="https://www.youtube.com/watch?v=L6eWBXTkR10"
+/>
 
 ## Extra
 
