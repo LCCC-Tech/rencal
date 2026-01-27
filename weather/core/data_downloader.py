@@ -103,7 +103,6 @@ class ERA5DataDownloader(DataDownloader):
         self._api_key = CDS_API_KEY
         self._api = ParsedURL(CDS_API_URL)
         self._client = None
-
         self._update_output_directory(stem="era5")
 
     def _extract_calibration_years(self) -> list[int]:
@@ -208,11 +207,9 @@ class ERA5DataDownloader(DataDownloader):
         }
 
         try:
-            result_wind = self.client.retrieve(ERA5_DATASET, request_wind)
-            result_wind.download(target=file_path_wind)
+            self.client.retrieve(ERA5_DATASET, request_wind, file_path_wind)
             self.logger.info("Download complete: %s", file_path_wind)
-            result_solar = self.client.retrieve(ERA5_DATASET, request_solar)
-            result_solar.download(target=file_path_solar)
+            self.client.retrieve(ERA5_DATASET, request_solar, file_path_solar)
             self.logger.info("Download complete: %s", file_path_solar)
         except Exception as e:
             self.logger.error("Error downloading %s: %s", year, e)
@@ -646,10 +643,9 @@ class GenerationDataDownloader(DataDownloader):
                           .reset_index()
                           .rename(columns={"cfd_id": "cfd_count", "capacity": "capacity_sum"}))
         generation_df = generation_df.merge(bmu_cfd_groups, on=["bmu_id", "settlement_date", "settlement_period"])
-        generation_df["quantity"].where(
+        generation_df["quantity"] = generation_df["quantity"].where(
             generation_df["cfd_count"] == 1,
-            generation_df["quantity"] * (generation_df["capacity"] / generation_df["capacity_sum"]),
-            inplace=True
+            generation_df["quantity"] * (generation_df["capacity"] / generation_df["capacity_sum"])
         )
         generation_df = generation_df.drop(columns=["capacity_sum", "cfd_count", "capacity"])
         return generation_df
@@ -680,7 +676,7 @@ class GenerationDataDownloader(DataDownloader):
         )
 
         # Merge with CFD data first
-        generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id", "capacity"]], on="bmu_id", how="left")
+        generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id", "capacity"]], on="bmu_id", how="left").copy()
 
         # Divide generation of shared bmus between plants
         generation_df = self._divide_shared_bmu_generation(generation_df)
