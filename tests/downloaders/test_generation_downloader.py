@@ -34,7 +34,7 @@ from weather.core.data_downloader import GenerationDataDownloader
 @pytest.fixture
 def test_cfd_df() -> pd.DataFrame:
     """Create test CfD DataFrame with BMU mapping."""
-    return pd.DataFrame({"cfd_id": ["TEST-CFD-001"], "bmu_id": ["C__PSTAT011"]})
+    return pd.DataFrame({"cfd_id": ["TEST-CFD-001"], "bmu_id": ["C__PSTAT011"], "capacity": [30.5]})
 
 
 @pytest.fixture
@@ -611,7 +611,8 @@ class TestGenerationDataDownloader:
         cfd_data = []
         for i, bmu_id in enumerate(bmui_ids):
             cfd_id = f"CFD_{i // 10:02d}"  # Group every 10 BMUs into same CFD
-            cfd_data.append({"cfd_id": cfd_id, "bmu_id": bmu_id})
+            capacity = i // 10 + 30
+            cfd_data.append({"cfd_id": cfd_id, "bmu_id": bmu_id, "capacity": capacity})
 
         cfd_df = pd.DataFrame(cfd_data)
 
