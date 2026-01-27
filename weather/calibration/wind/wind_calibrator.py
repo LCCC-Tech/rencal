@@ -345,12 +345,7 @@ class WindCalibrator(Calibrator):
         """Generates generic power curve parameters from available fitted data."""
         self.summary.loc[len(self.summary)] = ["GEN", 0, self.summary["b"].mean(), self.summary["c"].mean(), 1, self.summary["g"].mean(), 0]
 
-    def parameterised_logistic_function(self, plant_id: str):
-        """Returns a logistic function with the params from the summary for the plant."""
-        plant_summary = self.summary[self.summary[PLANT_ID_OUTPUT] == plant_id][["b", "c", "g"]] or self.summary[self.summary[PLANT_ID_OUTPUT] == "GEN"][["b", "c", "g"]]
-        return partial(self.logistic_function(b=plant_summary["b"].item, c=plant_summary["c"].item, g=plant_summary["g"].item))
-
-    def generate_resource_streams(self) -> None: # TODO: Partial application of logistic fun for ach plant could elimiinate large df size!
+    def generate_resource_streams(self) -> None:
         """Generates wind streams from fitted and/or generalised power curve parameters and long-term wind data."""
         summary_used_cols = [PLANT_ID_OUTPUT, "b", "c", "g"]
         plant_wind_speed_and_params = self.plant_wind_speeds.merge(self.summary[summary_used_cols], left_on=INTERNAL_PLANT_ID, right_on=PLANT_ID_OUTPUT, how="left", indicator=True).drop(columns=PLANT_ID_OUTPUT)
@@ -361,7 +356,7 @@ class WindCalibrator(Calibrator):
             plant_wind_speed_and_params["b"],
             plant_wind_speed_and_params["c"],
             plant_wind_speed_and_params["g"]
-        ) # Dict expansion for each id can limit size and eliminate duplication
+        )
         plant_wind_speed_and_params = plant_wind_speed_and_params.drop(columns=summary_used_cols[1:] + ["wind_speed"])
         plant_wind_speed_and_params = (
             plant_wind_speed_and_params
