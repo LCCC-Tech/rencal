@@ -173,8 +173,17 @@ class WindCalibrator(Calibrator):
         return wind_speed_generation_merged
 
     @staticmethod
-    def _fit_weibull_dist_to_plant(item):
-        """Fits a Weibull distribution to an array of wind speeds."""
+    def _fit_weibull_dist_to_plant(item: tuple[str, np.ndarray]) -> tuple[str, float, float]:
+        """
+        Fits a Weibull distribution to an array of wind speeds.
+        
+        Args:
+            item (tuple[str, np.ndarray]): Contains the ID and wind speeds connected to the plant to fit Weibull distribution to.
+
+        Returns:
+            tuple[str, float, float]: Tuple of plant ID, k and λ parameters of the fitted Weibull distribution.
+        
+        """
         cfd_id, speeds = item
         if len(speeds) < 3:  # skip if not enough points
             return cfd_id, np.nan, np.nan
@@ -341,15 +350,44 @@ class WindCalibrator(Calibrator):
         cfd_wind_data["wind_speed"] = cfd_wind_data["wind_speed"].clip(lower=WIND_SPEED_LBOUND, upper=WIND_SPEED_HBOUND)
         return cfd_wind_data 
 
-    def _create_generic_power_curve(self) -> None: # Split curve by offshore and onshore
+    def _create_generic_power_curve(self) -> None:
         """Generates generic power curve parameters from available fitted data."""
-        self.summary.loc[len(self.summary)] = ["GEN", 0, self.summary["b"].mean(), self.summary["c"].mean(), 1, self.summary["g"].mean(), 0]
+        summary_with_tech = self.summary.merge(self.plants.data[[INTERNAL_PLANT_ID, "technology"]], how="left", on=INTERNAL_PLANT_ID)
+        unique_summary_tech = summary_with_tech["technology"].unique()
+        if all([wind_tech in unique_summary_tech for wind_tech in WIND_TECHNOLOGY_TYPES]):
+            tech_means = (summary_with_tech
+                          .groupby("technology")
+                          .agg({"a": "first", "b": "mean", "c": "mean", "d": "first", "g": "mean"})
+                          .reset_index(names=INTERNAL_PLANT_ID)
+            )
+            tech_means["estimated_load_factor"] = 0
+            tech_means[INTERNAL_PLANT_ID] = "Generic " + tech_means[INTERNAL_PLANT_ID]
+            self.summary = pd.concat([self.summary, tech_means])
+        else:
+            self.summary.loc[len(self.summary)] = ["Generic", 0, self.summary["b"].mean(), self.summary["c"].mean(), 1, self.summary["g"].mean(), 0]
 
     def generate_resource_streams(self) -> None:
         """Generates wind streams from fitted and/or generalised power curve parameters and long-term wind data."""
         summary_used_cols = [PLANT_ID_OUTPUT, "b", "c", "g"]
-        plant_wind_speed_and_params = self.plant_wind_speeds.merge(self.summary[summary_used_cols], left_on=INTERNAL_PLANT_ID, right_on=PLANT_ID_OUTPUT, how="left", indicator=True).drop(columns=PLANT_ID_OUTPUT)
-        plant_wind_speed_and_params.loc[plant_wind_speed_and_params["_merge"] == "left_only", summary_used_cols[1:]] = self.summary.loc[self.summary.index[-1], summary_used_cols[1:]].values
+        plant_wind_speed_and_params = (self.plant_wind_speeds
+                                       .merge(self.summary[summary_used_cols], left_on=INTERNAL_PLANT_ID, right_on=PLANT_ID_OUTPUT, how="left", indicator=True)
+                                       .drop(columns=PLANT_ID_OUTPUT)
+        )
+        if "Generic" in self.summary[PLANT_ID_OUTPUT]:
+            plant_wind_speed_and_params.loc[plant_wind_speed_and_params["_merge"] == "left_only", summary_used_cols[1:]] = \
+                self.summary.loc[self.summary.index[-1], summary_used_cols[1:]].values
+        else:
+            left_only_mask = plant_wind_speed_and_params["_merge"] == "left_only"
+            plant_wind_speed_and_params[left_only_mask] = (plant_wind_speed_and_params[left_only_mask]
+                .assign(__idx=lambda x: x.index)
+                .drop(columns=summary_used_cols[1:])
+                .merge(self.plants.data[[INTERNAL_PLANT_ID, "technology"]], on=INTERNAL_PLANT_ID, how="left")
+                .assign(technology=lambda df: f"Generic " + df["technology"])
+                .merge(self.summary[summary_used_cols], left_on="technology", right_on=PLANT_ID_OUTPUT, how="left")
+                .drop(columns=[PLANT_ID_OUTPUT, "technology"])
+                .set_index("__idx")[plant_wind_speed_and_params.columns]
+                .reindex(plant_wind_speed_and_params.index[left_only_mask])
+            )
         plant_wind_speed_and_params.drop(columns="_merge")
         plant_wind_speed_and_params["load_factor"] = self.logistic_function(
             plant_wind_speed_and_params["wind_speed"],
@@ -357,9 +395,8 @@ class WindCalibrator(Calibrator):
             plant_wind_speed_and_params["c"],
             plant_wind_speed_and_params["g"]
         )
-        plant_wind_speed_and_params = plant_wind_speed_and_params.drop(columns=summary_used_cols[1:] + ["wind_speed"])
         plant_wind_speed_and_params = (
-            plant_wind_speed_and_params
+            plant_wind_speed_and_params[["time", INTERNAL_PLANT_ID, "load_factor"]]
                 .pivot(index="time", columns=INTERNAL_PLANT_ID, values="load_factor")
                 .sort_index()
                 .reset_index()
