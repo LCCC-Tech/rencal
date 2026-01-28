@@ -154,7 +154,7 @@ class TestWindCalibratorIntegration:
         calibrator.calibrate()
 
         # Post-calibration values
-        assert len(calibrator.summary) == 7
+        assert len(calibrator.summary) == 8
         assert calibrator.summary.isna().values.any() == np.False_
         assert len(calibrator.wind_streams) == 24
         assert len(calibrator.wind_streams.columns) == 11
