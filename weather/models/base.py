@@ -80,7 +80,7 @@ class PandasDatasetModel(DatasetModel):
                     # Allow string-like types for object columns
                     if not pd.api.types.is_string_dtype(data[col]):
                         logger.warning(
-                            f"Column '{col}' expected object dtype, got {data[col].dtype}"
+                            "Column '%s' expected object dtype, got %s", col, data[col].dtype
                         )
         return data
 

@@ -67,7 +67,7 @@ class DataDownloader(ABC):
         """
         self.output_dir = self.output_dir / stem if stem else self.output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.logger.debug(f"Data will be saved to: {self.output_dir}")
+        self.logger.debug("Data will be saved to: %s", self.output_dir)
 
     @abstractmethod
     def download(self, *args: Any, **kwargs: Any) -> None:
@@ -126,10 +126,10 @@ class ERA5DataDownloader(DataDownloader):
 
             # Generate list of years from start to end (inclusive)
             years = list(range(start_year, end_year + 1))
-            self.logger.debug(f"Extracted calibration years from date range: {years}")
+            self.logger.debug("Extracted calibration years from date range: %s", years)
             return years
         except Exception as e:
-            self.logger.error(f"Error extracting calibration years: {e}")
+            self.logger.error("Error extracting calibration years: %s", e)
             raise
 
     @property
@@ -147,7 +147,7 @@ class ERA5DataDownloader(DataDownloader):
             Exception: If client initialization fails.
         """
         try:
-            self.logger.debug(f"Initializing CDS API client for {self._api.domain}...")
+            self.logger.debug("Initializing CDS API client for %s...", self._api.domain)
             if self._client is None:
                 if not self._api_key:
                     self.logger.error("CDS API key not found in environment variables.")
@@ -160,7 +160,7 @@ class ERA5DataDownloader(DataDownloader):
                 )
             return self._client
         except Exception as e:
-            self.logger.error(f"Error initializing CDS API client: {e}")
+            self.logger.error("Error initializing CDS API client: %s", e)
             raise
 
     def _download_year(self, year: int, file_path: str) -> None:
@@ -251,11 +251,12 @@ class ERA5DataDownloader(DataDownloader):
 
             datetime_coord = self._find_datetime_coordinate(ds)
             if not datetime_coord:
-                self.logger.error(f"No datetime-like coordinate found in {file_path}.")
+                self.logger.error("No datetime-like coordinate found in %s.", file_path)
                 raise KeyError("No datetime-like coordinate found (expected 'time' or similar).")
 
             self.logger.debug(
-                f"{year}.nc date range: {ds[datetime_coord].values[0]}  →  {ds[datetime_coord].values[-1]}"
+                "%s.nc date range: %s  →  %s",
+                year, ds[datetime_coord].values[0], ds[datetime_coord].values[-1]
             )
 
             # Add metadata note
@@ -265,10 +266,10 @@ class ERA5DataDownloader(DataDownloader):
             ds.load()
             ds.close()
             ds.to_netcdf(file_path, mode="w")
-            self.logger.debug(f"File verified and metadata updated: {file_path}")
+            self.logger.debug("File verified and metadata updated: %s", file_path)
 
         except Exception as e:
-            self.logger.error(f"Error verifying {year}: {e}")
+            self.logger.error("Error verifying %s: %s", year, e)
             raise
 
     def _find_datetime_coordinate(self, ds: xr.Dataset) -> str | None:
@@ -316,7 +317,7 @@ class ERA5DataDownloader(DataDownloader):
 
                 if not is_current_year and file_path.exists():
                     pbar.set_postfix_str(f"verifying file for {year}")
-                    self.logger.debug(f"File already exist for {year}, verifying timestamps...")
+                    self.logger.debug("File already exist for %s, verifying timestamps...", year)
                     existing_files += 1
                 else:
                     pbar.set_postfix_str(f"downloading file for {year}")
@@ -329,10 +330,11 @@ class ERA5DataDownloader(DataDownloader):
         total_files = len(years)
         if downloaded_files > 0:
             self.logger.info(
-                f"ERA5 data complete: {downloaded_files} downloaded, {existing_files} verified ({total_files} total files)"
+                "ERA5 data complete: %s downloaded, %s verified (%s total files)",
+                downloaded_files, existing_files, total_files
             )
         else:
-            self.logger.info(f"ERA5 data verified: {total_files} files ({min(years)}-{max(years)})")
+            self.logger.info("ERA5 data verified: %s files (%s-%s)", total_files, min(years), max(years))
 
 
 class CfDDataDownloader(DataDownloader):
@@ -371,7 +373,7 @@ class CfDDataDownloader(DataDownloader):
         """
         try:
             self.logger.info(
-                f"Reading CfD to BMU mapping CSV from {self._cfd_to_bmu_api.domain}..."
+                "Reading CfD to BMU mapping CSV from %s...", self._cfd_to_bmu_api.domain
             )
             bmu_mapping = pd.read_csv(self._cfd_to_bmu_api.url)
             bmu_mapping.rename(columns={"CFD_Id": "cfd_id", "BMU_Id": "bmu_id"}, inplace=True)
@@ -380,7 +382,7 @@ class CfDDataDownloader(DataDownloader):
             return bmu_mapping
         except Exception as e:
             self.logger.error(
-                f"Error downloading CfD to BMU CSV from {self._cfd_to_bmu_api.domain}: {e}"
+                "Error downloading CfD to BMU CSV from {self._cfd_to_bmu_api.domain}: {e}"
             )
             raise
 
@@ -399,14 +401,14 @@ class CfDDataDownloader(DataDownloader):
             Exception: If API request fails or returns invalid data.
         """
         try:
-            self.logger.info(f"Fetching CfD register data from {self._cfd_register_api.url}...")
+            self.logger.info("Fetching CfD register data from %s...", self._cfd_register_api.url)
             res = requests.get(self._cfd_register_api.url)
             if res.status_code != 200:
                 raise Exception(f"Failed to fetch data: {res.status_code}: {res.text}")
 
             data = res.json()
             df = pd.DataFrame(data)
-            self.logger.info(f"Loaded {len(df)} records into dataframe memory.")
+            self.logger.info("Loaded %s records into dataframe memory.", len(df))
 
             cfd_df = df.loc[
                 :,
@@ -428,7 +430,7 @@ class CfDDataDownloader(DataDownloader):
             return cfd_df
 
         except Exception as e:
-            self.logger.error(f"Error downloading CfD register data: {e}")
+            self.logger.error("Error downloading CfD register data: %s", e)
             raise
 
     def download(self) -> None:
@@ -448,7 +450,7 @@ class CfDDataDownloader(DataDownloader):
             cfd_df = cfd_register.merge(bmu_mapping, on="cfd_id", how="inner")
             cfd_df.to_csv(self.output_dir / PLANT_DATA_FILE_NAME, index=False)
             self.logger.info(
-                f"CfD data with BMU mapping saved to {self.output_dir / PLANT_DATA_FILE_NAME}"
+                "CfD data with BMU mapping saved to %s", self.output_dir / PLANT_DATA_FILE_NAME
             )
 
 
@@ -483,13 +485,13 @@ class GenerationDataDownloader(DataDownloader):
         cfd_data_path = self.output_dir / "plant" / PLANT_DATA_FILE_NAME
         if not cfd_data_path.exists():
             self.logger.error(
-                f"CfD data file not found at {cfd_data_path}. Please download CfD data first."
+                "CfD data file not found at %s. Please download CfD data first.", cfd_data_path
             )
             raise FileNotFoundError(f"CfD data file not found at {cfd_data_path}.")
 
         cfd_df = pd.read_csv(cfd_data_path)
         self.bmu_ids: list[str] = cfd_df["bmu_id"].unique().tolist()
-        self.logger.info(f"Found {len(self.bmu_ids)} unique BMU IDs.")
+        self.logger.info("Found %s unique BMU IDs.", len(self.bmu_ids))
 
         return cfd_df
 
@@ -512,7 +514,7 @@ class GenerationDataDownloader(DataDownloader):
         """
         self.logger.info("Downloading generation data for CfD-associated BMUs...")
         try:
-            self.logger.info(f"Fetching settled Elexon generation data from {self._api.url}...")
+            self.logger.info("Fetching settled Elexon generation data from %s...", self._api.url)
 
             params = {
                 "from": CALIBRATION_START_DATE,
@@ -530,11 +532,11 @@ class GenerationDataDownloader(DataDownloader):
             df = pd.DataFrame(data).loc[
                 :, ["settlementDate", "settlementPeriod", "bmUnit", "quantity"]
             ]
-            self.logger.info(f"Loaded {len(df)} records into dataframe memory.")
+            self.logger.info("Loaded %s records into dataframe memory.", len(df))
             return df
 
         except Exception as e:
-            self.logger.error(f"Error downloading generation data: {e}")
+            self.logger.error("Error downloading generation data: %s", e)
             raise
 
     def _get_day_type_from_period_counts(self, generation_df: pd.DataFrame) -> pd.Series:
@@ -558,7 +560,7 @@ class GenerationDataDownloader(DataDownloader):
         unexpected_mask = date_to_day_type.isna()
         if unexpected_mask.any():
             unexpected_counts = period_counts[unexpected_mask]
-            self.logger.warning(f"Unexpected settlement period counts: {dict(unexpected_counts)}")
+            self.logger.warning("Unexpected settlement period counts: %s", dict(unexpected_counts))
             date_to_day_type = date_to_day_type.fillna("n")
 
         day_type_series = generation_df["settlement_date"].map(
@@ -594,7 +596,7 @@ class GenerationDataDownloader(DataDownloader):
 
         # Log day type distribution for debugging
         day_type_counts = df["day_type"].value_counts()
-        self.logger.debug(f"Day type distribution: {day_type_counts.to_dict()}")
+        self.logger.debug("Day type distribution: %s", day_type_counts.to_dict())
 
         # Convert to numpy arrays for vectorized operations
         normal_minuates_array = np.array(NORMAL_DAY_MINUTES)
@@ -721,7 +723,7 @@ class GenerationDataDownloader(DataDownloader):
         bmu_generation_df = self._download_generation_data()
         generation_df = self._aggregate_bmu_generation_to_cfd(cfd_df, bmu_generation_df)
         generation_df.to_parquet(output_file, index=False)
-        self.logger.info(f"Generation data saved to {output_file}")
+        self.logger.info("Generation data saved to %s", output_file)
 
 
 class DownloadManager:

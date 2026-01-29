@@ -218,7 +218,7 @@ class WindCalibrator(Calibrator):
                 self.historical_load_factor_distributions[INTERNAL_PLANT_ID] == plant_id
             ]
             if single_plant_load_factors.empty or single_plant_load_factor_dist_params.empty:
-                logger.warning(f"Skipping {plant_id} (no valid data or Weibull params).")
+                logger.warning("Skipping %s (no valid data or Weibull params).", plant_id)
                 continue
             lambda_val = single_plant_load_factor_dist_params["lambda"].iloc[0]
             k_val = single_plant_load_factor_dist_params["k"].iloc[0]
@@ -236,7 +236,7 @@ class WindCalibrator(Calibrator):
                     maxfev=LOGISTIC_FN_MAXEVAL
                 )
             except Exception as e:
-                logger.warning(f"Skipping {plant_id} (curve fit failed: {e})")
+                logger.warning("Skipping %s (curve fit failed: %s)", plant_id, e)
                 continue
 
             try:
@@ -248,7 +248,7 @@ class WindCalibrator(Calibrator):
                     0, np.inf, (logistic_params, k_val, lambda_val)
                 )[0]
             except Exception as e:
-                logger.warning(f"Integration failed for {plant_id}: {e}")
+                logger.warning("Integration failed for %s: %s", plant_id, e)
                 continue
 
             if self.visual_output:

@@ -22,12 +22,12 @@ run_config: dict[str, Any]
 try:
     with CONFIG_FILE_PATH.open("r") as f:
         run_config = yaml.safe_load(f) or {}
-    logger.info(f"Successfully loaded configuration from {CONFIG_FILE_PATH}")
+    logger.info("Successfully loaded configuration from %s", CONFIG_FILE_PATH)
 except FileNotFoundError:
-    logger.warning(f"Configuration file {CONFIG_FILE_PATH} not found. Using default constants.")
+    logger.warning("Configuration file %s not found. Using default constants.", CONFIG_FILE_PATH)
     run_config = {}
 except yaml.YAMLError as e:
-    logger.error(f"Error parsing {CONFIG_FILE_PATH}: {e}. Using default constants.")
+    logger.error("Error parsing %s: %s. Using default constants.", CONFIG_FILE_PATH, e)
     run_config = {}
 
 # Absolute path to download data directory

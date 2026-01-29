@@ -58,7 +58,7 @@ class LocalDataLoader(DataLoader):
         total_capacity = df["capacity"].sum() if "capacity" in df.columns else 0
 
         logger.info(
-            f"Plant data loaded: {total_plants} plants, {total_capacity:.1f}MW total capacity"
+            "Plant data loaded: %s plants, %.1f MW total capacity", total_plants, total_capacity
         )
 
         return PlantDatasetModel(
@@ -88,7 +88,7 @@ class LocalDataLoader(DataLoader):
         total_records = len(df)
         unique_plants = df[INTERNAL_PLANT_ID].nunique() if INTERNAL_PLANT_ID in df.columns else 0
 
-        logger.info(f"Generation data loaded: {total_records} records, {unique_plants} plants")
+        logger.info("Generation data loaded: %s records, %s plants", total_records, unique_plants)
 
         return GenerationDatasetModel(
             data=df,
@@ -130,9 +130,9 @@ class LocalDataLoader(DataLoader):
                 combined_ds = xr.concat(datasets, dim="time")
                 # Sort by time to ensure chronological order
                 combined_ds = combined_ds.sortby("time")
-                logger.debug(f"Successfully concatenated and sorted {len(datasets)} NetCDF files")
+                logger.debug("Successfully concatenated and sorted %s NetCDF files", len(datasets))
             except Exception as e:
-                logger.error(f"Failed to concatenate datasets on time dimension: {e}")
+                logger.error("Failed to concatenate datasets on time dimension: %s", e)
                 raise ValueError(f"Failed to concatenate NetCDF files: {e}") from e
         else:
             combined_ds = datasets[0]
@@ -143,7 +143,7 @@ class LocalDataLoader(DataLoader):
         # Find available ERA5 variables in the dataset (checking both naming conventions)
         available_vars = list(ds.data_vars.keys())
         requested_vars: list[str] = []
-        logger.debug(f"Available variables in dataset: {available_vars}")
+        logger.debug("Available variables in dataset: %s", available_vars)
 
         # Check for standard wind and solar variables
         standard_variables = DEFAULT_WIND_VARIABLES + DEFAULT_SOLAR_VARIABLES
@@ -158,7 +158,7 @@ class LocalDataLoader(DataLoader):
             )
 
         ds = ds[requested_vars]
-        logger.debug(f"Filtered dataset to ERA5 variables: {requested_vars}")
+        logger.debug("Filtered dataset to ERA5 variables: %s", requested_vars)
         return ds
 
     def _cast_data_variables_to_float32(self, ds: xr.Dataset) -> xr.Dataset:
@@ -203,9 +203,9 @@ class LocalDataLoader(DataLoader):
                     ds = ds.rename({time_dim: "time"})
                     ds = self._cast_data_variables_to_float32(ds)
                     datasets.append(ds)
-                logger.debug(f"Successfully loaded {file_path}")
+                logger.debug("Successfully loaded %s", file_path)
             except Exception as e:
-                logger.warning(f"Failed to load {file_path}: {e}")
+                logger.warning("Failed to load %s: %s", file_path, e)
                 continue
 
         if not datasets:
@@ -216,7 +216,8 @@ class LocalDataLoader(DataLoader):
 
         # Summary log
         logger.info(
-            f"ERA5 data loaded: {len(era5_files)} files, {combined_ds.sizes["time"]} time periods"
+            "ERA5 data loaded: %s files, %s time periods",
+            len(era5_files), combined_ds.sizes["time"]
         )
 
         return ERA5DatasetModel(
