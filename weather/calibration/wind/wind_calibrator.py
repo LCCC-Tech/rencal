@@ -92,6 +92,7 @@ class WindCalibrator(Calibrator):
             self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[0]]] ** 2
             + self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[1]]] ** 2
         )
+        logger.info("Extracting resource data for plants...")
         unique_plant_locations = self.plants.data.drop_duplicates([INTERNAL_PLANT_ID, "latitude", "longitude"])
         unique_plant_dim = xr.DataArray(unique_plant_locations[INTERNAL_PLANT_ID], dims=INTERNAL_PLANT_ID)
         plant_wind_speeds = self.resource.data.sel(
@@ -148,6 +149,7 @@ class WindCalibrator(Calibrator):
 
     def calculate_historical_load_factors(self) -> pd.DataFrame:
         """Calculates historical load factors based on resource availability and generation data for each plant."""
+        logger.info("Clculating historical load factors...")
         self.plant_wind_speeds[INTERNAL_PLANT_ID] = self.plant_wind_speeds[INTERNAL_PLANT_ID].astype(str)
         self.generation.data[INTERNAL_PLANT_ID] = self.generation.data[INTERNAL_PLANT_ID].astype(str)
         self.generation.data = self._remove_duplicate_plant_time_from_generation(self.generation.data)
@@ -192,6 +194,7 @@ class WindCalibrator(Calibrator):
 
     def fit_historical_load_factor_distribution(self) -> pd.DataFrame:
         """Fits probability distribution to historical load factors and resource availability."""
+        logger.info("Fitting probability distribution to historical load factors...")
         wind_speeds = self.historical_load_factors.groupby(INTERNAL_PLANT_ID, sort=False)["wind_speed"]
         wind_speed_stats = wind_speeds.agg(wind_speed_mean="mean", wind_speed_stdev="std")
         wind_speeds = [(plant_id, wind_speed.dropna().to_numpy()) for plant_id, wind_speed in wind_speeds]
@@ -205,6 +208,7 @@ class WindCalibrator(Calibrator):
 
     def estimate_load_factors_for_resource(self) -> pd.DataFrame:
         """Estimates load factors based on the historical distribution and the whole resource availability history."""
+        logger.info("Estimating long-term load factors for plants...")
         summary = pd.DataFrame(columns=[
             INTERNAL_PLANT_ID, "a", "b", "c", "d", "g", "estimated_load_factor"
         ])
@@ -368,6 +372,7 @@ class WindCalibrator(Calibrator):
 
     def generate_resource_streams(self) -> None:
         """Generates wind streams from fitted and/or generalised power curve parameters and long-term wind data."""
+        logger.info("Generating wind streams for plants...")
         summary_used_cols = [PLANT_ID_OUTPUT, "b", "c", "g"]
         plant_wind_speed_and_params = (self.plant_wind_speeds
                                        .merge(self.summary[summary_used_cols], left_on=INTERNAL_PLANT_ID, right_on=PLANT_ID_OUTPUT, how="left", indicator=True)
@@ -381,12 +386,11 @@ class WindCalibrator(Calibrator):
             plant_wind_speed_and_params[left_only_mask] = (plant_wind_speed_and_params[left_only_mask]
                 .assign(__idx=lambda x: x.index)
                 .drop(columns=summary_used_cols[1:])
-                .merge(self.plants.data[[INTERNAL_PLANT_ID, "technology"]], on=INTERNAL_PLANT_ID, how="left")
+                .merge(self.plants.data[[INTERNAL_PLANT_ID, "technology"]].drop_duplicates(INTERNAL_PLANT_ID), on=INTERNAL_PLANT_ID, how="left")
                 .assign(technology=lambda df: f"Generic " + df["technology"])
                 .merge(self.summary[summary_used_cols], left_on="technology", right_on=PLANT_ID_OUTPUT, how="left")
                 .drop(columns=[PLANT_ID_OUTPUT, "technology"])
                 .set_index("__idx")[plant_wind_speed_and_params.columns]
-                .reindex(plant_wind_speed_and_params.index[left_only_mask])
             )
         plant_wind_speed_and_params.drop(columns="_merge")
         plant_wind_speed_and_params["load_factor"] = self.logistic_function(
@@ -413,19 +417,26 @@ class WindCalibrator(Calibrator):
 
     def output_historical_load_factor_distribution_parameters(self) -> None:
         """Writes historical load factor parameters to a CSV file."""
-        self.historical_load_factor_distributions.to_csv(self.output_path / "Weibull Params.csv", index=False)
+        weibull_path = self.output_path / "Weibull Params.csv"
+        self.historical_load_factor_distributions.to_csv(weibull_path, index=False)
+        logger.info("Written historical load factor parameters to %s", weibull_path)
 
     def output_resource_per_plant(self) -> None:
         """Writes resource time series for each plant to a CSV file."""
-        self.plant_wind_speeds.to_csv(self.output_path / "Wind Speeds.csv", index=False)
+        resource_output_path = self.output_path / "Wind Speed.csv"
+        self.plant_wind_speeds.to_csv(resource_output_path, index=False)
+        logger.info("Written plant-wise resource dataset to %s", resource_output_path)
 
     def output_resource_streams(self) -> None:
         """Writes resource streams to a parquet file."""
-        self.wind_streams.to_parquet(self.output_path / "Wind Streams.parquet", index=False)
+        stream_path = self.output_path / "Wind Streams.parquet"
+        self.wind_streams.to_parquet(stream_path, index=False)
 
     def output_estimated_load_factors_tabular(self) -> None:
         """Outputs table of estimated load factors for whole resource availability history."""
-        self.summary.to_csv(self.output_path / "Calibration Summary.csv", index=False)
+        summary_path = self.output_path / "Calibration Summary.csv"
+        self.summary.to_csv(summary_path, index=False)
+        logger.info("Written estimated load factor summary to %s", summary_path)
 
     def output_estimated_load_factors_visual(self, logistic_params: np.ndarray, load_factors: pd.DataFrame) -> None:
         """Outputs a series of plots of estimated load and fitted curves per plant."""
