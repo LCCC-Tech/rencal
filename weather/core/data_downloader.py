@@ -382,7 +382,8 @@ class CfDDataDownloader(DataDownloader):
             return bmu_mapping
         except Exception as e:
             self.logger.error(
-                "Error downloading CfD to BMU CSV from {self._cfd_to_bmu_api.domain}: {e}"
+                "Error downloading CfD to BMU CSV from %s: %s",
+                self._cfd_to_bmu_api.domain, e
             )
             raise
 

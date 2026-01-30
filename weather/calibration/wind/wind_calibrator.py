@@ -1,8 +1,8 @@
 """Extracts data from input files and calibreates wind power curves."""
 
 from concurrent.futures import ThreadPoolExecutor
-from functools import partial
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -53,7 +53,7 @@ class WindCalibrator(Calibrator):
             plant_id_col = PLANT_ID_COLUMN
             logger.debug("Config-specified plant id column: %s", PLANT_ID_COLUMN)
         super().__init__(**super_args)
-        self.plants.data = self.plants.data[self.plants.data["technology"].isin(WIND_TECHNOLOGY_TYPES)]
+        self.plants.data = self.plants.data.loc[self.plants.data["technology"].isin(WIND_TECHNOLOGY_TYPES)]
         self.calibration_plant_ids = self.generation.data[INTERNAL_PLANT_ID].unique()
         self.output_path = output_path if isinstance(output_path, Path) else Path(output_path)
         self.visual_output = visual_output
@@ -128,8 +128,8 @@ class WindCalibrator(Calibrator):
         """Clips maximum generation to the capacity of the plant."""
         gen_with_capacity = self.generation.data.merge(self.plants.data, how="left", on=INTERNAL_PLANT_ID).drop_duplicates([INTERNAL_PLANT_ID, "time"])
         over_gen_mask = gen_with_capacity["quantity"] > gen_with_capacity["capacity"]
-        gen_with_capacity.loc[over_gen_mask, "quantity"] = gen_with_capacity.loc[over_gen_mask, "capacity"]
-        return gen_with_capacity[self.generation.data.columns]
+        gen_with_capacity.loc[over_gen_mask, "quantity"] = cast(pd.DataFrame, gen_with_capacity.loc[over_gen_mask, "capacity"])
+        return cast(pd.DataFrame, gen_with_capacity[self.generation.data.columns])
 
     @staticmethod
     def _remove_duplicate_plant_time_from_generation(generation_data: pd.DataFrame) -> pd.DataFrame:
@@ -143,9 +143,9 @@ class WindCalibrator(Calibrator):
             pd.DataFrame: Generation dataset with potentially duplicated plant-time combinations removed and their quantities summed.
         
         """
-        return generation_data.groupby(
+        return cast(pd.DataFrame, generation_data.groupby(
             [INTERNAL_PLANT_ID, "time"], as_index=False, sort=False
-        ).agg({"quantity": "sum"})
+        ).agg({"quantity": "sum"}))
 
     def calculate_historical_load_factors(self) -> pd.DataFrame:
         """Calculates historical load factors based on resource availability and generation data for each plant."""
@@ -175,7 +175,7 @@ class WindCalibrator(Calibrator):
         return wind_speed_generation_merged
 
     @staticmethod
-    def _fit_weibull_dist_to_plant(item: tuple[str, np.ndarray]) -> tuple[str, float, float]:
+    def _fit_weibull_dist_to_plant(item: tuple[str, np.ndarray]) -> tuple[str, float | None, float | None]:
         """
         Fits a Weibull distribution to an array of wind speeds.
         
@@ -213,8 +213,8 @@ class WindCalibrator(Calibrator):
             INTERNAL_PLANT_ID, "a", "b", "c", "d", "g", "estimated_load_factor"
         ])
         for plant_id in self.calibration_plant_ids:
-            single_plant_load_factors = self.historical_load_factors[self.historical_load_factors[INTERNAL_PLANT_ID] == plant_id]
-            single_plant_load_factor_dist_params = self.historical_load_factor_distributions[
+            single_plant_load_factors = self.historical_load_factors.loc[self.historical_load_factors[INTERNAL_PLANT_ID] == plant_id]
+            single_plant_load_factor_dist_params = self.historical_load_factor_distributions.loc[
                 self.historical_load_factor_distributions[INTERNAL_PLANT_ID] == plant_id
             ]
             if single_plant_load_factors.empty or single_plant_load_factor_dist_params.empty:
@@ -362,7 +362,8 @@ class WindCalibrator(Calibrator):
             tech_means = (summary_with_tech
                           .groupby("technology")
                           .agg({"a": "first", "b": "mean", "c": "mean", "d": "first", "g": "mean"})
-                          .reset_index(names=INTERNAL_PLANT_ID)
+                          .reset_index()
+                          .rename(columns={"technology": INTERNAL_PLANT_ID})
             )
             tech_means["estimated_load_factor"] = 0
             tech_means[INTERNAL_PLANT_ID] = "Generic " + tech_means[INTERNAL_PLANT_ID]
@@ -370,7 +371,7 @@ class WindCalibrator(Calibrator):
         else:
             self.summary.loc[len(self.summary)] = ["Generic", 0, self.summary["b"].mean(), self.summary["c"].mean(), 1, self.summary["g"].mean(), 0]
 
-    def generate_resource_streams(self) -> None:
+    def generate_resource_streams(self) -> pd.DataFrame:
         """Generates wind streams from fitted and/or generalised power curve parameters and long-term wind data."""
         logger.info("Generating wind streams for plants...")
         summary_used_cols = [PLANT_ID_OUTPUT, "b", "c", "g"]
@@ -386,7 +387,7 @@ class WindCalibrator(Calibrator):
             plant_wind_speed_and_params[left_only_mask] = (plant_wind_speed_and_params[left_only_mask]
                 .assign(__idx=lambda x: x.index)
                 .drop(columns=summary_used_cols[1:])
-                .merge(self.plants.data[[INTERNAL_PLANT_ID, "technology"]].drop_duplicates(INTERNAL_PLANT_ID), on=INTERNAL_PLANT_ID, how="left")
+                .merge(self.plants.data.loc[[INTERNAL_PLANT_ID, "technology"]].drop_duplicates(INTERNAL_PLANT_ID), on=INTERNAL_PLANT_ID, how="left")
                 .assign(technology=lambda df: f"Generic " + df["technology"])
                 .merge(self.summary[summary_used_cols], left_on="technology", right_on=PLANT_ID_OUTPUT, how="left")
                 .drop(columns=[PLANT_ID_OUTPUT, "technology"])
@@ -423,7 +424,7 @@ class WindCalibrator(Calibrator):
 
     def output_resource_per_plant(self) -> None:
         """Writes resource time series for each plant to a CSV file."""
-        resource_output_path = self.output_path / "Wind Speed.csv"
+        resource_output_path = self.output_path / "Wind Speeds.csv"
         self.plant_wind_speeds.to_csv(resource_output_path, index=False)
         logger.info("Written plant-wise resource dataset to %s", resource_output_path)
 
