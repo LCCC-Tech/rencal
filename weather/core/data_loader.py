@@ -102,7 +102,7 @@ class LocalDataLoader(DataLoader):
     def _get_time_dimension(ds: xr.Dataset) -> str:
         """
         Check if the dataset has a valid time dimension.
-        
+
         Args:
             ds (xr.Dataset): Xarray dataset to get the name of the temporal dimension of.
 
@@ -111,15 +111,13 @@ class LocalDataLoader(DataLoader):
 
         Raises:
             ValueError: When there is no expected time dimension name in the dataset.
-        
+
         """
         if "time" in ds.dims:
             return "time"
         if "valid_time" in ds.dims:
             return "valid_time"
-        raise ValueError(
-            "Dataset does not contain a valid time dimension ('valid_time' or 'time')"
-        )
+        raise ValueError("Dataset does not contain a valid time dimension ('valid_time' or 'time')")
 
     def _combine_datasets_on_time_dimension(self, datasets: list[xr.Dataset]) -> xr.Dataset:
         """Combine multiple xarray Datasets on the time dimension"""
@@ -217,7 +215,8 @@ class LocalDataLoader(DataLoader):
         # Summary log
         logger.info(
             "ERA5 data loaded: %s files, %s time periods",
-            len(era5_files), combined_ds.sizes["time"]
+            len(era5_files),
+            combined_ds.sizes["time"],
         )
 
         return ERA5DatasetModel(

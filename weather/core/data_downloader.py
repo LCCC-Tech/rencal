@@ -181,8 +181,12 @@ class ERA5DataDownloader(DataDownloader):
         self.logger.info("Downloading ERA5 data for %s...", year)
 
         path_filepath = Path(file_path)
-        file_path_wind = str(path_filepath.parent / (path_filepath.stem + "_wind" + path_filepath.suffix))
-        file_path_solar = str(path_filepath.parent / (path_filepath.stem + "_solar" + path_filepath.suffix))
+        file_path_wind = str(
+            path_filepath.parent / (path_filepath.stem + "_wind" + path_filepath.suffix)
+        )
+        file_path_solar = str(
+            path_filepath.parent / (path_filepath.stem + "_solar" + path_filepath.suffix)
+        )
 
         request_wind = {
             "product_type": ERA5_PRODUCT_TYPE,
@@ -215,11 +219,15 @@ class ERA5DataDownloader(DataDownloader):
             self.logger.error("Error downloading %s: %s", year, e)
             raise
 
-        with xr.open_dataset(file_path_wind) as ds_wind, \
-             xr.open_dataset(file_path_solar) as ds_solar:
+        with (
+            xr.open_dataset(file_path_wind) as ds_wind,
+            xr.open_dataset(file_path_solar) as ds_solar,
+        ):
             merged_vars = xr.merge([ds_wind, ds_solar])
             merged_vars.to_netcdf(path_filepath)
-            self.logger.info("Files %s and %s combined into %s", file_path_wind, file_path_solar, file_path)
+            self.logger.info(
+                "Files %s and %s combined into %s", file_path_wind, file_path_solar, file_path
+            )
 
         for fpath in [file_path_wind, file_path_solar]:
             try:
@@ -256,7 +264,9 @@ class ERA5DataDownloader(DataDownloader):
 
             self.logger.debug(
                 "%s.nc date range: %s  →  %s",
-                year, ds[datetime_coord].values[0], ds[datetime_coord].values[-1]
+                year,
+                ds[datetime_coord].values[0],
+                ds[datetime_coord].values[-1],
             )
 
             # Add metadata note
@@ -331,10 +341,14 @@ class ERA5DataDownloader(DataDownloader):
         if downloaded_files > 0:
             self.logger.info(
                 "ERA5 data complete: %s downloaded, %s verified (%s total files)",
-                downloaded_files, existing_files, total_files
+                downloaded_files,
+                existing_files,
+                total_files,
             )
         else:
-            self.logger.info("ERA5 data verified: %s files (%s-%s)", total_files, min(years), max(years))
+            self.logger.info(
+                "ERA5 data verified: %s files (%s-%s)", total_files, min(years), max(years)
+            )
 
 
 class CfDDataDownloader(DataDownloader):
@@ -382,8 +396,7 @@ class CfDDataDownloader(DataDownloader):
             return bmu_mapping
         except Exception as e:
             self.logger.error(
-                "Error downloading CfD to BMU CSV from %s: %s",
-                self._cfd_to_bmu_api.domain, e
+                "Error downloading CfD to BMU CSV from %s: %s", self._cfd_to_bmu_api.domain, e
             )
             raise
 
@@ -640,15 +653,18 @@ class GenerationDataDownloader(DataDownloader):
     @staticmethod
     def _divide_shared_bmu_generation(generation_df: pd.DataFrame) -> pd.DataFrame:
         "Divides generation for shared BMUs by the number of plants sharing it."
-        bmu_cfd_groups = (generation_df
-                          .groupby(["bmu_id", "settlement_date", "settlement_period"])
-                          .agg({"cfd_id": "count", "capacity": "sum"})
-                          .reset_index()
-                          .rename(columns={"cfd_id": "cfd_count", "capacity": "capacity_sum"}))
-        generation_df = generation_df.merge(bmu_cfd_groups, on=["bmu_id", "settlement_date", "settlement_period"])
+        bmu_cfd_groups = (
+            generation_df.groupby(["bmu_id", "settlement_date", "settlement_period"])
+            .agg({"cfd_id": "count", "capacity": "sum"})
+            .reset_index()
+            .rename(columns={"cfd_id": "cfd_count", "capacity": "capacity_sum"})
+        )
+        generation_df = generation_df.merge(
+            bmu_cfd_groups, on=["bmu_id", "settlement_date", "settlement_period"]
+        )
         generation_df["quantity"] = generation_df["quantity"].where(
             generation_df["cfd_count"] == 1,
-            generation_df["quantity"] * (generation_df["capacity"] / generation_df["capacity_sum"])
+            generation_df["quantity"] * (generation_df["capacity"] / generation_df["capacity_sum"]),
         )
         generation_df = generation_df.drop(columns=["capacity_sum", "cfd_count", "capacity"])
         return generation_df
@@ -679,7 +695,9 @@ class GenerationDataDownloader(DataDownloader):
         )
 
         # Merge with CFD data first
-        generation_df = generation_df.merge(cfd_df[["cfd_id", "bmu_id", "capacity"]], on="bmu_id", how="left").copy()
+        generation_df = generation_df.merge(
+            cfd_df[["cfd_id", "bmu_id", "capacity"]], on="bmu_id", how="left"
+        ).copy()
 
         # Divide generation of shared bmus between plants
         generation_df = self._divide_shared_bmu_generation(generation_df)

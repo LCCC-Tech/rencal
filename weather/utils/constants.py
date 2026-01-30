@@ -31,9 +31,7 @@ except yaml.YAMLError as e:
     run_config = {}
 
 # Absolute path to download data directory
-DOWNLOAD_DATA_DIR = run_config.get(
-    "DOWNLOAD_DATA_DIR", str(Path(__file__).parents[2] / "data")
-)
+DOWNLOAD_DATA_DIR = run_config.get("DOWNLOAD_DATA_DIR", str(Path(__file__).parents[2] / "data"))
 
 # Dates
 ERA5_START_YEAR: int = run_config.get("ERA5_START_YEAR", 2023)
@@ -123,6 +121,6 @@ LOGISTIC_FN_MAXEVAL = 10000
 WIND_SPEED_LBOUND = 0
 WIND_SPEED_HBOUND = 40
 
-INTERNAL_PLANT_ID = "plant_id" # for easier maintenance of internal calculations
+INTERNAL_PLANT_ID = "plant_id"  # for easier maintenance of internal calculations
 
 PLANT_ID_OUTPUT = run_config.get("PLANT_ID_OUTPUT", "CFD ID")
