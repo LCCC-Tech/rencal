@@ -436,7 +436,7 @@ class WindCalibrator(Calibrator):
             self.plants.data[[INTERNAL_PLANT_ID, "technology"]], how="left", on=INTERNAL_PLANT_ID
         )
         unique_summary_tech = summary_with_tech["technology"].unique()
-        if all([wind_tech in unique_summary_tech for wind_tech in WIND_TECHNOLOGY_TYPES]):
+        if all(wind_tech in unique_summary_tech for wind_tech in WIND_TECHNOLOGY_TYPES):
             tech_means = (
                 summary_with_tech.groupby("technology")
                 .agg({"a": "first", "b": "mean", "c": "mean", "d": "first", "g": "mean"})
@@ -485,7 +485,7 @@ class WindCalibrator(Calibrator):
                     on=INTERNAL_PLANT_ID,
                     how="left",
                 )
-                .assign(technology=lambda df: f"Generic " + df["technology"])
+                .assign(technology=lambda df: "Generic " + df["technology"])
                 .merge(
                     self.summary[summary_used_cols],
                     left_on="technology",
