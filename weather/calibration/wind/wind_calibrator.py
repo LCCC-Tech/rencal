@@ -47,8 +47,19 @@ class WindCalibrator(Calibrator):
         plant_id_col: str = None,
         output_path: str | Path = Path.cwd(),
         visual_output: bool = False,
+        stream_npy_output: bool = False,
     ) -> None:
-        """Constructor for the WindCalibrator class."""
+        """
+        Constructor for the WindCalibrator class.
+
+        Args:
+            data_path (str): Path to the folder containing plant information, generation, and resource data.
+            plant_id_col (str): Name of the plant identifier column.
+            output_path (str | Path): Location to write the output files to.
+            visual_output (bool): If True, each calibrated plant's power curve is plotted to the output folder.
+            stream_npy_output (bool): If True, wind streams are written in NPY format alongside PARQUET.
+
+        """
         super_args = {}
         if data_path:
             super_args["data_path"] = data_path
@@ -65,6 +76,7 @@ class WindCalibrator(Calibrator):
         self.calibration_plant_ids = self.generation.data[INTERNAL_PLANT_ID].unique()
         self.output_path = output_path if isinstance(output_path, Path) else Path(output_path)
         self.visual_output = visual_output
+        self.stream_npy_output = stream_npy_output
         self.plant_wind_speeds: pd.DataFrame
         self.historical_load_factors: pd.DataFrame
         self.historical_load_factor_distributions: pd.DataFrame
@@ -103,9 +115,7 @@ class WindCalibrator(Calibrator):
             + self.resource.data[ERA5_VARIABLE_MAPPING[DEFAULT_WIND_VARIABLES[1]]] ** 2
         )
         logger.info("Extracting resource data for plants...")
-        unique_plant_locations = self.plants.data.drop_duplicates(
-            [INTERNAL_PLANT_ID, "latitude", "longitude"]
-        )
+        unique_plant_locations = self.plants.data.drop_duplicates(INTERNAL_PLANT_ID)
         unique_plant_dim = xr.DataArray(
             unique_plant_locations[INTERNAL_PLANT_ID], dims=INTERNAL_PLANT_ID
         )
@@ -536,6 +546,11 @@ class WindCalibrator(Calibrator):
         """Writes resource streams to a parquet file."""
         stream_path = self.output_path / "Wind Streams.parquet"
         self.wind_streams.to_parquet(stream_path, index=False)
+        logger.info("Written wind streams to %s", stream_path)
+        if self.stream_npy_output:
+            with open(stream_path.with_suffix(".npy"), "wb") as stream_npy:
+                np.save(stream_npy, self.wind_streams.drop(columns="Times").to_numpy(dtype=np.float32))
+            logger.info("Written wind streams to %s", stream_path.with_suffix(".npy"))
 
     def output_estimated_load_factors_tabular(self) -> None:
         """Outputs table of estimated load factors for whole resource availability history."""
