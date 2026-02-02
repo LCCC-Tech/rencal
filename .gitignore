@@ -179,6 +179,7 @@ __marimo__/
 
 # Data folder
 data/
+!tests/data/
 
 # Model files
 models/saved/

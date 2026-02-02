@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 import xarray as xr
+from numpy import float32, float64
 
 from weather.models import ERA5DatasetModel, GenerationDatasetModel, PlantDatasetModel
 from weather.utils.constants import (
@@ -10,7 +11,8 @@ from weather.utils.constants import (
     DEFAULT_WIND_VARIABLES,
     DOWNLOAD_DATA_DIR,
     ERA5_VARIABLE_MAPPING,
-    GENERATION_DATE_FILE_NAME,
+    GENERATION_DATA_FILE_NAME,
+    INTERNAL_PLANT_ID,
     PLANT_DATA_FILE_NAME,
     PLANT_ID_COLUMN,
 )
@@ -49,14 +51,14 @@ class LocalDataLoader(DataLoader):
             raise FileNotFoundError(f"Plant data file not found at {file_path}")
 
         df = pd.read_csv(file_path)
-        df = df.rename(columns={id_column: "plant_id"})
+        df = df.rename(columns={id_column: INTERNAL_PLANT_ID})
 
         # Log summary info
         total_plants = len(df)
         total_capacity = df["capacity"].sum() if "capacity" in df.columns else 0
 
         logger.info(
-            f"Plant data loaded: {total_plants} plants, {total_capacity:.1f}MW total capacity"
+            "Plant data loaded: %s plants, %.1f MW total capacity", total_plants, total_capacity
         )
 
         return PlantDatasetModel(
@@ -75,18 +77,18 @@ class LocalDataLoader(DataLoader):
         Returns:
             GenerationDataset: Dataset containing generation time series
         """
-        file_path = self._base_path / "generation" / GENERATION_DATE_FILE_NAME
+        file_path = self._base_path / "generation" / GENERATION_DATA_FILE_NAME
         if not file_path.exists():
             raise FileNotFoundError(f"Generation data file not found at {file_path}")
 
-        df = pd.read_csv(file_path, parse_dates=["time"])
-        df = df.rename(columns={id_column: "plant_id"})
+        df = pd.read_parquet(file_path)
+        df = df.rename(columns={id_column: INTERNAL_PLANT_ID})
 
         # Log summary info
         total_records = len(df)
-        unique_plants = df["plant_id"].nunique() if "plant_id" in df.columns else 0
+        unique_plants = df[INTERNAL_PLANT_ID].nunique() if INTERNAL_PLANT_ID in df.columns else 0
 
-        logger.info(f"Generation data loaded: {total_records} records, {unique_plants} plants")
+        logger.info("Generation data loaded: %s records, %s plants", total_records, unique_plants)
 
         return GenerationDatasetModel(
             data=df,
@@ -96,25 +98,39 @@ class LocalDataLoader(DataLoader):
             },
         )
 
-    def _check_time_dimension(self, ds: xr.Dataset) -> None:
-        """Check if the dataset has a valid time dimension"""
-        if "valid_time" not in ds.dims:
-            raise ValueError(
-                "Dataset does not contain a valid time dimension ('valid_time' or 'time')"
-            )
+    @staticmethod
+    def _get_time_dimension(ds: xr.Dataset) -> str:
+        """
+        Check if the dataset has a valid time dimension.
+
+        Args:
+            ds (xr.Dataset): Xarray dataset to get the name of the temporal dimension of.
+
+        Returns:
+            str: The name of the tempora dimension.
+
+        Raises:
+            ValueError: When there is no expected time dimension name in the dataset.
+
+        """
+        if "time" in ds.dims:
+            return "time"
+        if "valid_time" in ds.dims:
+            return "valid_time"
+        raise ValueError("Dataset does not contain a valid time dimension ('valid_time' or 'time')")
 
     def _combine_datasets_on_time_dimension(self, datasets: list[xr.Dataset]) -> xr.Dataset:
         """Combine multiple xarray Datasets on the time dimension"""
         combined_ds: xr.Dataset
         if len(datasets) > 1:
-            # Assume files are split by time and concatenate along valid_time dimension
+            # Assume files are split by time and concatenate along time dimension
             try:
-                combined_ds = xr.concat(datasets, dim="valid_time")
+                combined_ds = xr.concat(datasets, dim="time")
                 # Sort by time to ensure chronological order
-                combined_ds = combined_ds.sortby("valid_time")
-                logger.debug(f"Successfully concatenated and sorted {len(datasets)} NetCDF files")
+                combined_ds = combined_ds.sortby("time")
+                logger.debug("Successfully concatenated and sorted %s NetCDF files", len(datasets))
             except Exception as e:
-                logger.error(f"Failed to concatenate datasets on time dimension: {e}")
+                logger.error("Failed to concatenate datasets on time dimension: %s", e)
                 raise ValueError(f"Failed to concatenate NetCDF files: {e}") from e
         else:
             combined_ds = datasets[0]
@@ -125,7 +141,7 @@ class LocalDataLoader(DataLoader):
         # Find available ERA5 variables in the dataset (checking both naming conventions)
         available_vars = list(ds.data_vars.keys())
         requested_vars: list[str] = []
-        logger.debug(f"Available variables in dataset: {available_vars}")
+        logger.debug("Available variables in dataset: %s", available_vars)
 
         # Check for standard wind and solar variables
         standard_variables = DEFAULT_WIND_VARIABLES + DEFAULT_SOLAR_VARIABLES
@@ -140,7 +156,21 @@ class LocalDataLoader(DataLoader):
             )
 
         ds = ds[requested_vars]
-        logger.debug(f"Filtered dataset to ERA5 variables: {requested_vars}")
+        logger.debug("Filtered dataset to ERA5 variables: %s", requested_vars)
+        return ds
+
+    def _cast_data_variables_to_float32(self, ds: xr.Dataset) -> xr.Dataset:
+        """Casts all data variables to np.float32 if they are in np.float64.
+
+        Args:
+            ds (xr.Dataset): Dataset to convert data variables of.
+
+        Returns:
+            xr.Dataset: Dataset with float64 data variables converted to float32.
+        """
+        for data_var in ds.data_vars:
+            if ds[data_var].dtype == float64:
+                ds[data_var] = ds[data_var].astype(float32, casting="same_kind")
         return ds
 
     def load_era5_data(self) -> ERA5DatasetModel:
@@ -166,12 +196,14 @@ class LocalDataLoader(DataLoader):
         datasets: list[xr.Dataset] = []
         for file_path in era5_files:
             try:
-                ds = xr.open_dataset(file_path)
-                self._check_time_dimension(ds)
-                datasets.append(ds)
-                logger.debug(f"Successfully loaded {file_path}")
+                with xr.open_dataset(file_path) as ds:
+                    time_dim = self._get_time_dimension(ds)
+                    ds = ds.rename({time_dim: "time"})
+                    ds = self._cast_data_variables_to_float32(ds)
+                    datasets.append(ds)
+                logger.debug("Successfully loaded %s", file_path)
             except Exception as e:
-                logger.warning(f"Failed to load {file_path}: {e}")
+                logger.warning("Failed to load %s: %s", file_path, e)
                 continue
 
         if not datasets:
@@ -179,11 +211,12 @@ class LocalDataLoader(DataLoader):
 
         combined_ds = self._combine_datasets_on_time_dimension(datasets)
         combined_ds = self._filter_dataset_variables(combined_ds)
-        combined_ds = combined_ds.rename({"valid_time": "time"})
 
         # Summary log
         logger.info(
-            f"ERA5 data loaded: {len(era5_files)} files, {combined_ds.sizes['time']} time periods"
+            "ERA5 data loaded: %s files, %s time periods",
+            len(era5_files),
+            combined_ds.sizes["time"],
         )
 
         return ERA5DatasetModel(

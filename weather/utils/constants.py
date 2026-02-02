@@ -22,18 +22,16 @@ run_config: dict[str, Any]
 try:
     with CONFIG_FILE_PATH.open("r") as f:
         run_config = yaml.safe_load(f) or {}
-    logger.info(f"Successfully loaded configuration from {CONFIG_FILE_PATH}")
+    logger.info("Successfully loaded configuration from %s", CONFIG_FILE_PATH)
 except FileNotFoundError:
-    logger.warning(f"Configuration file {CONFIG_FILE_PATH} not found. Using default constants.")
+    logger.warning("Configuration file %s not found. Using default constants.", CONFIG_FILE_PATH)
     run_config = {}
 except yaml.YAMLError as e:
-    logger.error(f"Error parsing {CONFIG_FILE_PATH}: {e}. Using default constants.")
+    logger.error("Error parsing %s: %s. Using default constants.", CONFIG_FILE_PATH, e)
     run_config = {}
 
 # Absolute path to download data directory
-DOWNLOAD_DATA_DIR = run_config.get(
-    "DOWNLOAD_DATA_DIR", str(Path(__file__).parent.parent.parent / "data")
-)
+DOWNLOAD_DATA_DIR = run_config.get("DOWNLOAD_DATA_DIR", str(Path(__file__).parents[2] / "data"))
 
 # Dates
 ERA5_START_YEAR: int = run_config.get("ERA5_START_YEAR", 2023)
@@ -82,7 +80,7 @@ WIND_TECHNOLOGY_TYPES = {"Onshore Wind", "Offshore Wind"}
 
 # Elexon API
 ELEXON_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
-GENERATION_DATE_FILE_NAME = "generation_data.csv"
+GENERATION_DATA_FILE_NAME = "generation_data.parquet"
 
 # Normal Day (n): 48 periods, continuous 30-minute intervals
 NORMAL_DAY_MINUTES = [i * 30 for i in range(50)]  # [0, 30, 60, 90, ...] up to period 50
@@ -105,3 +103,24 @@ OCTOBER_BACK_MINUTES = (
 # Logging Configuration
 QUIET_MODE: bool = run_config.get("QUIET_MODE", False)  # Only show warnings/errors
 VERBOSE_MODE: bool = run_config.get("VERBOSE_MODE", False)  # Show all DEBUG logs
+
+# Wind calibrator constants
+DEFAULT_LOGISTIC_FN_XLOC = 9
+DEFAULT_LOGISTIC_FN_ASYMMETRY = 1
+DEFAULT_LOGISTIC_FN_STEEPNESS = 4.5
+# Minimum bounds chosen to avoid division by zero error in np.log, maximum bounds chosen to avoid overflow
+LOGISTIC_FN_STEEPNESS_LBOUND = 1e-6
+LOGISTIC_FN_STEEPNESS_HBOUND = 50
+LOGISTIC_FN_XLOC_LBOUND = 1e-4
+LOGISTIC_FN_XLOC_HBOUND = 50
+LOGISTIC_FN_ASYMMETRY_LBOUND = 1e-6
+LOGISTIC_FN_ASYMMETRY_HBOUND = 500
+
+LOGISTIC_FN_MAXEVAL = 10000
+
+WIND_SPEED_LBOUND = 0
+WIND_SPEED_HBOUND = 40
+
+INTERNAL_PLANT_ID = "plant_id"  # for easier maintenance of internal calculations
+
+PLANT_ID_OUTPUT = run_config.get("PLANT_ID_OUTPUT", "CFD ID")
