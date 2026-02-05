@@ -1,0 +1,213 @@
+---
+title: CommodityPrice
+description: A reference page for the CommodityPrice abstract base class.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+This abstract base class provides the foundation for simulating commodity prices by applying stochastic processes to their respective forward curves. It initializes commodities such as carbon, coal, or gas, retrieves smoothed forward price curves, and sets up stochastic parameters from the database.
+
+#### Implementation Overview
+
+The CommodityPrice class serves as a base for specific commodity price simulations. It handles:
+- Forward curve retrieval and smoothing
+- Stochastic parameter initialization
+- Geometric Brownian Motion process setup
+- Price simulation plotting capabilities
+
+#### Example Usage
+
+While you cannot instantiate this abstract class directly, here's how it's used through its subclasses:
+
+```python
+from quantlib.commodities.CommodityPriceSimulation import CoalPrice
+from quantlib.database.DatabaseDelta import DatabaseDelta
+import datetime as dt
+
+# Create a database connection
+connection = DatabaseDelta()
+
+# Create a coal price simulation
+coal_sim = CoalPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2024, 12, 31),
+    number_of_simulations=1000,
+    connection=connection
+)
+
+# Run the simulation
+daily_prices = coal_sim.run()
+
+# Plot the results
+coal_sim.plot_Simulated_Curve(paths=50)
+```
+
+All commodity-specific classes inherit from this base class and implement their own `run()` and `daily_Fuel_Price()` methods.
+</Section>
+
+---
+
+## Constructor
+
+<Segment>
+<Section type="signature">
+```python
+class CommodityPrice(start_date: datetime.datetime, end_date: datetime.datetime, 
+number_of_simulations: int, connection: DatabaseDelta, name: str, 
+numpy_rng=np.random.default_rng(0)): CommodityPrice
+```
+</Section>
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">start_date</code> <code class="primitive">datetime.datetime</code></p>
+  The start date for the simulation.
+
+- <p><code class="key">end_date</code> <code class="primitive">datetime.datetime</code></p>
+  The end date for the simulation.
+
+- <p><code class="key">number_of_simulations</code> <code class="primitive">int</code></p>
+  The number of Monte Carlo simulations to run.
+
+- <p><code class="key">connection</code> [<code class="type">DatabaseDelta</code>](#DatabaseDelta)</p>
+  Database connection object for retrieving forward curves and stochastic parameters.
+
+- <p><code class="key">name</code> <code class="primitive">str</code></p>
+  Name of the commodity (e.g., "Carbon", "Coal", "Gas").
+
+- <p><code class="key">numpy_rng</code> <code class="primitive">numpy.random.Generator</code></p>
+  NumPy random number generator instance. Default = np.random.default_rng(0).
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">CommodityPrice</code>](#CommodityPrice)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### get_Forward_Curve
+
+<Segment>
+<Section type="signature">
+```ts
+get_Forward_Curve(name=None): tuple[int, ndarray]
+```
+</Section>
+
+Retrieves and processes the forward curve for the commodity.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">name</code> <code class="primitive">str</code></p>
+  The name of the commodity. If None, uses the instance's commodity name.
+</Section>
+
+<InlineSection>
+**Returns** A tuple containing:
+- days (int): The number of days in the forward curve
+- Ft (np.ndarray): The forward curve represented as a 1-D NumPy array of floats
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">tuple</code>
+</InlineSection>
+</Segment>
+
+### plot_Simulated_Curve
+
+<Segment>
+<Section type="signature">
+```ts
+plot_Simulated_Curve(raw_price: bool = False, paths: int = 0, random_seed: int = 0): None
+```
+</Section>
+
+Plots the simulated price curves for the commodity.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">raw_price</code> <code class="primitive">bool</code></p>
+  Whether to plot the raw price or the daily fuel price. Default = False.
+
+- <p><code class="key">paths</code> <code class="primitive">int</code></p>
+  The number of paths to plot. Default = 0 (plots all paths).
+
+- <p><code class="key">random_seed</code> <code class="primitive">int</code></p>
+  The random seed to use for selecting which paths to display. Default = 0.
+</Section>
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### daily_Fuel_Price
+
+<Segment>
+<Section type="signature">
+```ts
+daily_Fuel_Price(prices: ndarray): ndarray
+```
+</Section>
+
+Abstract method that must be implemented by subclasses to calculate daily fuel prices.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">prices</code> <code class="primitive">np.ndarray</code></p>
+  The simulated commodity prices.
+</Section>
+
+<InlineSection>
+**Returns** Daily fuel prices in £/MWh.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+## Properties
+
+### GBM_Process
+
+<Segment>
+The Geometric Brownian Motion process used for price simulation.
+
+<InlineSection>
+**Type** [<code class="type">GeometricBrownianMotion</code>](#GeometricBrownianMotion)
+</InlineSection>
+</Segment>
+
+### Ft
+
+<Segment>
+The forward curve as a NumPy array.
+
+<InlineSection>
+**Type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### Pt
+
+<Segment>
+The simulated price paths (set after running simulation).
+
+<InlineSection>
+**Type** <code class="primitive">np.ndarray</code> | <code class="primitive">None</code>
+</InlineSection>
+</Segment>
+
+</div>

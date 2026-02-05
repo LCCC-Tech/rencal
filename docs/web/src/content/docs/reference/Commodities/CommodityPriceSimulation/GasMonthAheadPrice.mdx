@@ -1,0 +1,200 @@
+---
+title: GasMonthAheadPrice
+description: A reference page for the GasMonthAheadPrice class.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+This class simulates gas month-ahead prices, which are forward contracts for gas delivery one month in the future. It uses the same stochastic processes as the GasPrice class but returns monthly averaged prices.
+
+#### Simple Example
+
+Here's a basic example of simulating gas month-ahead prices:
+
+```python
+from quantlib.commodities.CommodityPriceSimulation import GasMonthAheadPrice
+from quantlib.database.DatabaseDelta import DatabaseDelta
+import datetime as dt
+import numpy as np
+
+# Create database connection
+connection = DatabaseDelta()
+
+# Create gas month-ahead price simulation
+gas_ma_sim = GasMonthAheadPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2024, 12, 31),
+    number_of_simulations=100,
+    connection=connection,
+    numpy_rng=np.random.default_rng(42)
+)
+
+# Run simulation to get monthly prices
+monthly_prices = gas_ma_sim.run()
+```
+
+#### Advanced Example with Price Comparison
+
+Compare month-ahead with day-ahead prices:
+
+```python
+from quantlib.commodities.CommodityPriceSimulation import GasPrice, GasMonthAheadPrice
+
+# Same parameters for both simulations
+params = {
+    'start_date': dt.datetime(2024, 1, 1),
+    'end_date': dt.datetime(2025, 12, 31),
+    'number_of_simulations': 1000,
+    'connection': connection,
+    'numpy_rng': np.random.default_rng(42)
+}
+
+# Create both simulations
+gas_da = GasPrice(**params)
+gas_ma = GasMonthAheadPrice(**params)
+
+# Run simulations
+daily_prices = gas_da.run()
+monthly_prices = gas_ma.run()
+
+# Month-ahead prices are typically:
+# - Less volatile than day-ahead
+# - Better for hedging monthly consumption
+# - Used for forward contract pricing
+```
+
+Month-ahead prices are essential for gas market participants who need to hedge or plan for future consumption.
+</Section>
+
+---
+
+## Constructor
+
+<Segment>
+<Section type="signature">
+```python
+class GasMonthAheadPrice(start_date: datetime, end_date: datetime,
+number_of_simulations: int, connection: DatabaseDelta,
+numpy_rng: np.random.Generator): GasMonthAheadPrice
+```
+</Section>
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">start_date</code> <code class="primitive">datetime</code></p>
+  The start date for the simulation.
+
+- <p><code class="key">end_date</code> <code class="primitive">datetime</code></p>
+  The end date for the simulation.
+
+- <p><code class="key">number_of_simulations</code> <code class="primitive">int</code></p>
+  The number of simulations to run.
+
+- <p><code class="key">connection</code> [<code class="type">DatabaseDelta</code>](#DatabaseDelta)</p>
+  Database connection object.
+
+- <p><code class="key">numpy_rng</code> <code class="primitive">numpy.random.Generator</code></p>
+  NumPy random number generator instance.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">GasMonthAheadPrice</code>](#GasMonthAheadPrice)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### run
+
+<Segment>
+<Section type="signature">
+```ts
+run(): ndarray
+```
+</Section>
+
+Runs one simulation of the gas month-ahead price.
+
+<InlineSection>
+**Returns** Monthly fuel prices (£/MWh) for gas.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### daily_Fuel_Price
+
+<Segment>
+<Section type="signature">
+```ts
+daily_Fuel_Price(prices: ndarray): ndarray
+```
+</Section>
+
+Calculates the daily fuel price (£/MWh) for gas. Converts from pence per therm to £/MWh.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">prices</code> <code class="primitive">np.ndarray</code></p>
+  The gas prices in pence per therm.
+</Section>
+
+<InlineSection>
+**Returns** The daily fuel price in £/MWh.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### monthly_Fuel_Price
+
+<Segment>
+<Section type="signature">
+```ts
+monthly_Fuel_Price(prices: ndarray): ndarray
+```
+</Section>
+
+Calculates the monthly fuel price (£/MWh) for gas by averaging daily prices within each month.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">prices</code> <code class="primitive">np.ndarray</code></p>
+  The daily fuel prices.
+</Section>
+
+<InlineSection>
+**Returns** The monthly averaged fuel price.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+## Properties
+
+### NIG_Process
+
+<Segment>
+The Normal Inverse Gaussian Lévy process for modeling price dynamics.
+
+<InlineSection>
+**Type** [<code class="type">NormalInverseGaussian</code>](#NormalInverseGaussian)
+</InlineSection>
+</Segment>
+
+</div>
