@@ -1,0 +1,80 @@
+---
+title: Wind Calibrator Concepts
+description: An overview of the wind generator power curve calibration process
+draft: true
+---
+
+# Calibration of Renewables Power Curves
+
+| Concept   | Description |
+| :------   | :---------- |
+| Objective | Produce realistic and localised generation forecasts monthly |
+| Scope     | Calibrating power curves for individual generators - modelling the relationship between historical climate data at their location and observed electricity generation to estimate future output|
+| Why approach chosen | Historical data is used because long-term climate conditions and seasonal trends are generally stable, offering a dependable foundation for estimating monthly electricity generation |
+| What feeds this | ELFO’s generation forecast, Scheme Valuation Model |
+| Time horizon | Trained on data from 1980 to present, project load factors for future years (currently up to 2050) |
+
+## Context
+
+Often we represent plant generation as a load factor, which is derived by dividing generation data by CfD plants' maximum contract capacity. We have data on generation since the start of a CfD contract. We also know what GB weather conditions were in specific locations going all the way back to 1980 based on data sourced from the ERA5 data ([ERA5 hourly data on single levels](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview)). Using these two sources, we model the relationship between historical load factors for our CfD plants and observed weather conditions. This process produces a power curve function, which we can then use to estimate the load factor of a wind plant based on its wind speed data inputs, or estimate the load factor of a solar plant based on its temperature and radiation data inputs. 
+
+This page explains the reasoning and theories followed to calibrate power curves. Once the newly calibrated power curves have been obtained, they can be used to estimate future electricity generation. In case actual data are not yet available for a specific generator, default parameter can be used to estimate the generation.
+
+## Output Sample
+
+![Sample Calibration Output](/docs/web/src/assets/concepts/RenewablesCalibration/RenCalSampleOutput.png)
+
+## Wind Power Curve
+
+Three activities need to be carried out to calculate the parameters and produce the load factor stream:
+
+1. Update the ERA5 data to obtain the latest historical wind data for GB
+2. Calibrate the wind power curve for each CfD generator, based on actual data where available
+3. Create the individual wind streams from the historic data with specific information for CFD generators in GB
+
+To calibrate the power curve for the CFD wind farm the following data are needed:
+
+- Actual hourly load factor data (generation/capacity) for a significant time interval.
+- Hourly actual wind speed data for the closest available location (from ERA5 dataset) for the same period the actual load factors data are available.
+
+Among all the models available to forecast the wind farm output, the five-parameter logistic function (5PL) has been chosen. This function combines the simplicity of one single analytical expression and an accurate representation of the wind farm power curve once it has been calibrated. See the reference [here](https://onlinelibrary.wiley.com/doi/full/10.1155/2016/8519785).
+
+The 5PL function is the following:
+
+![Five-parameter logistic function](/docs/web/src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionEquation.png)
+
+The five parameters a, b, c, d and g can be interpreted as follows:
+
+- a: lower bound representing minimum production
+
+- b: slope of the curve
+
+- c: inflection point of the curve
+
+- d: upper bound representing maximum production
+
+- g: asymmetry factor; curve is symmetric for g=1
+
+The effect of the variation of these parameters on the shape of a power curve defined by the 5PL function is shown below:
+
+![Effects of parameters A-D on the shape of the generalised logistic function](/docs/web/src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionParamsAtoD.png)
+
+![Effect of parameter G on the shape of the generalised logistic function](/docs/web/src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionParamsG.png)
+
+To use the 5PL function to forecast wind energy output it is necessary beforehand to define the five parameters through a calibration process run over actual wind speed and generation data.
+
+The definition of the parameters is accomplished through a least square regression to find the power curve that fits best the actual data, allowing to calculate the best fit parameters  a, b, c, d and g that minimize the error on the load factor.
+
+After the determination of the five parameters, the analytical function can be easily applied to a forecast hourly wind speed dataset to evaluate the corresponding hourly load factor.
+
+Practically what this process means is we can use the power curve to produce historical estimates (i.e. backcast), obtaining estimated load factors for plant locations back to 1980, as well as future estimates. Outputs from this process produce hourly load factors for each generator (aka wind streams).
+
+## Calibrated vs. Default
+
+CfDs are typically allocated to newly operational plants, so quite often we have minimal historical generation in which to derive a plant specific forecast. In other words, we don’t have enough generation data to confidently derive a power curve function, which can then be used to estimate historical values. In these instances, a generic power curve would be applied and ELFO would sample from this generic wind stream.
+
+By applying analytical judgement and looking at the individual CFD units’ plots, determine which CFDs have produced a power curve that closely approximate the actual data and is hence acceptable to be used in the forecasting process. A default power curve for generators whose calibration is not suitable.
+
+e.g. model (yellow line) below approximates the actual data (blue dots).
+
+![Wind Calibration Plot](/docs/web/src/assets/concepts/RenewablesCalibration/WindCalibrationPlot.png)
