@@ -22,7 +22,7 @@ This page explains the reasoning and theories followed to calibrate power curves
 
 ## Output Sample
 
-![Sample Calibration Output](/docs/web/src/assets/concepts/RenewablesCalibration/RenCalSampleOutput.png)
+![Sample Calibration Output](src/assets/concepts/RenewablesCalibration/RenCalSampleOutput.png)
 
 ## Wind Power Curve
 
@@ -41,7 +41,11 @@ Among all the models available to forecast the wind farm output, the five-parame
 
 The 5PL function is the following:
 
-![Five-parameter logistic function](/docs/web/src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionEquation.png)
+![Five-parameter logistic function](src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionEquation.png)
+
+$$
+f(x,a,b,c,d,g) = d + \frac{a - d}{(1 + (x/c)^{b})^{g}}
+$$
 
 The five parameters a, b, c, d and g can be interpreted as follows:
 
@@ -57,9 +61,9 @@ The five parameters a, b, c, d and g can be interpreted as follows:
 
 The effect of the variation of these parameters on the shape of a power curve defined by the 5PL function is shown below:
 
-![Effects of parameters A-D on the shape of the generalised logistic function](/docs/web/src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionParamsAtoD.png)
+![Effects of parameters A-D on the shape of the generalised logistic function](src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionParamsAtoD.png)
 
-![Effect of parameter G on the shape of the generalised logistic function](/docs/web/src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionParamsG.png)
+![Effect of parameter G on the shape of the generalised logistic function](src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionParamsG.png)
 
 To use the 5PL function to forecast wind energy output it is necessary beforehand to define the five parameters through a calibration process run over actual wind speed and generation data.
 
@@ -77,4 +81,4 @@ By applying analytical judgement and looking at the individual CFD units’ plot
 
 e.g. model (yellow line) below approximates the actual data (blue dots).
 
-![Wind Calibration Plot](/docs/web/src/assets/concepts/RenewablesCalibration/WindCalibrationPlot.png)
+![Wind Calibration Plot](src/assets/concepts/RenewablesCalibration/WindCalibrationPlot.png)
