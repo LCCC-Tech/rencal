@@ -16,9 +16,15 @@ draft: true
 
 ## Context
 
-Often we represent plant generation as a load factor, which is derived by dividing generation data by CfD plants' maximum contract capacity. We have data on generation since the start of a CfD contract. We also know what GB weather conditions were in specific locations going all the way back to 1980 based on data sourced from the ERA5 data ([ERA5 hourly data on single levels](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview)). Using these two sources, we model the relationship between historical load factors for our CfD plants and observed weather conditions. This process produces a power curve function, which we can then use to estimate the load factor of a wind plant based on its wind speed data inputs, or estimate the load factor of a solar plant based on its temperature and radiation data inputs. 
+Often we represent plant generation as a load factor, which is derived by dividing generation data by the plant's maximum contract capacity.
+We have data on generation since the start of a CfD contract.
+We also know what GB weather conditions were in specific locations going all the way back to 1980 based on ERA5 data ([ERA5 hourly data on single levels](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview)).
+Using these two sources, we model the relationship between historical load factors for our plants and observed weather conditions.
+This process produces a power curve function, which we can then use to estimate the load factor of a wind plant based on its wind speed data inputs, or estimate the load factor of a solar plant based on its temperature and radiation data inputs. 
 
-This page explains the reasoning and theories followed to calibrate power curves. Once the newly calibrated power curves have been obtained, they can be used to estimate future electricity generation. In case actual data are not yet available for a specific generator, default parameter can be used to estimate the generation.
+This page explains the reasoning and theories followed to calibrate power curves.
+Once the newly calibrated power curves have been obtained, they can be used to estimate future electricity generation.
+In case actual data are not yet available for a specific generator, default parameter can be used to estimate the generation.
 
 ## Output Sample
 
@@ -63,7 +69,10 @@ This page explains the reasoning and theories followed to calibrate power curves
 | Generic Onshore Wind  | 0   | 7.283319  | 6.653677  | 1   | 0.6801953  | 0                     |
 
 
-This is a sample output from the calibration summary, which contains the logistic function parameters for each calibrated plant. It also reports an estimated long-term load factor which is based on the historical distribution of wind speeds for the plant location. At the bottom of the file, generic curve parameters are reported for both onshore and offshore wind, which can be used for uncalibrated plants. Note that these have their estimated load factor at 0 as there is no knowledge of localised wind speed distributions.
+This is a sample output from the calibration summary, which contains the logistic function parameters for each calibrated plant.
+It also reports an estimated long-term load factor which is based on the historical distribution of wind speeds for the plant location.
+At the bottom of the file, generic curve parameters are reported for both onshore and offshore wind, which can be used for uncalibrated plants.
+Note that these have their estimated load factor at 0 as there is no knowledge of localised wind speed distributions.
 
 ## Wind Power Curve
 
@@ -78,7 +87,9 @@ To calibrate the power curve for the CFD wind farm the following data are needed
 - Actual hourly load factor data (generation/capacity) for a significant time interval.
 - Hourly actual wind speed data for the closest available location (from ERA5 dataset) for the same period the actual load factors data are available.
 
-Among all the models available to forecast the wind farm output, the five-parameter logistic function (5PL) has been chosen. This function combines the simplicity of one single analytical expression and an accurate representation of the wind farm power curve once it has been calibrated. See the reference [here](https://onlinelibrary.wiley.com/doi/full/10.1155/2016/8519785).
+Among all the models available to forecast the wind farm output, the five-parameter logistic function (5PL) has been chosen.
+This function combines the simplicity of one single analytical expression and an accurate representation of the wind farm power curve once it has been calibrated.
+See the reference [here](https://onlinelibrary.wiley.com/doi/full/10.1155/2016/8519785).
 
 The 5PL function is the following:
 
@@ -110,13 +121,17 @@ The definition of the parameters is accomplished through a least square regressi
 
 After the determination of the five parameters, the analytical function can be easily applied to a forecast hourly wind speed dataset to evaluate the corresponding hourly load factor.
 
-Practically what this process means is we can use the power curve to produce historical estimates (i.e. backcast), obtaining estimated load factors for plant locations back to 1980, as well as future estimates. Outputs from this process produce hourly load factors for each generator (aka wind streams).
+Practically what this process means is we can use the power curve to produce historical estimates (i.e. backcast), obtaining estimated load factors for plant locations back to 1980, as well as future estimates.
+Outputs from this process produce hourly load factors for each generator (aka wind streams).
 
 ## Calibrated vs. Default
 
-CfDs are typically allocated to newly operational plants, so quite often we have minimal historical generation in which to derive a plant specific forecast. In other words, we don’t have enough generation data to confidently derive a power curve function, which can then be used to estimate historical values. In these instances, a generic power curve would be applied and ELFO would sample from this generic wind stream.
+With newly operational plants, quite often we have minimal historical generation for which to derive a plant specific forecast.
+In other words, we don’t have enough generation data to confidently derive a power curve function, which can then be used to estimate historical values.
+In these instances, a generic power curve would be applied to the wind speeds at the location of the plant to generate wind streams.
 
-By applying analytical judgement and looking at the individual CFD units’ plots, determine which CFDs have produced a power curve that closely approximate the actual data and is hence acceptable to be used in the forecasting process. A default power curve for generators whose calibration is not suitable.
+By applying analytical judgement and looking at the individual CFD units’ plots, one can determine which CFDs have produced a power curve that closely approximate the actual data and is hence acceptable to be used in the forecasting process.
+A default power curve should be used for generators whose calibration is not suitable.
 
 e.g. model (yellow line) below approximates the actual data (blue dots).
 
