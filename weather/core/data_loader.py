@@ -132,8 +132,13 @@ class LocalDataLoader(DataLoader):
     def get_prefix_histograms(self) -> NDArray | None:
         histograms_wind_path = self._base_path / "calibrated" / WIND_NPY_HISTOGRAMS_BASEPATH
 
+        if not histograms_wind_path.exists():
+            return None
+
         try:
-            histogram_memmap_ref_wind = np.load(histograms_wind_path, mmap_mode="r", allow_pickle=False)
+            histogram_memmap_ref_wind = np.load(
+                histograms_wind_path, mmap_mode="r", allow_pickle=False
+            )
         except Exception as e:
             histogram_memmap_ref_wind = None
 
@@ -142,8 +147,13 @@ class LocalDataLoader(DataLoader):
     def get_historical_weather(self) -> NDArray | None:
         wind_path = self._base_path / "calibrated" / WIND_NPY_BASEPATH
 
+        if not wind_path.exists():
+            return None
+
         try:
-            wind_npy = np.load(wind_path, mmap_mode="r", allow_pickle=False)
+            wind_npy = np.load(
+                wind_path, mmap_mode="r", allow_pickle=False
+            )
         except Exception as e:
             wind_npy = None
 
