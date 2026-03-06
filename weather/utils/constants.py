@@ -46,6 +46,8 @@ SIMULATION_END_DATE = run_config.get("END_DATE", "2025-06-30T00:00:00Z")
 
 # Data
 PLANT_ID_COLUMN: str = run_config.get("PLANT_ID_COLUMN", "cfd_id")
+WIND_NPY_BASEPATH: str = run_config.get("WIND_NPY_BASEPATH", "Wind Streams.npy")
+WIND_NPY_HISTOGRAMS_BASEPATH: str = run_config.get("WIND_NPY_HISTOGRAMS_BASEPATH", "Wind Streams.histograms.npy")
 
 # Runtime timestamp
 RUNTIME_DATE = datetime.datetime.today()
