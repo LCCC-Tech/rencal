@@ -1,0 +1,167 @@
+---
+title: GasMonthAndDayAheadPrice
+description: A reference page for the GasMonthAndDayAheadPrice class.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+This class simulates correlated gas day-ahead and month-ahead prices. It ensures both price series share the same Geometric Brownian Motion process to maintain realistic correlation between spot and forward prices.
+
+#### Simple Example
+
+Here's how to simulate correlated day-ahead and month-ahead gas prices:
+
+```python
+from quantlib.commodities.CommodityPriceSimulation import GasMonthAndDayAheadPrice
+from quantlib.database.DatabaseDelta import DatabaseDelta
+import datetime as dt
+import numpy as np
+
+# Create database connection
+connection = DatabaseDelta()
+
+# Create correlated gas price simulation
+gas_sim = GasMonthAndDayAheadPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2024, 12, 31),
+    number_of_simulations=100,
+    connection=connection,
+    numpy_rng=np.random.default_rng(42)
+)
+
+# Run simulation to get both price series
+month_ahead, day_ahead = gas_sim.run()
+```
+
+#### Advanced Example with Spread Analysis
+
+Analyze the spread between month-ahead and day-ahead prices:
+
+```python
+# Create simulation with many paths
+gas_sim = GasMonthAndDayAheadPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2025, 12, 31),
+    number_of_simulations=1000,
+    connection=connection
+)
+
+# Run simulation
+month_ahead, day_ahead = gas_sim.run()
+
+# Calculate spreads
+spread = month_ahead - day_ahead
+
+# Analysis of correlated prices:
+# - Both use the same GBM process for correlation
+# - Each has independent NIG processes for idiosyncratic risk
+# - Month-ahead typically less volatile than day-ahead
+# - Spread represents forward premium/discount
+
+# The shared GBM ensures realistic correlation
+# while separate volatilities capture term structure
+```
+
+This class is essential for modeling gas forward curves and basis risk between different contract maturities.
+</Section>
+
+---
+
+## Constructor
+
+<Segment>
+<Section type="signature">
+```python
+class GasMonthAndDayAheadPrice(start_date: datetime, end_date: datetime, 
+number_of_simulations: int, connection: DatabaseDelta, 
+numpy_rng: np.random.Generator): GasMonthAndDayAheadPrice
+```
+</Section>
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">start_date</code> <code class="primitive">datetime</code></p>
+  The start date for the simulation.
+
+- <p><code class="key">end_date</code> <code class="primitive">datetime</code></p>
+  The end date for the simulation.
+
+- <p><code class="key">number_of_simulations</code> <code class="primitive">int</code></p>
+  The number of simulations to run.
+
+- <p><code class="key">connection</code> [<code class="type">DatabaseDelta</code>](#DatabaseDelta)</p>
+  Database connection object.
+
+- <p><code class="key">numpy_rng</code> <code class="primitive">numpy.random.Generator</code></p>
+  NumPy random number generator instance.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">GasMonthAndDayAheadPrice</code>](#GasMonthAndDayAheadPrice)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### run
+
+<Segment>
+<Section type="signature">
+```ts
+run(): tuple[ndarray, ndarray]
+```
+</Section>
+
+Runs one simulation of correlated gas prices. Both day-ahead and month-ahead prices share the same GBM process but use their own volatility parameters and NIG processes.
+
+<InlineSection>
+**Returns** A tuple containing:
+- np.ndarray: Monthly fuel prices for month-ahead contracts (£/MWh)
+- np.ndarray: Monthly fuel prices for day-ahead contracts (£/MWh)
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">tuple</code>
+</InlineSection>
+</Segment>
+
+## Properties
+
+### day_Ahead
+
+<Segment>
+The GasPrice instance for day-ahead price simulation.
+
+<InlineSection>
+**Type** [<code class="type">GasPrice</code>](#GasPrice)
+</InlineSection>
+</Segment>
+
+### month_Ahead
+
+<Segment>
+The GasMonthAheadPrice instance for month-ahead price simulation.
+
+<InlineSection>
+**Type** [<code class="type">GasMonthAheadPrice</code>](#GasMonthAheadPrice)
+</InlineSection>
+</Segment>
+
+### GBM_Process
+
+<Segment>
+The shared Geometric Brownian Motion process ensuring correlation between day-ahead and month-ahead prices.
+
+<InlineSection>
+**Type** [<code class="type">GeometricBrownianMotion</code>](#GeometricBrownianMotion)
+</InlineSection>
+</Segment>
+
+</div>

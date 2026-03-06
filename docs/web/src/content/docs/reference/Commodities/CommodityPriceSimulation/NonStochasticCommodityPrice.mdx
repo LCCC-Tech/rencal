@@ -1,0 +1,226 @@
+---
+title: NonStochasticCommodityPrice
+description: A reference page for the NonStochasticCommodityPrice class.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+This class handles deterministic commodity prices that don't require stochastic simulation. It's used for commodities like biomass and oil where prices are based on historical data or fixed forward curves rather than Monte Carlo simulation.
+
+#### Simple Example
+
+Here's how to work with non-stochastic commodity prices:
+
+```python
+from quantlib.commodities.CommodityPriceSimulation import BiomassPrice
+from quantlib.database.DatabaseDelta import DatabaseDelta
+import datetime as dt
+
+# Create database connection
+connection = DatabaseDelta()
+
+# Create biomass price instance
+biomass = BiomassPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2024, 12, 31),
+    connection=connection
+)
+
+# Get daily fuel prices
+daily_prices = biomass.run()
+```
+
+#### Advanced Example with Price Interpolation
+
+This example shows how the class handles sparse price data:
+
+```python
+# The NonStochasticCommodityPrice class automatically:
+# 1. Retrieves historical prices from the database
+# 2. Forward-fills missing dates
+# 3. Interpolates between price points
+# 4. Extends the most recent price to future dates
+
+# Create oil price instance
+from quantlib.commodities.CommodityPriceSimulation import OilPrice
+
+oil = OilPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2025, 12, 31),
+    connection=connection
+)
+
+# Get deterministic daily prices
+daily_prices = oil.run()
+
+# The class handles:
+# - Sparse price updates (e.g., monthly or quarterly)
+# - Historical data gaps
+# - Future price extrapolation
+# - Unit conversions and transport costs
+```
+
+Non-stochastic prices are useful for commodities with regulated prices, long-term contracts, or limited market liquidity.
+</Section>
+
+---
+
+## Constructor
+
+<Segment>
+<Section type="signature">
+```python
+class NonStochasticCommodityPrice(start_date: datetime, end_date: datetime, 
+connection: DatabaseDelta): NonStochasticCommodityPrice
+```
+</Section>
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">start_date</code> <code class="primitive">datetime</code></p>
+  The start date for the simulation.
+
+- <p><code class="key">end_date</code> <code class="primitive">datetime</code></p>
+  The end date for the simulation.
+
+- <p><code class="key">connection</code> [<code class="type">DatabaseDelta</code>](#DatabaseDelta)</p>
+  Database connection object.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">NonStochasticCommodityPrice</code>](#NonStochasticCommodityPrice)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### run
+
+<Segment>
+<Section type="signature">
+```ts
+run(): ndarray
+```
+</Section>
+
+Runs the simulation by returning the pre-calculated daily fuel prices.
+
+<InlineSection>
+**Returns** The daily fuel price array.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### daily_Fuel_Price
+
+<Segment>
+<Section type="signature">
+```ts
+daily_Fuel_Price(): ndarray
+```
+</Section>
+
+Calculates the daily fuel price (£/MWh) for the commodity including transport costs and calorific value conversion.
+
+<InlineSection>
+**Returns** The daily fuel price in £/MWh.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### generate_Daily_Fuel_Price
+
+<Segment>
+<Section type="signature">
+```ts
+generate_Daily_Fuel_Price(): ndarray
+```
+</Section>
+
+Generates the daily fuel price for non-stochastic commodities by retrieving and processing historical data.
+
+<InlineSection>
+**Returns** List of daily prices for the chosen commodity.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### generate_Variable_Price_List
+
+<Segment>
+<Section type="signature">
+```ts
+generate_Variable_Price_List(prices_df: DataFrame, most_recent_price: float): ndarray
+```
+</Section>
+
+Generates a list of daily prices by interpolating sparse price data.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">prices_df</code> <code class="primitive">pd.DataFrame</code></p>
+  DataFrame of commodity prices with columns 'Date' and 'Price'.
+
+- <p><code class="key">most_recent_price</code> <code class="primitive">float</code></p>
+  The price of the commodity at the end date of the simulation.
+</Section>
+
+<InlineSection>
+**Returns** List of daily prices for the chosen commodity.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+## Properties
+
+### name
+
+<Segment>
+The name of the commodity extracted from the class name.
+
+<InlineSection>
+**Type** <code class="primitive">str</code>
+</InlineSection>
+</Segment>
+
+### Pt
+
+<Segment>
+The generated daily price array.
+
+<InlineSection>
+**Type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### non_Stochastic_Dataframe
+
+<Segment>
+DataFrame containing historical price data from the database.
+
+<InlineSection>
+**Type** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+</div>

@@ -1,0 +1,248 @@
+---
+title: GasPrice
+description: A reference page for the GasPrice class.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+This class simulates gas prices using a combination of Geometric Brownian Motion and Normal Inverse Gaussian Lévy processes. The NIG process captures the heavy tails and skewness often observed in gas price distributions.
+
+#### Simple Example
+
+Here's a basic example of simulating gas prices:
+
+```python
+from quantlib.commodities.CommodityPriceSimulation import GasPrice
+from quantlib.database.DatabaseDelta import DatabaseDelta
+import datetime as dt
+import numpy as np
+
+# Create database connection
+connection = DatabaseDelta()
+
+# Create gas price simulation
+gas_sim = GasPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2024, 12, 31),
+    number_of_simulations=100,
+    connection=connection,
+    numpy_rng=np.random.default_rng(42)
+)
+
+# Run simulation to get daily fuel prices
+daily_prices = gas_sim.run()
+```
+
+#### Advanced Example with Monthly Aggregation
+
+This example demonstrates monthly price aggregation:
+
+```python
+# Create gas price simulation
+gas_sim = GasPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2025, 12, 31),
+    number_of_simulations=1000,
+    connection=connection
+)
+
+# Run simulation for daily prices
+daily_prices = gas_sim.run()
+
+# Get monthly average prices
+monthly_prices = gas_sim.monthly_Fuel_Price(gas_sim.Pt)
+
+# The gas price simulation includes:
+# - Winter/Summer seasonality parameters
+# - Heavy-tailed distributions via NIG process
+# - Conversion from pence/therm to £/MWh
+
+# Plot the simulated prices
+gas_sim.plot_Simulated_Curve(raw_price=False, paths=50)
+```
+
+Gas prices exhibit complex dynamics including seasonality, jumps, and heavy tails, all captured by the NIG-GBM combination.
+</Section>
+
+---
+
+## Constructor
+
+<Segment>
+<Section type="signature">
+```python
+class GasPrice(start_date: datetime, end_date: datetime, 
+number_of_simulations: int, connection: DatabaseDelta, 
+numpy_rng: np.random.Generator = np.random.default_rng(0)): GasPrice
+```
+</Section>
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">start_date</code> <code class="primitive">datetime</code></p>
+  The start date for the simulation.
+
+- <p><code class="key">end_date</code> <code class="primitive">datetime</code></p>
+  The end date for the simulation.
+
+- <p><code class="key">number_of_simulations</code> <code class="primitive">int</code></p>
+  The number of simulations to run.
+
+- <p><code class="key">connection</code> [<code class="type">DatabaseDelta</code>](#DatabaseDelta)</p>
+  Database connection object.
+
+- <p><code class="key">numpy_rng</code> <code class="primitive">numpy.random.Generator</code></p>
+  NumPy random number generator instance. Default = np.random.default_rng(0).
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">GasPrice</code>](#GasPrice)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### run
+
+<Segment>
+<Section type="signature">
+```ts
+run(): ndarray
+```
+</Section>
+
+Runs one simulation of the gas price combining GBM and NIG processes.
+
+<InlineSection>
+**Returns** Daily fuel prices (£/MWh) for gas.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### daily_Fuel_Price
+
+<Segment>
+<Section type="signature">
+```ts
+daily_Fuel_Price(prices: ndarray): ndarray
+```
+</Section>
+
+Calculates the daily fuel price (£/MWh) for gas. Converts from pence per therm to £/MWh including transport costs.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">prices</code> <code class="primitive">np.ndarray</code></p>
+  The gas prices in pence per therm.
+</Section>
+
+<InlineSection>
+**Returns** The daily fuel price in £/MWh.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### monthly_Fuel_Price
+
+<Segment>
+<Section type="signature">
+```ts
+monthly_Fuel_Price(prices: ndarray): ndarray
+```
+</Section>
+
+Returns the monthly fuel price (£/MWh) for gas by averaging daily prices.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">prices</code> <code class="primitive">np.ndarray</code></p>
+  The daily gas prices.
+</Section>
+
+<InlineSection>
+**Returns** Monthly averaged fuel prices.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+## Properties
+
+### NIG_Process
+
+<Segment>
+The Normal Inverse Gaussian Lévy process for modeling price jumps and heavy tails.
+
+<InlineSection>
+**Type** [<code class="type">NormalInverseGaussian</code>](#NormalInverseGaussian)
+</InlineSection>
+</Segment>
+
+### NIG_sigma
+
+<Segment>
+Volatility parameter for the NIG process.
+
+<InlineSection>
+**Type** <code class="primitive">float</code>
+</InlineSection>
+</Segment>
+
+### NIG_kappa
+
+<Segment>
+Mean reversion coefficient (uses winter parameters).
+
+<InlineSection>
+**Type** <code class="primitive">float</code>
+</InlineSection>
+</Segment>
+
+### NIG_alpha
+
+<Segment>
+Tail heaviness parameter (uses winter parameters).
+
+<InlineSection>
+**Type** <code class="primitive">float</code>
+</InlineSection>
+</Segment>
+
+### NIG_beta
+
+<Segment>
+Skewness parameter (uses winter parameters).
+
+<InlineSection>
+**Type** <code class="primitive">float</code>
+</InlineSection>
+</Segment>
+
+### NIG_delta
+
+<Segment>
+Scale parameter (uses winter parameters).
+
+<InlineSection>
+**Type** <code class="primitive">float</code>
+</InlineSection>
+</Segment>
+
+</div>

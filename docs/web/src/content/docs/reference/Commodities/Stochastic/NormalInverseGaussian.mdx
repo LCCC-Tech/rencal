@@ -1,0 +1,154 @@
+---
+title: Normal Inverse Gaussian
+description: A reference page for the Normal Inverse Gaussian class.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+This class implements the Normal Inverse Gaussian Lévy process. It is used to simulate an array of random paths for mean-reverting stochastic processes.
+
+#### Simple Example
+
+Here's a simple example of creating a Normal Inverse Gaussian process:
+
+```python
+from quantlib.commodities.Stochastic import NormalInverseGaussian
+import numpy as np
+
+# Create a Normal Inverse Gaussian process
+nig = NormalInverseGaussian(
+    alpha=2.0,
+    beta=0.5,
+    n=365,
+    sigma=0.2,
+    theta=0.0,
+    kappa=0.5,
+    paths=100,
+    mu=0.0,
+    delta=1.0,
+    numpy_rng=np.random.default_rng(42)
+)
+
+# Generate paths
+paths = nig.run_Path()
+```
+
+#### Advanced Example
+
+Here's a more advanced example showing how to use the Normal Inverse Gaussian process for gas price simulation:
+
+```python
+from quantlib.commodities.Stochastic import NormalInverseGaussian
+import numpy as np
+
+# Parameters for gas price simulation
+alpha = 1.5  # Tail heaviness
+beta = 0.3   # Skew parameter
+n = 252      # Trading days in a year
+sigma = 0.3  # Volatility
+theta = 0.0  # Long term mean
+kappa = 0.8  # Mean reversion
+paths = 1000 # Number of simulations
+
+# Create the process
+nig = NormalInverseGaussian(
+    alpha=alpha,
+    beta=beta,
+    n=n,
+    sigma=sigma,
+    theta=theta,
+    kappa=kappa,
+    paths=paths,
+    mu=0.0,
+    delta=1.0,
+    numpy_rng=np.random.default_rng(42)
+)
+
+# Generate paths
+paths = nig.run_Path()
+```
+
+The Normal Inverse Gaussian distribution is particularly useful for modeling asset returns with heavy tails and skewness, making it ideal for energy commodities like gas.
+</Section>
+
+---
+
+## Constructor
+
+<Segment>
+<Section type="signature">
+```python
+class NormalInverseGaussian(alpha: float, beta: float, n: int, sigma: float, 
+theta: float, kappa: float, paths: int, mu: float = 0.0, delta: float = 1.0, 
+numpy_rng: ~numpy.random._generator.Generator = Generator(PCG64) at 0x16AD409E0): NormalInverseGaussian
+```
+</Section>
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">alpha</code> <code class="primitive">float</code></p>
+  Tail heaviness of normal inverse Gaussian distribution.
+
+- <p><code class="key">beta</code> <code class="primitive">float</code></p>
+  Skew of normal inverse Gaussian distribution.
+
+- <p><code class="key">n</code> <code class="primitive">int</code></p>
+  Number of time steps (e.g., n = 365 days).
+
+- <p><code class="key">sigma</code> <code class="primitive">float</code></p>
+  Volatility coefficient.
+
+- <p><code class="key">theta</code> <code class="primitive">float</code></p>
+  Long term mean.
+
+- <p><code class="key">kappa</code> <code class="primitive">float</code></p>
+  Mean reversion coefficient.
+
+- <p><code class="key">mu</code> <code class="primitive">float</code></p>
+  Location parameter - determines the "location" or shift of the distribution. Default = 0.0.
+
+- <p><code class="key">delta</code> <code class="primitive">float</code></p>
+  Scale parameter - determines the spread of the distribution. Default = 1.0.
+
+- <p><code class="key">paths</code> <code class="primitive">int</code></p>
+  Number of paths - default = 1.
+
+- <p><code class="key">numpy_rng</code> <code class="primitive">numpy.random.Generator</code></p>
+  NumPy random number generator instance.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">NormalInverseGaussian</code>](#NormalInverseGaussian)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### run_Path
+
+<Segment>
+<Section type="signature">
+```ts
+run_Path(): ndarray
+```
+</Section>
+
+Generate a matrix of a Normal Inverse Gaussian Lévy process: Pt[n, paths] by sampling from a normal inverse Gaussian distribution.
+
+<InlineSection>
+**Returns** A numpy matrix of Pt[n, paths].
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+</div>
