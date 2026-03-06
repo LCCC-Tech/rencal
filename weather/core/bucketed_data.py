@@ -1,22 +1,22 @@
-# The purpose of the BucketedData class is to serve as a container for all shared functionality between input modules that use the Bucketer as the main generation machanism.
+# The purpose of the BucketedData class is to serve as a container
+# for all shared functionality between input modules that use the Bucketer
+# as the main generation machanism.
 
-# It is the parent class of the SolarData, WindData, and DemandData classes.
+# It is the parent class of the WeatherData, and DemandData classes.
 
-# It has no state of its own, it relies on the fields of other classes to be named accordingly (historical_Start/End_Date, new_CDF, historical_Data, bin_Width).
-# It is ready for the deployment of multiple solar streams in that regard, since it can repurpose those optimisation functions abstracted away from WindData.
+# It has no state of its own, it relies on the fields of other classes to be named accordingly:
+# (historical_start/end_date, mask, new_cdf, duplicate_histogram_positions/canonical_streams, historical_data).
+# It is ready for the deployment of multiple types of streams in that regard,
+# since it can repurpose those optimisation functions abstracted away from WeatherData.
 
-# There is no main output, as the class functions more like an abstract class template of shared logic.
+# There is no main output, as the class functions more like a template of shared logic.
 
 import datetime
 import numpy as np
 import pandas as pd
-from typing import Optional, Sequence, Union
+from typing import Sequence, Union
 from numpy.typing import NDArray
 import warnings
-
-from scipy.optimize import minimize
-from scipy.special import rel_entr
-from bisect import bisect_left
 
 
 class VersionedColumnsNDArray:
@@ -52,12 +52,12 @@ class VersionedColumnsNDArray:
 
         Args:
             canonical_col (int): The canonical column index in the original sample 
-            that is being transformed this iteration.
+                that is being transformed this iteration.
             j (int): The 0-based current iteration index.
         
         Returns:
             abs_idx (int): The absolute column index in the output matrix where 
-            the new version of the canonical column is stored.
+                the new version of the canonical column is stored.
         """
         abs_idx = self.n_raw_features + j
         self._canonical_to_absolute.setdefault(int(canonical_col), []).append(abs_idx)
@@ -118,7 +118,7 @@ class BucketedData:
     """
     The purpose of this class is to serve as a container for all shared functionality between input modules that use the :class:`Bucketer` as the main path-generation mechanism.
 
-    It is the parent class of the :class:`SolarData`, :class:`WindData`, and :class:`DemandData` classes.
+    It is the parent class of the :class:`WeatherData`, and :class:`DemandData` classes.
 
     It has no state of its own, it relies on the fields of other classes to be named accordingly.
 
@@ -155,7 +155,7 @@ class BucketedData:
     def get_histogram(self,
         statistical_start_index: int,
         statistical_end_index: int,
-        historical_data: Optional[NDArray[np.floating]],
+        historical_data: NDArray[np.floating] | None,
         number_of_bins: int,
         ignore_zeros: bool = False,
     ) -> NDArray[np.uint32]:
@@ -169,7 +169,7 @@ class BucketedData:
             statistical_start_index (int): The start index of the data to consider for the histogram (inclusive).
             statistical_end_index (int): The end index of the data to consider for the histogram (exclusive).
             number_of_bins (int): The number of bins to use for the histogram.
-            historical_data (NDArray[np.floating]): The historical data array.
+            historical_data (NDArray[np.floating]): The historical data array, loadfactors between 0 and 1.
             ignore_zeros (bool): If True, zero-valued observations are excluded from
                 the histogram (useful for solar data where nighttime hours are 0).
                 Defaults to False.
@@ -265,13 +265,6 @@ class BucketedData:
         )
 
         return historical_distributions + partial_start + partial_end
-
-    # Returns an index of that particular date in the historical data (non-cropped):
-    def get_index_of_date(self, date):
-        first_index = int((date - self.historical_start_datetime).total_seconds() // 3600)
-        last_index = first_index + 24
-
-        return first_index, last_index
     
     def get_absolute_index_of_date(self, date):
         """
@@ -403,7 +396,7 @@ class BucketedData:
 
 
     @staticmethod
-    def compute_time_margins_new(historical_start, historical_end, data_limit_left, data_limit_right):
+    def compute_time_margins(historical_start, historical_end, data_limit_left, data_limit_right):
         """
         Utility method used to compute the start and end point of stric hour-mark timeseries data dynamically at runtime in both full hours and full days, 
         cropping in case we asked for more than what we have available.
