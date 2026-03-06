@@ -54,7 +54,6 @@ DAYS_IN_YEAR: int = 365
 
 # ERA5 API
 CDS_API_URL: str = "https://cds.climate.copernicus.eu/api"
-CDS_API_KEY: str | None = os.environ.get("CDS_API_KEY", None)
 ERA5_PRODUCT_TYPE = "reanalysis"
 ERA5_DATASET = "reanalysis-era5-single-levels"
 AREA_BOUNDING_BOX_COORDINATES = [61, -12, 49, 5]  # [North, West, South, East] - UK bounding box
