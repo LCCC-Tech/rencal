@@ -549,7 +549,9 @@ class WindCalibrator(Calibrator):
         logger.info("Written wind streams to %s", stream_path)
         if self.stream_npy_output:
             with open(stream_path.with_suffix(".npy"), "wb") as stream_npy:
-                np.save(stream_npy, self.wind_streams.drop(columns="Times").to_numpy(dtype=np.float32))
+                np.save(
+                    stream_npy, self.wind_streams.drop(columns="Times").to_numpy(dtype=np.float32)
+                )
             logger.info("Written wind streams to %s", stream_path.with_suffix(".npy"))
 
     def output_estimated_load_factors_tabular(self) -> None:

@@ -102,33 +102,35 @@ class LocalDataLoader(DataLoader):
                 "aggregated": True,
             },
         )
-    
+
     def path_resolver_weather_data(self, basename: str) -> str | Path:
         return self._base_path / "calibrated" / basename
-    
+
     def check_historical_weather(self):
-        '''
+        """
         This function is used to return the NPY historical calibrated weather metadata.
         It is also responsible for validating this data against its manifest file.
-        
+
         Returns:
-            manifest (dict): The dict representing the validation JSON along with file metadata, 
+            manifest (dict): The dict representing the validation JSON along with file metadata,
                 for fast federation across Simulations in models.
 
-        '''
+        """
         wind_path = self._base_path / "calibrated" / WIND_NPY_BASEPATH
         if not wind_path.exists():
             raise FileNotFoundError(f"Historical wind file not found at {wind_path}")
 
         basepath_wind = wind_path.name
 
-        manifest_wind = self.verify_npy_against_manifest(npy_path=wind_path, manifest_path=f'{wind_path}.manifest.json')
+        manifest_wind = self.verify_npy_against_manifest(
+            npy_path=wind_path, manifest_path=f"{wind_path}.manifest.json"
+        )
 
         # Add basepath to the manifest for later use in the executors:
-        manifest_wind['basename'] = basepath_wind
+        manifest_wind["basename"] = basepath_wind
 
         return manifest_wind
-    
+
     def get_prefix_histograms(self) -> NDArray | None:
         histograms_wind_path = self._base_path / "calibrated" / WIND_NPY_HISTOGRAMS_BASEPATH
 
@@ -143,7 +145,7 @@ class LocalDataLoader(DataLoader):
             histogram_memmap_ref_wind = None
 
         return histogram_memmap_ref_wind
-    
+
     def get_historical_weather(self) -> NDArray | None:
         wind_path = self._base_path / "calibrated" / WIND_NPY_BASEPATH
 
@@ -158,15 +160,17 @@ class LocalDataLoader(DataLoader):
             wind_npy = None
 
         return wind_npy
-    
+
     @staticmethod
-    def verify_npy_against_manifest(npy_path: str | Path, manifest_path: str | Path) -> dict[str, any]:
+    def verify_npy_against_manifest(
+        npy_path: str | Path, manifest_path: str | Path
+    ) -> dict[str, any]:
         """
         Raises ValueError on mismatch; returns None on success.
         Checks hash + basic header sanity (shape second dim vs columns length).
 
         Returns:
-            manifest (dict): The dict representing the validation JSON, 
+            manifest (dict): The dict representing the validation JSON,
                 for later use in database -> models.
 
         """
@@ -179,20 +183,26 @@ class LocalDataLoader(DataLoader):
         with open(npy_path, "rb") as f:
             for chunk in iter(lambda: f.read(8 * 1024 * 1024), b""):
                 actual_hash.update(chunk)
-        
+
         if actual_hash.hexdigest() != expected_hash:
-            raise ValueError(f"SHA-256 mismatch for {npy_path}\nexpected={expected_hash}\nactual={actual_hash.hexdigest()}")
+            raise ValueError(
+                f"SHA-256 mismatch for {npy_path}\nexpected={expected_hash}\nactual={actual_hash.hexdigest()}"
+            )
 
         # Sanity checks:
         actual_data = np.load(npy_path, mmap_mode="r")
         expected_cols = manifest.get("artifact", {}).get("columns", [])
         if expected_cols and actual_data.ndim != 2 and actual_data.shape[1] != len(expected_cols):
-            raise ValueError(f"Column count mismatch: npy second dim={actual_data.shape[1]} vs manifest columns={len(expected_cols)}")
+            raise ValueError(
+                f"Column count mismatch: npy second dim={actual_data.shape[1]} vs manifest columns={len(expected_cols)}"
+            )
 
         size_bytes = Path(npy_path).stat().st_size
         if size_bytes != manifest["artifact"]["size_bytes"]:
-            raise ValueError(f"Size mismatch: file={size_bytes} vs manifest={manifest['artifact']['size_bytes']}")
-        
+            raise ValueError(
+                f"Size mismatch: file={size_bytes} vs manifest={manifest['artifact']['size_bytes']}"
+            )
+
         return manifest
 
     @staticmethod

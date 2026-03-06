@@ -37,7 +37,7 @@ ERA5_START_YEAR: int = run_config.get("ERA5_START_YEAR", 2023)
 CALIBRATION_START_YEAR: int = run_config.get("CALIBRATION_START_YEAR", 2023)
 CALIBRATION_START_DATE: str = f"{CALIBRATION_START_YEAR}-01-01T00:00:00Z"
 CALIBRATION_END_DATE: str = (
-    datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=5)
+    datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=5)
 ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 SIMULATION_START_DATE = run_config.get("START_DATE", "2025-04-01T00:00:00Z")
@@ -46,7 +46,9 @@ SIMULATION_END_DATE = run_config.get("END_DATE", "2025-06-30T00:00:00Z")
 # Data
 PLANT_ID_COLUMN: str = run_config.get("PLANT_ID_COLUMN", "cfd_id")
 WIND_NPY_BASEPATH: str = run_config.get("WIND_NPY_BASEPATH", "Wind Streams.npy")
-WIND_NPY_HISTOGRAMS_BASEPATH: str = run_config.get("WIND_NPY_HISTOGRAMS_BASEPATH", "Wind Streams.histograms.npy")
+WIND_NPY_HISTOGRAMS_BASEPATH: str = run_config.get(
+    "WIND_NPY_HISTOGRAMS_BASEPATH", "Wind Streams.histograms.npy"
+)
 
 # Runtime timestamp
 RUNTIME_DATE = datetime.datetime.today()
