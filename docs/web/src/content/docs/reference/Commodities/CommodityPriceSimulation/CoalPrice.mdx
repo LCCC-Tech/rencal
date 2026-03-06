@@ -1,0 +1,209 @@
+---
+title: CoalPrice
+description: A reference page for the CoalPrice class.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+This class simulates coal prices using a combination of Geometric Brownian Motion and Ornstein-Uhlenbeck processes. The dual stochastic process approach captures both the trending behavior and mean-reverting characteristics of coal prices.
+
+#### Simple Example
+
+Here's a basic example of simulating coal prices:
+
+```python
+from quantlib.commodities.CommodityPriceSimulation import CoalPrice
+from quantlib.database.DatabaseDelta import DatabaseDelta
+import datetime as dt
+import numpy as np
+
+# Create database connection
+connection = DatabaseDelta()
+
+# Create coal price simulation
+coal_sim = CoalPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2024, 12, 31),
+    number_of_simulations=100,
+    connection=connection,
+    numpy_rng=np.random.default_rng(42)
+)
+
+# Run simulation to get daily fuel prices
+daily_prices = coal_sim.run()
+```
+
+#### Advanced Example with Price Analysis
+
+This example shows how to analyze the simulated coal prices:
+
+```python
+# Create coal price simulation with more paths
+coal_sim = CoalPrice(
+    start_date=dt.datetime(2024, 1, 1),
+    end_date=dt.datetime(2025, 12, 31),
+    number_of_simulations=1000,
+    connection=connection
+)
+
+# Run simulation
+daily_prices = coal_sim.run()  # Returns prices in £/MWh
+
+# Access the raw simulated prices ($/tonne)
+raw_prices = coal_sim.Pt
+
+# Plot both raw and converted prices
+coal_sim.plot_Simulated_Curve(raw_price=True, paths=50)  # Raw $/tonne
+coal_sim.plot_Simulated_Curve(raw_price=False, paths=50) # Converted £/MWh
+
+# The conversion includes:
+# - USD to GBP exchange rate
+# - Transport costs
+# - Calorific value conversion
+```
+
+The coal price simulation combines GBM for long-term trends with an Ornstein-Uhlenbeck process for short-term mean reversion, providing realistic price dynamics.
+</Section>
+
+---
+
+## Constructor
+
+<Segment>
+<Section type="signature">
+```python
+class CoalPrice(start_date: datetime, end_date: datetime, 
+number_of_simulations: int, connection: DatabaseDelta, 
+numpy_rng: np.random.Generator = np.random.default_rng(0)): CoalPrice
+```
+</Section>
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">start_date</code> <code class="primitive">datetime</code></p>
+  The start date for the simulation.
+
+- <p><code class="key">end_date</code> <code class="primitive">datetime</code></p>
+  The end date for the simulation.
+
+- <p><code class="key">number_of_simulations</code> <code class="primitive">int</code></p>
+  The number of simulations to run.
+
+- <p><code class="key">connection</code> [<code class="type">DatabaseDelta</code>](#DatabaseDelta)</p>
+  Database connection object.
+
+- <p><code class="key">numpy_rng</code> <code class="primitive">numpy.random.Generator</code></p>
+  NumPy random number generator instance. Default = np.random.default_rng(0).
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">CoalPrice</code>](#CoalPrice)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### run
+
+<Segment>
+<Section type="signature">
+```ts
+run(): ndarray
+```
+</Section>
+
+Defines one simulation of the coal price. The Pt attribute is updated as a NumPy array of simulated prices and daily fuel prices are returned transforming the Pt array.
+
+The simulation combines:
+- Geometric Brownian Motion (GBM) for the base price evolution
+- Ornstein-Uhlenbeck (OU) process for mean-reverting adjustments
+
+<InlineSection>
+**Returns** Daily fuel prices (£/MWh) for coal.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### daily_Fuel_Price
+
+<Segment>
+<Section type="signature">
+```ts
+daily_Fuel_Price(prices: ndarray): ndarray
+```
+</Section>
+
+Calculates the daily fuel price (£/MWh) for coal. This method converts raw coal prices ($/tonne) to fuel prices (£/MWh) by:
+1. Converting USD to GBP using exchange rates
+2. Adding transport costs
+3. Converting using calorific value
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">prices</code> <code class="primitive">np.ndarray</code></p>
+  The raw coal prices in $/tonne.
+</Section>
+
+<InlineSection>
+**Returns** The daily fuel price in £/MWh.
+</InlineSection>
+
+<InlineSection>
+**Return type** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+## Properties
+
+### OU_Process
+
+<Segment>
+The Ornstein-Uhlenbeck process used for mean-reverting adjustments.
+
+<InlineSection>
+**Type** [<code class="type">OrnsteinUhlenbeck</code>](#OrnsteinUhlenbeck)
+</InlineSection>
+</Segment>
+
+### OU_kappa
+
+<Segment>
+Mean reversion coefficient for the Ornstein-Uhlenbeck process.
+
+<InlineSection>
+**Type** <code class="primitive">float</code>
+</InlineSection>
+</Segment>
+
+### OU_sigma
+
+<Segment>
+Volatility parameter for the Ornstein-Uhlenbeck process.
+
+<InlineSection>
+**Type** <code class="primitive">float</code>
+</InlineSection>
+</Segment>
+
+### OU_theta
+
+<Segment>
+Long-term mean for the Ornstein-Uhlenbeck process (set to 0.0).
+
+<InlineSection>
+**Type** <code class="primitive">float</code>
+</InlineSection>
+</Segment>
+
+</div>
