@@ -63,22 +63,22 @@ class HistoricalMetadata:
 
 class WeatherData(BucketedData):
     """
-    Unified intermittent weather sampler for wind and solar loadfactors.
+    Unified intermittent weather sampler for intermittent loadfactors.
 
     Produces hourly loadfactor time-series for a future horizon by randomly stitching
-    historical weeks and (optionally) inverse-CDF resampling to hit target averages.
+    historical periods and (optionally) inverse-CDF resampling to hit target averages.
 
     For solar (ignore_zeros=True), nighttime zeros are preserved and only positive
     loadfactor hours participate in histogram building & resampling. Desired averages
     are automatically re-scaled from all-hours to daytime-only averages.
 
-    The class-level _HIST_CACHE dict is keyed by npy_Basename so that separate
-    wind and solar instances never collide during PySpark lazy-loading on executors.
+    The class-level _HIST_CACHE dict is keyed by npy_basename so that separate
+    intermittent loadfactor instances never collide during PySpark lazy-loading on executors.
     """
 
-    # Process-scope cache keyed by npy_Basename.
+    # Process-scope cache keyed by npy_basename.
     # Kept as a class variable (not instance) to prevent inadvertent serialization
-    # poisoning: calling random_Sample() on the driver would otherwise prevent
+    # poisoning: calling random_sample() on the driver would otherwise prevent
     # serializing the Engine.
     _HIST_CACHE: dict[str, NDArray] = {}
 
@@ -126,7 +126,7 @@ class WeatherData(BucketedData):
 
         # Computes the margins of the time intervals for which we have data:
         self.historical_start_datetime, self.historical_start_date, self.historical_end_datetime, self.historical_end_date = \
-            BucketedData.compute_time_margins_new(historical_start_date, historical_end_date, self.data_limit_left, self.data_limit_right)
+            BucketedData.compute_time_margins(historical_start_date, historical_end_date, self.data_limit_left, self.data_limit_right)
 
         self.intermittent_bucketer = IntermittentBucketer(
             historical_start_date=self.historical_start_date,
@@ -229,11 +229,12 @@ class WeatherData(BucketedData):
         Args:
             future_start_date: Earliest datetime to include in the sample. Inclusive from 00:00 of that day.
             future_end_date: Latest date to include in the sample. Inclusive until 23:00 of that day.
-            python_rng: Instance of Python's random.Random for reproducible sampling of historical weeks.
+            python_rng: Instance of Python's random.Random for reproducible sampling of historical periods.
             numpy_rng: Instance of NumPy's Generator for reproducible sampling in the inverse-CDF.
         
         Returns:
             sample: NDArray of shape (n_hours_in_horizon, n_output_columns) containing
+                the generated sample of weather data for the future period.
         """
 
         historical = self.get_or_mmap_historical()
