@@ -35,8 +35,8 @@ import numpy as np
 import datetime
 import random
 
-from ..weather.IntermittentBucketer import IntermittentBucketer
-from ..weather.BucketedData import BucketedData
+from .intermittent_bucketer import IntermittentBucketer
+from ..core.bucketed_data import BucketedData
 
 DateTimeLike = Union[datetime.datetime, "pd.Timestamp"]
 
@@ -46,12 +46,12 @@ class HistoricalMetadata:
     Lightweight descriptor and path resolver for the NPY-backed historical data.
 
     Attributes:
-        npy_Basename: Filename of the .npy artifact (also serves as _HIST_CACHE key).
-        path_Resolver: Callable mapping npy_Basename to the on-executor filesystem path.
-        data_Limit_Left: Earliest datetime in the NPY file.
-        data_Limit_Right: Latest datetime in the NPY file.
+        npy_basename: Filename of the .npy artifact (also serves as _HIST_CACHE key).
+        path_resolver: Callable mapping npy_basename to the on-executor filesystem path.
+        data_limit_left: Earliest datetime in the NPY file.
+        data_limit_right: Latest datetime in the NPY file.
         columns: Column names/identifiers in the NPY file.
-        hours_Per_Block: Block size used when building prefix histograms (None if unavailable).
+        hours_per_block: Block size used when building prefix histograms (None if unavailable).
     """
     npy_basename: str
     path_resolver: Callable[[str], str]
@@ -136,19 +136,19 @@ class WeatherData(BucketedData):
 
         if len(self.mask) != 0:
             # Get only the cropped-to-full-year data while keeping the most recent historical datapoints; only the start date can change:
-            statistical_start_date = self.crop_Time_Margins_To_Full_Years()
-            first_statistical_index, _ = self.get_Absolute_Index_of_Date(statistical_start_date)  # Inclusive
-            _, last_statistical_index = self.get_Absolute_Index_of_Date(self.historical_end_date)  # Non-inclusive
+            statistical_start_date = self.crop_time_margins_to_full_years()
+            first_statistical_index, _ = self.get_absolute_index_of_date(statistical_start_date)  # Inclusive
+            _, last_statistical_index = self.get_absolute_index_of_date(self.historical_end_date)  # Non-inclusive
 
             # Compute the histogram matrix for the historical data for each masked col:
             if prefix_histograms is not None and metadata.hours_per_block is not None:
-                prev_hist = self.get_Fast_Histogram(
+                prev_hist = self.get_fast_histogram(
                     first_statistical_index, last_statistical_index,
                     historical_data, metadata.hours_per_block, prefix_histograms,
                     ignore_zeros=ignore_zeros,
                 )
             else:
-                prev_hist = self.get_Histogram(
+                prev_hist = self.get_histogram(
                     first_statistical_index, last_statistical_index,
                     historical_data, number_of_bins=500, ignore_zeros=ignore_zeros,
                 )

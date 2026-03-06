@@ -178,7 +178,7 @@ class Bucketer:
 
 
     # Called by the simulation engine with the datetime.datetime edges of the future period as parameters;
-    # Returns a list of randomly selected datetime.datetime objects that would fill the future period if sampled draw_Period-days at a time starting at each of them and stiching it all together:
+    # Returns a list of randomly selected datetime.datetime objects that would fill the future period if sampled draw_period-days at a time starting at each of them and stiching it all together:
     def random_sample(self, future_start_date, future_end_date, rng_python):
         """
         Fills a specified future period with randomly selected dates from the bucket structure, matching the future period across buckets and categories.
@@ -189,13 +189,13 @@ class Bucketer:
             rng_python (random.Random): A random number generator object.
 
         Returns:
-            sample (list): A list of randomly selected :class"`datetime.datetime` objects that would fill the future period if sampled ``draw_Period``-days at a time starting at each of them and stiching it all together.
+            sample (list): A list of randomly selected :class"`datetime.datetime` objects that would fill the future period if sampled ``draw_period``-days at a time starting at each of them and stiching it all together.
         """
 
         sample = []
         date = future_start_date 
 
-        while date <= future_end_date - datetime.timedelta(self.draw_Period - 1): # Still in range for a full draw period remaining
+        while date <= future_end_date - datetime.timedelta(self.draw_period - 1): # Still in range for a full draw period remaining
             # Getting the right list in the bucket structure:
             bucket = self.bucket_of(date)
             category = self.assign_category(date)

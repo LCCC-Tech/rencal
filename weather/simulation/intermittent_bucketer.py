@@ -3,11 +3,11 @@
 # It should work well with data that is independent from business processes,
 # but correlated with the day of the year.
 
-from ..weather.Bucketer import Bucketer
-from ..constants import Constants
+from ..core.bucketer import Bucketer
+from ..core.short_date import MONTHLY_BUCKET_DEFINITION, WEEKLY_BUCKET_DEFINITION
 
 class IntermittentBucketer(Bucketer):
-	def __init__(self, historical_start_date, historical_end_date, draw_period = 7, bucket_definition = Constants.MONTHLY_BUCKET_DEFINITION):
+	def __init__(self, historical_start_date, historical_end_date, draw_period = 7, bucket_definition = MONTHLY_BUCKET_DEFINITION):
 		categories = 1
 		super().__init__(historical_start_date, historical_end_date, categories, draw_period, bucket_definition)
 

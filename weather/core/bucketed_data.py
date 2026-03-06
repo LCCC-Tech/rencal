@@ -421,8 +421,8 @@ class BucketedData:
         
         # Enforcing strict hour marks while keeping logical behaviour inclusive of the user input
         # If already on an hour mark, leaves them unchanged:
-        historical_start = historical_start.ceil("H") 
-        historical_end = historical_end.floor("H")
+        historical_start = historical_start.ceil("h") 
+        historical_end = historical_end.floor("h")
         
         start_datetime = max(historical_start, data_limit_left)
         start_date = start_datetime + datetime.timedelta(hours = 24 - (24 if start_datetime.hour == 0 else start_datetime.hour))
