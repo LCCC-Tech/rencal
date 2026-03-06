@@ -4,7 +4,6 @@ Utility modules for the weather package.
 
 from .constants import (
     AREA_BOUNDING_BOX_COORDINATES,
-    CDS_API_KEY,
     CDS_API_URL,
     DOWNLOAD_DATA_DIR,
     ERA5_DATASET,
@@ -25,6 +24,5 @@ __all__ = [
     "TIMEZONE",
     "ERA5_DATASET",
     "CDS_API_URL",
-    "CDS_API_KEY",
     "AREA_BOUNDING_BOX_COORDINATES",
 ]
