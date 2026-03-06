@@ -2,6 +2,8 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import tailwind from "@astrojs/tailwind";
+import remarkMath from "remark-math";
+import rehypeMathjax from "rehype-mathjax";
 
 // https://astro.build/config
 export default defineConfig({
@@ -11,6 +13,10 @@ export default defineConfig({
                 '@': new URL('./src', import.meta.url).pathname
             }
         }
+    },
+    markdown: {
+        remarkPlugins: [remarkMath],
+        rehypePlugins: [rehypeMathjax],
     },
     integrations: [
         starlight({
