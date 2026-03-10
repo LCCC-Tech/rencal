@@ -1,0 +1,242 @@
+---
+title: DataLoader
+description: API reference for loading local plant, generation, and ERA5 datasets.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+The data loader module defines a common loader interface and a local filesystem implementation for reading plant metadata, generation time series, and ERA5 weather data.
+
+`LocalDataLoader` expects a base directory containing the following subdirectories:
+
+- `plant/` for plant metadata files
+- `generation/` for generation time-series files
+- `era5/` for ERA5 NetCDF files (`*.nc`)
+
+If expected files are missing, user-facing methods raise `FileNotFoundError` with the missing path.
+
+#### Example
+
+```python
+from weather.core.data_loader import LocalDataLoader
+
+loader = LocalDataLoader(data_path="data")
+plant = loader.load_plant_data()
+generation = loader.load_generation_data()
+era5 = loader.load_era5_data()
+```
+</Section>
+
+---
+
+## Classes
+
+### DataLoader
+
+<Segment>
+<Section type="signature">
+```python
+class DataLoader(ABC)
+```
+</Section>
+
+Abstract base class for data loading backends.
+
+Implementations must provide methods to load:
+- plant data (`PlantDatasetModel`)
+- generation data (`GenerationDatasetModel`)
+- ERA5 weather data (`ERA5DatasetModel`)
+</Segment>
+
+### DataLoader.load_plant_data (abstract)
+
+<Segment>
+<Section type="signature">
+```python
+load_plant_data() -> PlantDatasetModel
+```
+</Section>
+
+Abstract method for loading plant metadata.
+
+<InlineSection>
+**Returns** <code class="type">PlantDatasetModel</code>
+</InlineSection>
+</Segment>
+
+### DataLoader.load_generation_data (abstract)
+
+<Segment>
+<Section type="signature">
+```python
+load_generation_data() -> GenerationDatasetModel
+```
+</Section>
+
+Abstract method for loading generation time-series data.
+
+<InlineSection>
+**Returns** <code class="type">GenerationDatasetModel</code>
+</InlineSection>
+</Segment>
+
+### DataLoader.load_era5_data (abstract)
+
+<Segment>
+<Section type="signature">
+```python
+load_era5_data() -> ERA5DatasetModel
+```
+</Section>
+
+Abstract method for loading ERA5 weather data.
+
+<InlineSection>
+**Returns** <code class="type">ERA5DatasetModel</code>
+</InlineSection>
+</Segment>
+
+### LocalDataLoader
+
+## Constructor
+
+### LocalDataLoader.__init__
+
+<Segment>
+<Section type="signature">
+```python
+class LocalDataLoader(data_path: str = DOWNLOAD_DATA_DIR): LocalDataLoader
+```
+</Section>
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">data_path</code> <code class="primitive">str</code></p>
+  Base directory containing `plant/`, `generation/`, and `era5/` subdirectories.
+
+  <InlineSection>
+  **Default** <code class="primitive">DOWNLOAD_DATA_DIR</code>
+  </InlineSection>
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">LocalDataLoader</code>](#LocalDataLoader)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### LocalDataLoader.load_plant_data
+
+<Segment>
+<Section type="signature">
+```python
+load_plant_data(id_column: str = PLANT_ID_COLUMN) -> PlantDatasetModel
+```
+</Section>
+
+Loads plant metadata from the local `plant/` dataset file and normalizes the external plant ID column to the internal plant ID field.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">id_column</code> <code class="primitive">str</code></p>
+  Column name in the source file that contains the plant identifier.
+
+  <InlineSection>
+  **Default** <code class="primitive">PLANT_ID_COLUMN</code>
+  </InlineSection>
+</Section>
+
+<InlineSection>
+**Returns** <code class="type">PlantDatasetModel</code>
+</InlineSection>
+
+<InlineSection>
+**Raises** <code class="type">FileNotFoundError</code> if the expected file in `plant/` does not exist.
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.load_generation_data
+
+<Segment>
+<Section type="signature">
+```python
+load_generation_data(id_column: str = PLANT_ID_COLUMN) -> GenerationDatasetModel
+```
+</Section>
+
+Loads generation time-series data from the local `generation/` dataset file and normalizes the external plant ID column to the internal plant ID field.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">id_column</code> <code class="primitive">str</code></p>
+  Column name in the source file that contains the plant identifier.
+
+  <InlineSection>
+  **Default** <code class="primitive">PLANT_ID_COLUMN</code>
+  </InlineSection>
+</Section>
+
+<InlineSection>
+**Returns** <code class="type">GenerationDatasetModel</code>
+</InlineSection>
+
+<InlineSection>
+**Raises** <code class="type">FileNotFoundError</code> if the expected file in `generation/` does not exist.
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.load_era5_data
+
+<Segment>
+<Section type="signature">
+```python
+load_era5_data() -> ERA5DatasetModel
+```
+</Section>
+
+Loads ERA5 weather data from all `.nc` files discovered in `era5/`.
+
+Behavior relevant to users:
+- Auto-discovers all NetCDF files in `era5/`.
+- Normalizes the temporal dimension to `time` (accepts source dimensions `time` or `valid_time`).
+- Filters variables to the standard configured ERA5 wind and solar variable set.
+- Casts data variables from `float64` to `float32` when applicable.
+- Concatenates multiple files along `time` and sorts chronologically.
+- Skips unreadable individual files; fails if none can be loaded successfully.
+
+<InlineSection>
+**Returns** <code class="type">ERA5DatasetModel</code>
+</InlineSection>
+
+<Section type="parameters">
+#### Raises
+
+- <p><code class="type">FileNotFoundError</code></p>
+  If no `.nc` files are found in `era5/`.
+
+- <p><code class="type">ValueError</code></p>
+  If no files can be loaded successfully, if files do not contain a valid time dimension (`time` or `valid_time`), if concatenation fails, or if no standard ERA5 variables are found.
+</Section>
+
+#### Example
+
+```python
+from weather.core.data_loader import LocalDataLoader
+
+loader = LocalDataLoader(data_path="data")
+era5 = loader.load_era5_data()
+# era5.data is an xarray.Dataset filtered to standard ERA5 variables
+```
+</Segment>
+
+</div>
