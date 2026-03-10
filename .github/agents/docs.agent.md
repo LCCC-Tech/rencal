@@ -14,7 +14,7 @@ Create Reference (API) Documentation from docstrings (Google Python Style) with 
     - Check if the feature is already documented in docs/web/src/content/docs/*
 2. If you find undocumented features:
     - Update the relevant documentation files in docs/web/src/content/docs/*
-    - Follow the existing documentation style and structure
+
     - Make sure to document the feature clearly with examples where appropriate
 3. If all new features are already documented, report that no updates are needed
 4. If you are creating a new documentation file be sure to update packages/web/astro.config.mjs too.
