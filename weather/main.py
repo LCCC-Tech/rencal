@@ -22,6 +22,8 @@ def main():
 
 def weather_data_loop():
     import datetime
+    import numpy as np
+    import random
 
     from weather.simulation.weather_data import WeatherData, HistoricalMetadata
 
@@ -29,12 +31,12 @@ def weather_data_loop():
     manifest_wind = loader.check_historical_weather()
     
     metadata_wind = HistoricalMetadata(
-            manifest_wind["basename"], 
-            loader.path_resolver_weather_data, 
-            datetime.datetime.fromisoformat(manifest_wind["horizon_utc"]["start"]), 
-            datetime.datetime.fromisoformat(manifest_wind["horizon_utc"]["end"]), 
-            manifest_wind["artifact"]["columns"], 
-            manifest_wind["artifact_histogram"]["rows_per_block"])
+        manifest_wind["basename"], 
+        loader.path_resolver_weather_data, 
+        datetime.datetime.fromisoformat(manifest_wind["horizon_utc"]["start"]), 
+        datetime.datetime.fromisoformat(manifest_wind["horizon_utc"]["end"]), 
+        manifest_wind["artifact"]["columns"], 
+        manifest_wind["artifact_histogram"]["rows_per_block"])
     
     # Prefix histograms pulled in as memmapped ref:
     prefix_histograms_wind = loader.get_prefix_histograms()
@@ -42,11 +44,14 @@ def weather_data_loop():
     historical_data_wind = loader.get_historical_weather()
 
     wind_sampler = WeatherData(metadata = metadata_wind,
-        desired_averages = {1: [0.34, 0.5, 0.66]},
+        desired_averages = {1: [0.14, 0.5, 0.66]},
         prefix_histograms = prefix_histograms_wind,
         historical_data = historical_data_wind)
 
-    print(wind_sampler.random_sample(datetime.datetime(2025, 4, 1), datetime.datetime(2025, 8, 7)).access_col(1, 1))
+    print(wind_sampler.random_sample(datetime.datetime(2025, 4, 1),
+                               datetime.datetime(2025, 8, 7),
+                               random.Random(4),
+                               np.random.default_rng(32)).access_col(1, 1))
 
 if __name__ == "__main__":
     weather_data_loop()
