@@ -1,5 +1,4 @@
 import datetime
-import os
 from pathlib import Path
 from typing import Any
 
@@ -54,7 +53,6 @@ DAYS_IN_YEAR: int = 365
 
 # ERA5 API
 CDS_API_URL: str = "https://cds.climate.copernicus.eu/api"
-CDS_API_KEY: str | None = os.environ.get("CDS_API_KEY", None)
 ERA5_PRODUCT_TYPE = "reanalysis"
 ERA5_DATASET = "reanalysis-era5-single-levels"
 AREA_BOUNDING_BOX_COORDINATES = [61, -12, 49, 5]  # [North, West, South, East] - UK bounding box
@@ -74,7 +72,7 @@ ERA5_VARIABLE_MAPPING = {
 
 # CFD API
 CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?format=json"
-CFD_BMU_CSV_URL = "https://dp.lowcarboncontracts.uk/dataset/be8c542a-c66c-4a06-a3df-bc46db7416c0/resource/9316f493-365c-4abc-a40e-3a5e67119a0a/download/cfd_to_bm_unit_mapping.csv"
+CFD_BMU_CSV_URL = "https://dp.lowcarboncontracts.uk/dataset/8743291b-3646-4a69-a599-364cc6ae9d6e/resource/26fc2b66-7c92-45d4-9a70-acbd1631f4c3/download/cfd_to_bm_unit_mapping.csv"
 PLANT_DATA_FILE_NAME = "plant_data.csv"
 WIND_TECHNOLOGY_TYPES = {"Onshore Wind", "Offshore Wind"}
 

@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.10.8,<0.11.0"]
+build-backend = "uv_build"
 
 [project]
 name = "weather-lccc"
@@ -97,16 +97,9 @@ Changelog = "https://github.com/LCCC-Tech/weather/blob/main/CHANGELOG.md"
 weather-calibrate = "weather.calibration.cli:main"
 weather-forecast = "weather.models.cli:main"
 
-[tool.setuptools]
-package-dir = {"" = "."}
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["weather*"]
-exclude = ["tests*", "docs*", "scripts*"]
-
-[tool.setuptools.package-data]
-weather = ["data/*.csv", "data/*.json", "calibration/templates/*"]
+[tool.uv.build-backend]
+module-name = "weather"
+module-root = ""
 
 [tool.basedpyright]
 include = ["weather"]
@@ -203,4 +196,3 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
-
