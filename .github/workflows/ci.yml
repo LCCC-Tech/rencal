@@ -42,4 +42,3 @@ jobs:
             - name: Run tests with coverage
               run: |
                   uv run pytest tests/ -v
-
