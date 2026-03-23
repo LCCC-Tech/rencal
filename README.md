@@ -8,13 +8,13 @@ This project provides Monte Carlo-based load factor forecasting for wind and sol
 
 ## Status
 
-**Early Development**: Significant refactoring needed for production use. The codebase contains calibration scripts from The Low Carbon Contracts Company's internal systems that require adaptation.
+**Pre-release / Internal Integration Testing**: The core package is stable and currently being validated through end-to-end integration testing via TestPyPI distribution. Development is now focused primarily on infrastructure, packaging, and operational readiness, with incremental improvements still ongoing in the codebase.
 
 ## Key Components
 
-- **Wind/Solar Models**: Monte Carlo generators using inverse distribution sampling (`WindData`, `SolarData`)
-- **Calibration Scripts**: The Low Carbon Contracts Company workflow scripts for wind/solar parameter calibration (requires Azure/Databricks)
-- **Data Loading**: Stub implementation for ERA5 NetCDF data (user must implement)
+- **Wind/Solar Models**: Monte Carlo paths for energy generators using bucketing and optional inverse distribution sampling (`WeatherData`)
+- **Calibration Scripts**: The Low Carbon Contracts Company workflow scripts for wind/solar parameter calibration
+- **Data Loading**: Stub implementation for ERA5 NetCDF data
 - **Statistical Framework**: Time-bucketed sampling with correlation preservation
 
 ## Installation
@@ -33,12 +33,21 @@ uv sync --group notebook     # Jupyter notebook dependencies
 ## Quick Start
 
 ```python
-from weather.models import WindData, SolarData
+from weather.simulation.weather_data import WeatherData, HistoricalMetadata
+from weather.core.data_loader import LocalDataLoader
 
-# Monte Carlo wind forecast (not a data loader despite the name)
-wind_model = WindData(connection, windstreams=["farm1", "farm2"], 
-                     desired_averages=[None, 0.35])
-forecast = wind_model.random_Sample(start_date, end_date)
+loader = LocalDataLoader()
+
+manifest_wind = loader.check_historical_weather()
+metadata_wind = HistoricalMetadata.from_manifest(
+    manifest_wind,
+    loader.path_resolver_weather_data
+)
+
+wind_sampler = WeatherData(metadata = metadata_wind)
+
+one_path = wind_sampler.random_sample(future_start_date,
+    future_end_date)
 ```
 
 **Note**: ERA5 data loading must be implemented by users. See `weather.data.ERA5DataLoader` stub.

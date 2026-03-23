@@ -4,8 +4,8 @@ build-backend = "uv_build"
 
 [project]
 name = "weather-lccc"
-version = "0.1.0"
-description = "Weather forecasting and modelling for renewable energy applications"
+version = "0.0.1"
+description = "Weather-to-power calibration and Monte Carlo scrambler for renewable energy applications"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = {text = "MIT"}
@@ -22,7 +22,9 @@ keywords = [
     "wind power",
     "solar power",
     "era5",
-    "machine learning"
+    "monte carlo",
+    "calibration",
+    "climate"
 ]
 classifiers = [
     "Intended Audience :: Science/Research",
