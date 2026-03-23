@@ -26,7 +26,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Sequence, Callable, Union, TYPE_CHECKING
+from typing import Sequence, Callable, Union, Any, TYPE_CHECKING
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
@@ -62,6 +62,26 @@ class HistoricalMetadata:
     data_limit_right: DateTimeLike
     columns: Sequence[str]
     hours_per_block: int | None = None
+
+    @staticmethod
+    def _parse_horizon(horizon_utc: dict[str, str]) -> tuple[datetime.datetime, datetime.datetime]:
+        return (
+            datetime.datetime.fromisoformat(horizon_utc["start"]),
+            datetime.datetime.fromisoformat(horizon_utc["end"]),
+        )
+    
+    @classmethod
+    def from_manifest(cls, manifest: dict[str, Any], path_resolver: Callable[[str], str]) -> "HistoricalMetadata":
+        start_utc, end_utc = cls._parse_horizon(manifest["horizon_utc"])
+
+        return cls(
+            npy_basename=manifest["basename"],
+            path_resolver=path_resolver,
+            data_limit_left=start_utc,
+            data_limit_right=end_utc,
+            columns=manifest["artifact"]["columns"],
+            hours_per_block=manifest["artifact_histogram"]["rows_per_block"],
+        )
 
 
 class WeatherData(BucketedData):
