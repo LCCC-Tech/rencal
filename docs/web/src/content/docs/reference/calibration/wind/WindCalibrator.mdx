@@ -50,7 +50,9 @@ The generalised logistic function has five parameters defining its shape; this i
 
 The non‑log‑domain logistic function is:
 
-f(x) = d + (a - d) / ((1 + (x / c)**b)**g)
+$$
+f(x) = d \;+\; \frac{a - d}{\left( 1 + \left( \frac{x}{c} \right)^b \right)^g}
+$$
 
 - *a* — minimum bound  
 - *b* — steepness  
@@ -100,7 +102,9 @@ Calculates the value of a Weibull distribution for any numeric input `x`.
 
 The equation of the Weibull distribution is:
 
-f(x) = k / λ * (x / λ)(k - 1) * e(-(x / λ)**k)
+$$
+f(x) = \frac{k}{\lambda} \left( \frac{x}{\lambda} \right)^{k - 1} \exp\!\left( -\left( \frac{x}{\lambda} \right)^k \right)
+$$
 
 - *k* — shape parameter  
 - *λ* — scale parameter  
