@@ -46,7 +46,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         run: |
-          files_list=$(while IFS= read -r file; do printf "- %s\n" "$file"; done < pr_files.txt)
+          files_list=$(while IFS= read -r file; do [ -n "$file" ] && printf -- "- %s\n" "$file"; done < pr_files.txt)
           copilot --agent docs --prompt "Review the following changed files for user-facing documentation gaps. Update docs/web/src/content/docs/* if needed.\n\nChanged files:\n$files_list" --allow-all-tools
 
       - name: Commit and push docs changes
