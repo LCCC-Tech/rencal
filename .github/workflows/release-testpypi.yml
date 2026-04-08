@@ -1,0 +1,149 @@
+name: Tag release and publish to TestPyPI
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Create release tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine next minor version
+        id: version
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import subprocess
+
+          semver = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
+
+          def parse(tag: str):
+              m = semver.match(tag)
+              return tuple(map(int, m.groups()))
+
+          head_tags = subprocess.check_output(
+              ["git", "tag", "--points-at", "HEAD"],
+              text=True,
+          ).splitlines()
+
+          head_release_tags = sorted(
+              [t for t in head_tags if semver.match(t)],
+              key=parse,
+          )
+
+          if head_release_tags:
+              tag = head_release_tags[-1]
+              version = tag[1:]
+          else:
+              all_tags = subprocess.check_output(
+                  ["git", "tag", "--list", "v*"],
+                  text=True,
+              ).splitlines()
+
+              release_tags = [t for t in all_tags if semver.match(t)]
+
+              if release_tags:
+                  major, minor, patch = parse(sorted(release_tags, key=parse)[-1])
+                  version = f"{major}.{minor}.{patch + 1}"
+              else:
+                  version = "0.0.1"
+
+              tag = f"v{version}"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"tag={tag}\n")
+              fh.write(f"version={version}\n")
+          PY
+
+      - name: Create and push tag if needed
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists on origin."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "refs/tags/${TAG}"
+
+  build:
+    name: Build distributions
+    needs: tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository at merged commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch tags
+        run: git fetch --force --tags origin
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install build frontend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+
+      - name: Build wheel and sdist
+        run: python -m build
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v5
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish-to-testpypi:
+    name: Publish to TestPyPI
+    needs: [tag, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/YOUR_PROJECT_NAME
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v6
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
