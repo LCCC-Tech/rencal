@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "weather-lccc"
-version = "0.0.1"
+version = "0.0.0"  # placeholder — CI injects the real version from the git tag before building
 description = "Weather-to-power calibration and Monte Carlo scrambler for renewable energy applications"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
