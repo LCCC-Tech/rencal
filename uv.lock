@@ -2400,7 +2400,7 @@ wheels = [
 
 [[package]]
 name = "weather-lccc"
-version = "0.1.0"
+version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "cdsapi" },

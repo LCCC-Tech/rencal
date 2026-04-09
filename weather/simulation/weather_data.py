@@ -25,19 +25,23 @@
 # keeping track of the average-changed streams through the access_col method.
 
 from __future__ import annotations
+
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Sequence, Callable, Union, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Union
+
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
     import pandas as pd
 
-import numpy as np
 import datetime
 import random
 
-from .intermittent_bucketer import IntermittentBucketer
+import numpy as np
+
 from ..core.bucketed_data import BucketedData
+from .intermittent_bucketer import IntermittentBucketer
 
 DateTimeLike = Union[datetime.datetime, "pd.Timestamp"]
 
@@ -69,9 +73,11 @@ class HistoricalMetadata:
             datetime.datetime.fromisoformat(horizon_utc["start"]),
             datetime.datetime.fromisoformat(horizon_utc["end"]),
         )
-    
+
     @classmethod
-    def from_manifest(cls, manifest: dict[str, Any], path_resolver: Callable[[str], str]) -> "HistoricalMetadata":
+    def from_manifest(
+        cls, manifest: dict[str, Any], path_resolver: Callable[[str], str]
+    ) -> HistoricalMetadata:
         start_utc, end_utc = cls._parse_horizon(manifest["horizon_utc"])
 
         return cls(
@@ -110,7 +116,7 @@ class WeatherData(BucketedData):
         metadata: HistoricalMetadata,
         historical_start_date: DateTimeLike = datetime.datetime(1980, 1, 1),
         historical_end_date: DateTimeLike = datetime.datetime(2026, 1, 1),
-        desired_averages: dict[int, list[float]] = {},
+        desired_averages: dict[int, list[float]] | None = None,
         prefix_histograms: NDArray[np.uint32] | None = None,
         historical_data: NDArray[np.floating] | None = None,
         ignore_zeros: bool = False,
@@ -132,6 +138,9 @@ class WeatherData(BucketedData):
                 automatically adjusted from all-hours to daytime-only averages.
         """
 
+        if desired_averages is None:
+            desired_averages = {}
+
         if len(desired_averages) != 0 and (historical_data is None and prefix_histograms is None):
             raise ValueError(
                 "You need to pass a reference to some form of historical data upon WeatherData construction. "
@@ -146,7 +155,7 @@ class WeatherData(BucketedData):
         self.ignore_zeros = ignore_zeros
 
         # Save non-duplicate columns that require an average transformation in the mask (starting with 0):
-        self.mask = np.array([column for column in desired_averages.keys()])
+        self.mask = np.array(list(desired_averages.keys()))
 
         # Computes the margins of the time intervals for which we have data:
         (
