@@ -2,8 +2,11 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
+import hashlib, json
 import xarray as xr
 from numpy import float32, float64
+from numpy.typing import NDArray
 
 from weather.models import ERA5DatasetModel, GenerationDatasetModel, PlantDatasetModel
 from weather.utils.constants import (
@@ -15,6 +18,8 @@ from weather.utils.constants import (
     INTERNAL_PLANT_ID,
     PLANT_DATA_FILE_NAME,
     PLANT_ID_COLUMN,
+    WIND_NPY_BASEPATH,
+    WIND_NPY_HISTOGRAMS_BASEPATH,
 )
 from weather.utils.logger import get_logger
 
@@ -97,6 +102,108 @@ class LocalDataLoader(DataLoader):
                 "aggregated": True,
             },
         )
+
+    def path_resolver_weather_data(self, basename: str) -> str | Path:
+        return self._base_path / "calibrated" / basename
+
+    def check_historical_weather(self):
+        """
+        This function is used to return the NPY historical calibrated weather metadata.
+        It is also responsible for validating this data against its manifest file.
+
+        Returns:
+            manifest (dict): The dict representing the validation JSON along with file metadata,
+                for fast federation across Simulations in models.
+
+        """
+        wind_path = self._base_path / "calibrated" / WIND_NPY_BASEPATH
+        if not wind_path.exists():
+            raise FileNotFoundError(f"Historical wind file not found at {wind_path}")
+
+        basepath_wind = wind_path.name
+
+        manifest_wind = self.verify_npy_against_manifest(
+            npy_path=wind_path, manifest_path=f"{wind_path}.manifest.json"
+        )
+
+        # Add basepath to the manifest for later use in the executors:
+        manifest_wind["basename"] = basepath_wind
+
+        return manifest_wind
+
+    def get_prefix_histograms(self) -> NDArray | None:
+        histograms_wind_path = self._base_path / "calibrated" / WIND_NPY_HISTOGRAMS_BASEPATH
+
+        if not histograms_wind_path.exists():
+            return None
+
+        try:
+            histogram_memmap_ref_wind = np.load(
+                histograms_wind_path, mmap_mode="r", allow_pickle=False
+            )
+        except Exception as e:
+            histogram_memmap_ref_wind = None
+
+        return histogram_memmap_ref_wind
+
+    def get_historical_weather(self) -> NDArray | None:
+        wind_path = self._base_path / "calibrated" / WIND_NPY_BASEPATH
+
+        if not wind_path.exists():
+            return None
+
+        try:
+            wind_npy = np.load(
+                wind_path, mmap_mode="r", allow_pickle=False
+            )
+        except Exception as e:
+            wind_npy = None
+
+        return wind_npy
+
+    @staticmethod
+    def verify_npy_against_manifest(
+        npy_path: str | Path, manifest_path: str | Path
+    ) -> dict[str, any]:
+        """
+        Raises ValueError on mismatch; returns None on success.
+        Checks hash + basic header sanity (shape second dim vs columns length).
+
+        Returns:
+            manifest (dict): The dict representing the validation JSON,
+                for later use in database -> models.
+
+        """
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+
+        # Checking the recorded hash from RenCal against the runtime hash of the NPY file:
+        expected_hash = manifest["artifact"]["sha256"]
+        actual_hash = hashlib.sha256()
+        with open(npy_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8 * 1024 * 1024), b""):
+                actual_hash.update(chunk)
+
+        if actual_hash.hexdigest() != expected_hash:
+            raise ValueError(
+                f"SHA-256 mismatch for {npy_path}\nexpected={expected_hash}\nactual={actual_hash.hexdigest()}"
+            )
+
+        # Sanity checks:
+        actual_data = np.load(npy_path, mmap_mode="r")
+        expected_cols = manifest.get("artifact", {}).get("columns", [])
+        if expected_cols and actual_data.ndim != 2 and actual_data.shape[1] != len(expected_cols):
+            raise ValueError(
+                f"Column count mismatch: npy second dim={actual_data.shape[1]} vs manifest columns={len(expected_cols)}"
+            )
+
+        size_bytes = Path(npy_path).stat().st_size
+        if size_bytes != manifest["artifact"]["size_bytes"]:
+            raise ValueError(
+                f"Size mismatch: file={size_bytes} vs manifest={manifest['artifact']['size_bytes']}"
+            )
+
+        return manifest
 
     @staticmethod
     def _get_time_dimension(ds: xr.Dataset) -> str:

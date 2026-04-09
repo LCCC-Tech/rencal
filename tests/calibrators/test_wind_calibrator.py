@@ -170,6 +170,7 @@ class TestWindCalibratorIntegration:
             data_path=Path(__file__).parents[1] / "data",
             output_path=temp_output_dir,
             visual_output=True,
+            stream_npy_output=True,
         )
 
         # Initial values
@@ -182,6 +183,7 @@ class TestWindCalibratorIntegration:
         assert len(calibrator.resource.data.dims) == 3
         assert calibrator.output_path == temp_output_dir
         assert calibrator.visual_output is True
+        assert calibrator.stream_npy_output is True
 
         calibrator.calibrate()
 
@@ -195,6 +197,7 @@ class TestWindCalibratorIntegration:
         assert (calibrator.output_path / "Calibration Summary.csv").exists() is True
         assert (calibrator.output_path / "Weibull Params.csv").exists() is True
         assert (calibrator.output_path / "Wind Streams.parquet").exists() is True
+        assert (calibrator.output_path / "Wind Streams.npy").exists() is True
         assert (calibrator.output_path / "Wind Speeds.csv").exists() is True
 
 
