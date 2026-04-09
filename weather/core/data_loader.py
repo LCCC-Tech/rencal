@@ -1,9 +1,10 @@
+import hashlib
+import json
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-import pandas as pd
 import numpy as np
-import hashlib, json
+import pandas as pd
 import xarray as xr
 from numpy import float32, float64
 from numpy.typing import NDArray
@@ -141,7 +142,7 @@ class LocalDataLoader(DataLoader):
             histogram_memmap_ref_wind = np.load(
                 histograms_wind_path, mmap_mode="r", allow_pickle=False
             )
-        except Exception as e:
+        except Exception:
             histogram_memmap_ref_wind = None
 
         return histogram_memmap_ref_wind
@@ -153,10 +154,8 @@ class LocalDataLoader(DataLoader):
             return None
 
         try:
-            wind_npy = np.load(
-                wind_path, mmap_mode="r", allow_pickle=False
-            )
-        except Exception as e:
+            wind_npy = np.load(wind_path, mmap_mode="r", allow_pickle=False)
+        except Exception:
             wind_npy = None
 
         return wind_npy
@@ -174,7 +173,7 @@ class LocalDataLoader(DataLoader):
                 for later use in database -> models.
 
         """
-        with open(manifest_path, "r", encoding="utf-8") as f:
+        with open(manifest_path, encoding="utf-8") as f:
             manifest = json.load(f)
 
         # Checking the recorded hash from RenCal against the runtime hash of the NPY file:

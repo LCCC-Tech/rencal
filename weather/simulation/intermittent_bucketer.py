@@ -4,7 +4,7 @@
 # but correlated with the day of the year.
 
 from ..core.bucketer import Bucketer
-from ..core.short_date import MONTHLY_BUCKET_DEFINITION, WEEKLY_BUCKET_DEFINITION
+from ..core.short_date import MONTHLY_BUCKET_DEFINITION
 
 
 class IntermittentBucketer(Bucketer):

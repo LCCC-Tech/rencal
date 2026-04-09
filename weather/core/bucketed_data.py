@@ -12,11 +12,12 @@
 # There is no main output, as the class functions more like a template of shared logic.
 
 import datetime
+import warnings
+from collections.abc import Sequence
+
 import numpy as np
 import pandas as pd
-from typing import Sequence, Union
 from numpy.typing import NDArray
-import warnings
 
 
 class VersionedColumnsNDArray:
@@ -191,7 +192,8 @@ class BucketedData:
             # Warning the user that there is no data to compute the histogram on:
             warnings.warn(
                 f"No data to compute histogram between indices start: {statistical_start_index} "
-                + f"and end: {statistical_end_index}. Returning empty histogram."
+                + f"and end: {statistical_end_index}. Returning empty histogram.",
+                stacklevel=2,
             )
             return histogram
 
@@ -506,7 +508,7 @@ class BucketedData:
     def compute_optimized_distributions(
         previous_distribution_not_normalized: NDArray[np.uint32],
         desired_averages: Sequence[float],
-        observations_per_column: Union[int, Sequence[int], NDArray],
+        observations_per_column: int | Sequence[int] | NDArray,
         tol: float = 1e-12,
         max_iter: int = 60,
     ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
@@ -594,7 +596,8 @@ class BucketedData:
         if not np.array_equal(averages, averages_clipped):
             warnings.warn(
                 "Some desired averages were outside the achievable range given the support of the previous distribution. "
-                "They have been clipped to the nearest achievable value. "
+                "They have been clipped to the nearest achievable value. ",
+                stacklevel=2,
             )
 
         # Solve for unique lambda per column with bracketed Newton.

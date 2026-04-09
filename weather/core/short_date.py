@@ -60,7 +60,7 @@ class ShortDate:
 
     @month.setter
     def month(self, m):
-        if not type(m) == int:
+        if not isinstance(m, int):
             raise TypeError("The month provided is not an integer")
         if not (m >= 1 and m <= 12):
             raise ValueError("The month provided is not between 1 and 12 inclusive")
@@ -72,14 +72,14 @@ class ShortDate:
 
     @day.setter
     def day(self, d):
-        if not type(d) == int:
+        if not isinstance(d, int):
             raise TypeError("The day provided is not an integer")
         try:
             datetime.datetime(
                 NON_LEAP_YEAR, self.month, d
             )  # We consider that ShortDate should only hold non-leap days for consistency in partitioning years
         except ValueError:
-            raise ValueError("The day provided is not a valid date for the month")
+            raise ValueError("The day provided is not a valid date for the month") from None
         self._day = d
 
     # Context years are only passed to the instance of ShortDate we are calling them on:
@@ -200,9 +200,9 @@ class ShortDate:
 
     # Since subtracting returns an object of this same class, simple arithmetic uses non-leap years:
     def __sub__(self, timedelta):
-        if type(timedelta) == datetime.timedelta:
+        if isinstance(timedelta, datetime.timedelta):
             return ShortDate(self.to_datetime(NON_LEAP_YEAR) - timedelta)
-        elif type(timedelta) == ShortDate:
+        elif isinstance(timedelta, ShortDate):
             return (self.to_datetime(NON_LEAP_YEAR) - timedelta.to_datetime(NON_LEAP_YEAR)).days
 
 
