@@ -131,10 +131,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
-          persist-credentials: false
-
-      - name: Fetch tags
-        run: git fetch --force --tags origin
+          fetch-tags: true
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
