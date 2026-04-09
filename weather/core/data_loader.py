@@ -2,6 +2,7 @@ import hashlib
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -163,7 +164,7 @@ class LocalDataLoader(DataLoader):
     @staticmethod
     def verify_npy_against_manifest(
         npy_path: str | Path, manifest_path: str | Path
-    ) -> dict[str, any]:
+    ) -> dict[str, Any]:
         """
         Raises ValueError on mismatch; returns None on success.
         Checks hash + basic header sanity (shape second dim vs columns length).
