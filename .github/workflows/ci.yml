@@ -120,6 +120,7 @@ jobs:
 
   build:
     name: Build distributions
+    if: false  # disabled — re-enable when publishing to TestPyPI is needed
     needs: tag
     runs-on: ubuntu-latest
     permissions:
@@ -160,6 +161,7 @@ jobs:
 
   publish-to-testpypi:
     name: Publish to TestPyPI
+    if: false  # disabled — re-enable when publishing to TestPyPI is needed
     needs: [tag, build]
     runs-on: ubuntu-latest
     environment:
