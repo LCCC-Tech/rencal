@@ -16,7 +16,6 @@ from weather.utils.constants import (
     AREA_BOUNDING_BOX_COORDINATES,
     CALIBRATION_END_DATE,
     CALIBRATION_START_DATE,
-    CDS_API_KEY,
     CDS_API_URL,
     CFD_BMU_CSV_URL,
     CFD_REGISTER_API_URL,
@@ -97,11 +96,18 @@ class ERA5DataDownloader(DataDownloader):
         _client (cdsapi.Client): Lazy-initialized CDS API client.
     """
 
-    def __init__(self):
-        """Initialize ERA5 data downloader with API configuration."""
+    def __init__(self, api_key: str | None = None, api_url: str | None = None):
+        """Initialize ERA5 data downloader with API configuration.
+
+        Args:
+            api_key: Optional CDS API key. Falls back to CDS_API_KEY env var if not set.
+            api_url: Optional CDS API URL override. Falls back to CDS_API_URL env var or
+                CDS_API_URL constant.
+        """
         super().__init__()
-        self._api_key = CDS_API_KEY
-        self._api = ParsedURL(CDS_API_URL)
+        self._api_key = api_key
+        self._api_url = api_url
+        self._api = ParsedURL(api_url or os.getenv("CDS_API_URL") or CDS_API_URL)
         self._client = None
         self._update_output_directory(stem="era5")
 
@@ -149,13 +155,17 @@ class ERA5DataDownloader(DataDownloader):
         try:
             self.logger.debug("Initializing CDS API client for %s...", self._api.domain)
             if self._client is None:
-                if not self._api_key:
+                api_key = self._api_key or os.getenv("CDS_API_KEY")
+                api_url = self._api_url or os.getenv("CDS_API_URL") or CDS_API_URL
+                if not api_key:
                     self.logger.error("CDS API key not found in environment variables.")
-                    raise ValueError("Provide your Copernicus CDS API key string.")
+                    raise ValueError(
+                        "CDS API key missing. Set CDS_API_KEY or pass api_key to ERA5DataDownloader."
+                    )
 
                 self._client = cdsapi.Client(
-                    url=self._api.url,
-                    key=self._api_key,
+                    url=api_url,
+                    key=api_key,
                     verify=certifi.where(),
                 )
             return self._client
@@ -765,11 +775,16 @@ class DownloadManager:
         era5 (ERA5DataDownloader): Downloader for ERA5 weather data.
     """
 
-    def __init__(self):
-        """Initialize download manager with all data source downloaders."""
+    def __init__(self, cds_api_key: str | None = None, cds_api_url: str | None = None):
+        """Initialize download manager with all data source downloaders.
+
+        Args:
+            cds_api_key: Optional CDS API key for ERA5 downloads.
+            cds_api_url: Optional CDS API URL override for ERA5 downloads.
+        """
         self.cfd = CfDDataDownloader()
         self.generation = GenerationDataDownloader()
-        self.era5 = ERA5DataDownloader()
+        self.era5 = ERA5DataDownloader(api_key=cds_api_key, api_url=cds_api_url)
 
     def download_cfd(self) -> None:
         """Download CfD register and BMU mapping data.

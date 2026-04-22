@@ -1,11 +1,11 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.10.8,<0.11.0"]
+build-backend = "uv_build"
 
 [project]
 name = "weather-lccc"
-version = "0.1.0"
-description = "Weather forecasting and modelling for renewable energy applications"
+version = "0.0.0"  # placeholder — CI injects the real version from the git tag before building
+description = "Weather-to-power calibration and Monte Carlo scrambler for renewable energy applications"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = {text = "MIT"}
@@ -22,18 +22,15 @@ keywords = [
     "wind power",
     "solar power",
     "era5",
-    "machine learning"
+    "monte carlo",
+    "calibration",
+    "climate"
 ]
 classifiers = [
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Atmospheric Science",
     "Topic :: Utilities"
@@ -46,7 +43,6 @@ dependencies = [
     "seaborn>=0.12.0",
     "scikit-learn>=1.0.0",
     "netCDF4>=1.5.0",
-    "torch>=1.9.0",
     "xarray>=0.19.0",
     "pytz>=2021.1",
     "requests>=2.25.0",
@@ -97,16 +93,9 @@ Changelog = "https://github.com/LCCC-Tech/weather/blob/main/CHANGELOG.md"
 weather-calibrate = "weather.calibration.cli:main"
 weather-forecast = "weather.models.cli:main"
 
-[tool.setuptools]
-package-dir = {"" = "."}
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["weather*"]
-exclude = ["tests*", "docs*", "scripts*"]
-
-[tool.setuptools.package-data]
-weather = ["data/*.csv", "data/*.json", "calibration/templates/*"]
+[tool.uv.build-backend]
+module-name = "weather"
+module-root = ""
 
 [tool.basedpyright]
 include = ["weather"]
@@ -203,4 +192,3 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
-
