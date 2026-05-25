@@ -1,4 +1,4 @@
-# RenCal Re(newable)Cal(ibration)
+# RenCal Ren(ewable)Cal(ibration)
 
 An open-source Python library for renewable energy forecasting using ERA5 weather data and statistical sampling techniques.
 
