@@ -1,5 +1,5 @@
 """
-Setup script for weather-lccc package.
+Setup script for rencal-lccc package.
 """
 
 from setuptools import setup

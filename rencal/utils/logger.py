@@ -15,7 +15,7 @@ def get_logger(name: str | None = None, level: int = logging.DEBUG) -> logging.L
     """
     # Import here to avoid circular imports
     try:
-        from weather.utils.constants import QUIET_MODE, VERBOSE_MODE
+        from rencal.utils.constants import QUIET_MODE, VERBOSE_MODE
     except ImportError:
         QUIET_MODE = False
         VERBOSE_MODE = False
@@ -26,9 +26,9 @@ def get_logger(name: str | None = None, level: int = logging.DEBUG) -> logging.L
 
         frame = inspect.currentframe()
         if frame and frame.f_back:
-            name = frame.f_back.f_globals.get("__name__", "weather")
+            name = frame.f_back.f_globals.get("__name__", "rencal")
         else:
-            name = "weather"
+            name = "rencal"
 
     # Create logger
     logger = logging.getLogger(name)
@@ -68,5 +68,5 @@ def get_logger(name: str | None = None, level: int = logging.DEBUG) -> logging.L
     return logger
 
 
-# For convenience, create a default logger for the weather package
-default_logger = get_logger("weather")
+# For convenience, create a default logger for the rencal package
+default_logger = get_logger("rencal")

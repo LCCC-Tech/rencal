@@ -3,9 +3,9 @@ requires = ["uv_build>=0.10.8,<0.11.0"]
 build-backend = "uv_build"
 
 [project]
-name = "weather-lccc"
+name = "rencal"
 version = "0.0.0"  # placeholder — CI injects the real version from the git tag before building
-description = "Weather-to-power calibration and Monte Carlo scrambler for renewable energy applications"
+description = "Weather-to-power calibration and Monte Carlo load factor simulation for renewable energy applications"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = {text = "MIT"}
@@ -83,23 +83,23 @@ notebook = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/LCCC-Tech/weather"
-Documentation = "https://weather-lccc.readthedocs.io/"
-Repository = "https://github.com/LCCC-Tech/weather.git"
-"Bug Tracker" = "https://github.com/LCCC-Tech/weather/issues"
-Changelog = "https://github.com/LCCC-Tech/weather/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/LCCC-Tech/rencal"
+Documentation = "https://docs.lowcarboncontracts.uk"
+Repository = "https://github.com/LCCC-Tech/rencal.git"
+"Bug Tracker" = "https://github.com/LCCC-Tech/rencal/issues"
+Changelog = "https://github.com/LCCC-Tech/rencal/blob/main/CHANGELOG.md"
 
 [project.scripts]
-weather-calibrate = "weather.calibration.cli:main"
-weather-forecast = "weather.models.cli:main"
+rencal-calibrate = "rencal.calibration.cli:main"
+rencal-forecast = "rencal.models.cli:main"
 
 [tool.uv.build-backend]
-module-name = "weather"
+module-name = "rencal"
 module-root = ""
 
 [tool.basedpyright]
-include = ["weather"]
-exclude = [".venv", "build", "dist", "weather/simulation/intermittent_bucketer.py", "weather/core/bucketed_data.py",]
+include = ["rencal"]
+exclude = [".venv", "build", "dist", "rencal/simulation/intermittent_bucketer.py", "rencal/core/bucketed_data.py",]
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"
@@ -148,7 +148,7 @@ docstring-code-format = true
 docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint.isort]
-known-first-party = ["weather"]
+known-first-party = ["rencal"]
 
 # pytest configuration
 [tool.pytest.ini_options]
@@ -172,7 +172,7 @@ markers = [
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["weather"]
+source = ["rencal"]
 omit = [
     "*/tests/*",
     "*/test_*",

@@ -33,7 +33,7 @@ uv sync --group notebook     # Jupyter notebook dependencies
 ## Quick Start
 
 ```python
-from weather.simulation.weather_data import WeatherData, HistoricalMetadata
+from rencal.simulation.rencal_data import WeatherData, HistoricalMetadata
 from weather.core.data_loader import LocalDataLoader
 
 loader = LocalDataLoader()

@@ -10,7 +10,7 @@ import xarray as xr
 from numpy import float32, float64
 from numpy.typing import NDArray
 
-from weather.models import ERA5DatasetModel, GenerationDatasetModel, PlantDatasetModel
+from rencal.models import ERA5DatasetModel, GenerationDatasetModel, PlantDatasetModel
 from weather.utils.constants import (
     DEFAULT_SOLAR_VARIABLES,
     DEFAULT_WIND_VARIABLES,

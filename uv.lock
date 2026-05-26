@@ -2399,7 +2399,7 @@ wheels = [
 ]
 
 [[package]]
-name = "weather-lccc"
+name = "rencal-lccc"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
