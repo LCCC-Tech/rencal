@@ -11,7 +11,7 @@ from numpy import float32, float64
 from numpy.typing import NDArray
 
 from rencal.models import ERA5DatasetModel, GenerationDatasetModel, PlantDatasetModel
-from weather.utils.constants import (
+from rencal.utils.constants import (
     DEFAULT_SOLAR_VARIABLES,
     DEFAULT_WIND_VARIABLES,
     DOWNLOAD_DATA_DIR,
@@ -23,7 +23,7 @@ from weather.utils.constants import (
     WIND_NPY_BASEPATH,
     WIND_NPY_HISTOGRAMS_BASEPATH,
 )
-from weather.utils.logger import get_logger
+from rencal.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

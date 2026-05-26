@@ -1902,6 +1902,105 @@ wheels = [
 ]
 
 [[package]]
+name = "rencal"
+version = "0.0.0"
+source = { editable = "." }
+dependencies = [
+    { name = "cdsapi" },
+    { name = "matplotlib" },
+    { name = "netcdf4" },
+    { name = "numpy" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "polars" },
+    { name = "pyarrow" },
+    { name = "pydantic" },
+    { name = "pyodbc" },
+    { name = "python-dotenv" },
+    { name = "pytz" },
+    { name = "requests" },
+    { name = "scikit-learn" },
+    { name = "scipy" },
+    { name = "seaborn" },
+    { name = "tqdm" },
+    { name = "xarray" },
+    { name = "zarr" },
+]
+
+[package.dev-dependencies]
+azure = [
+    { name = "azure-identity" },
+    { name = "azure-storage-blob" },
+]
+dev = [
+    { name = "basedpyright" },
+    { name = "build" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+docs = [
+    { name = "myst-parser" },
+    { name = "sphinx" },
+    { name = "sphinx-autoapi" },
+    { name = "sphinx-rtd-theme" },
+]
+notebook = [
+    { name = "ipykernel" },
+    { name = "jupyter" },
+    { name = "plotly" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cdsapi", specifier = ">=0.6.0" },
+    { name = "matplotlib", specifier = ">=3.4.0" },
+    { name = "netcdf4", specifier = ">=1.5.0" },
+    { name = "numpy", specifier = ">=1.20.0" },
+    { name = "openpyxl", specifier = ">=3.1.0" },
+    { name = "pandas", specifier = ">=1.3.0" },
+    { name = "polars", specifier = ">=1.8.2" },
+    { name = "pyarrow", specifier = ">=22.0.0" },
+    { name = "pydantic", specifier = ">=2.10.6" },
+    { name = "pyodbc", specifier = ">=4.0.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "pytz", specifier = ">=2021.1" },
+    { name = "requests", specifier = ">=2.25.0" },
+    { name = "scikit-learn", specifier = ">=1.0.0" },
+    { name = "scipy", specifier = ">=1.7.0" },
+    { name = "seaborn", specifier = ">=0.12.0" },
+    { name = "tqdm", specifier = ">=4.62.0" },
+    { name = "xarray", specifier = ">=0.19.0" },
+    { name = "zarr", specifier = ">=2.16.1" },
+]
+
+[package.metadata.requires-dev]
+azure = [
+    { name = "azure-identity", specifier = ">=1.7.0" },
+    { name = "azure-storage-blob", specifier = ">=12.0.0" },
+]
+dev = [
+    { name = "basedpyright", specifier = ">=1.0.0" },
+    { name = "build", specifier = ">=1.0.0" },
+    { name = "pre-commit", specifier = ">=2.15.0" },
+    { name = "pytest", specifier = ">=6.0" },
+    { name = "pytest-cov", specifier = ">=2.0" },
+    { name = "ruff", specifier = ">=0.8.0" },
+]
+docs = [
+    { name = "myst-parser", specifier = ">=0.15.0" },
+    { name = "sphinx", specifier = ">=4.0" },
+    { name = "sphinx-autoapi", specifier = ">=1.8.0" },
+    { name = "sphinx-rtd-theme", specifier = ">=1.0" },
+]
+notebook = [
+    { name = "ipykernel", specifier = ">=6.0.0" },
+    { name = "jupyter", specifier = ">=1.0.0" },
+    { name = "plotly", specifier = ">=5.0.0" },
+]
+
+[[package]]
 name = "requests"
 version = "2.32.5"
 source = { registry = "https://pypi.org/simple" }
@@ -2396,105 +2495,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/24/30/6b0809f4510673dc723187aeaf24c7f5459922d01e2f794277a3dfb90345/wcwidth-0.2.14.tar.gz", hash = "sha256:4d478375d31bc5395a3c55c40ccdf3354688364cd61c4f6adacaa9215d0b3605", size = 102293, upload-time = "2025-09-22T16:29:53.023Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/af/b5/123f13c975e9f27ab9c0770f514345bd406d0e8d3b7a0723af9d43f710af/wcwidth-0.2.14-py2.py3-none-any.whl", hash = "sha256:a7bb560c8aee30f9957e5f9895805edd20602f2d7f720186dfd906e82b4982e1", size = 37286, upload-time = "2025-09-22T16:29:51.641Z" },
-]
-
-[[package]]
-name = "rencal-lccc"
-version = "0.0.0"
-source = { editable = "." }
-dependencies = [
-    { name = "cdsapi" },
-    { name = "matplotlib" },
-    { name = "netcdf4" },
-    { name = "numpy" },
-    { name = "openpyxl" },
-    { name = "pandas" },
-    { name = "polars" },
-    { name = "pyarrow" },
-    { name = "pydantic" },
-    { name = "pyodbc" },
-    { name = "python-dotenv" },
-    { name = "pytz" },
-    { name = "requests" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
-    { name = "seaborn" },
-    { name = "tqdm" },
-    { name = "xarray" },
-    { name = "zarr" },
-]
-
-[package.dev-dependencies]
-azure = [
-    { name = "azure-identity" },
-    { name = "azure-storage-blob" },
-]
-dev = [
-    { name = "basedpyright" },
-    { name = "build" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-docs = [
-    { name = "myst-parser" },
-    { name = "sphinx" },
-    { name = "sphinx-autoapi" },
-    { name = "sphinx-rtd-theme" },
-]
-notebook = [
-    { name = "ipykernel" },
-    { name = "jupyter" },
-    { name = "plotly" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cdsapi", specifier = ">=0.6.0" },
-    { name = "matplotlib", specifier = ">=3.4.0" },
-    { name = "netcdf4", specifier = ">=1.5.0" },
-    { name = "numpy", specifier = ">=1.20.0" },
-    { name = "openpyxl", specifier = ">=3.1.0" },
-    { name = "pandas", specifier = ">=1.3.0" },
-    { name = "polars", specifier = ">=1.8.2" },
-    { name = "pyarrow", specifier = ">=22.0.0" },
-    { name = "pydantic", specifier = ">=2.10.6" },
-    { name = "pyodbc", specifier = ">=4.0.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "pytz", specifier = ">=2021.1" },
-    { name = "requests", specifier = ">=2.25.0" },
-    { name = "scikit-learn", specifier = ">=1.0.0" },
-    { name = "scipy", specifier = ">=1.7.0" },
-    { name = "seaborn", specifier = ">=0.12.0" },
-    { name = "tqdm", specifier = ">=4.62.0" },
-    { name = "xarray", specifier = ">=0.19.0" },
-    { name = "zarr", specifier = ">=2.16.1" },
-]
-
-[package.metadata.requires-dev]
-azure = [
-    { name = "azure-identity", specifier = ">=1.7.0" },
-    { name = "azure-storage-blob", specifier = ">=12.0.0" },
-]
-dev = [
-    { name = "basedpyright", specifier = ">=1.0.0" },
-    { name = "build", specifier = ">=1.0.0" },
-    { name = "pre-commit", specifier = ">=2.15.0" },
-    { name = "pytest", specifier = ">=6.0" },
-    { name = "pytest-cov", specifier = ">=2.0" },
-    { name = "ruff", specifier = ">=0.8.0" },
-]
-docs = [
-    { name = "myst-parser", specifier = ">=0.15.0" },
-    { name = "sphinx", specifier = ">=4.0" },
-    { name = "sphinx-autoapi", specifier = ">=1.8.0" },
-    { name = "sphinx-rtd-theme", specifier = ">=1.0" },
-]
-notebook = [
-    { name = "ipykernel", specifier = ">=6.0.0" },
-    { name = "jupyter", specifier = ">=1.0.0" },
-    { name = "plotly", specifier = ">=5.0.0" },
 ]
 
 [[package]]

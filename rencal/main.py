@@ -27,14 +27,14 @@ def rencal_data_loop():
 
     import numpy as np
 
-    from rencal.simulation.rencal_data import HistoricalMetadata, WeatherData
+    from rencal.simulation.weather_data import HistoricalMetadata, WeatherData
 
     loader = LocalDataLoader()
-    manifest_wind = loader.check_historical_rencal()
+    manifest_wind = loader.check_historical_weather()
 
     metadata_wind = HistoricalMetadata(
         manifest_wind["basename"],
-        loader.path_resolver_rencal_data,
+        loader.path_resolver_weather_data,
         datetime.datetime.fromisoformat(manifest_wind["horizon_utc"]["start"]),
         datetime.datetime.fromisoformat(manifest_wind["horizon_utc"]["end"]),
         manifest_wind["artifact"]["columns"],
@@ -44,7 +44,7 @@ def rencal_data_loop():
     # Prefix histograms pulled in as memmapped ref:
     prefix_histograms_wind = loader.get_prefix_histograms()
     # Historical data needed at this stage only if desired averages are computed:
-    historical_data_wind = loader.get_historical_rencal()
+    historical_data_wind = loader.get_historical_weather()
 
     wind_sampler = WeatherData(
         metadata=metadata_wind,
