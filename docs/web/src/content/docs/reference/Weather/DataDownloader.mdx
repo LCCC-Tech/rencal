@@ -44,7 +44,7 @@ Using environment variables:
 
 ```python
 import os
-from weather.core.data_downloader import DownloadManager
+from rencal.core.data_downloader import DownloadManager
 
 os.environ["CDS_API_KEY"] = "uid:token"
 
@@ -55,7 +55,7 @@ downloader.download_era5()
 Passing the key explicitly:
 
 ```python
-from weather.core.data_downloader import ERA5DataDownloader
+from rencal.core.data_downloader import ERA5DataDownloader
 
 era5 = ERA5DataDownloader(api_key="uid:token")
 era5.download()
