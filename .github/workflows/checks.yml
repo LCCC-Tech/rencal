@@ -1,5 +1,4 @@
-name: Run linting, typecheck and tests
-
+name: Run checks
 on:
     pull_request:
         branches: [main, dev]
