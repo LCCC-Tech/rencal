@@ -13,7 +13,10 @@ jobs:
     # ── Release pipeline ───────────────────────────────────────────────
     tag:
         name: Create release tag
-        if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+        if: >
+            false &&
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.head_branch == 'main'
         runs-on: ubuntu-latest
         permissions:
             contents: write
@@ -87,9 +90,47 @@ jobs:
                   git tag -a "${TAG}" -m "Release ${TAG}"
                   git push origin "refs/tags/${TAG}"
 
-    build:
-        name: Build distributions
-        if: false # disabled — re-enable when publishing to TestPyPI is needed
+    build-dev:
+        name: Build distributions (dev)
+        if: >
+            false &&
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.head_branch == 'dev'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v5
+              with:
+                  ref: ${{ github.event.workflow_run.head_sha }}
+                  fetch-depth: 0
+                  fetch-tags: true
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v3
+              with:
+                  version: "latest"
+
+            - name: Set up Python
+              run: uv python install 3.12
+
+            - name: Build wheel and sdist
+              run: uv build
+
+            - name: Upload distributions
+              uses: actions/upload-artifact@v4
+              with:
+                  name: python-package-distributions
+                  path: dist/
+
+    build-main:
+        name: Build distributions (main)
+        if: >
+            false &&
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.head_branch == 'main'
         needs: tag
         runs-on: ubuntu-latest
         permissions:
@@ -130,8 +171,11 @@ jobs:
 
     publish-to-testpypi:
         name: Publish to TestPyPI
-        if: false # disabled — re-enable when publishing to TestPyPI is needed
-        needs: [tag, build]
+        if: >
+            false &&
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.head_branch == 'dev'
+        needs: [build-dev]
         runs-on: ubuntu-latest
         environment:
             name: testpypi
@@ -151,3 +195,27 @@ jobs:
               with:
                   repository-url: https://test.pypi.org/legacy/
                   skip-existing: true
+
+    publish-to-pypi:
+        name: Publish to PyPI
+        if: >
+            false &&
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.head_branch == 'main'
+        needs: [tag, build-main]
+        runs-on: ubuntu-latest
+        environment:
+            name: pypi
+            url: https://pypi.org/p/rencal-lccc
+        permissions:
+            id-token: write
+
+        steps:
+            - name: Download distributions
+              uses: actions/download-artifact@v4
+              with:
+                  name: python-package-distributions
+                  path: dist/
+
+            - name: Publish to PyPI
+              uses: pypa/gh-action-pypi-publish@release/v1
