@@ -17,11 +17,11 @@ def main():
     generation_ds = loader.load_generation_data()
     logger.info(generation_ds)
 
-    rencal_ds = loader.load_era5_data()
-    logger.info(rencal_ds)
+    weather_ds = loader.load_era5_data()
+    logger.info(weather_ds)
 
 
-def rencal_data_loop():
+def run_data_loop():
     import datetime
     import random
 
@@ -64,4 +64,4 @@ def rencal_data_loop():
 
 
 if __name__ == "__main__":
-    rencal_data_loop()
+    run_data_loop()
