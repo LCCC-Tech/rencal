@@ -1,9 +1,9 @@
 """
-Weather Forecasting and Modelling for Renewable Energy
+Renewable Calibration (rencal) for renwable energy forecasting.
 
-A Python library for forecasting renewable energy generation using ERA5 weather data
-and statistical sampling techniques. Provides calibrated load factor predictions for
-wind and solar plants to support financial modelling and grid planning.
+A Python library for calibrating renewable plant power curves using generalised logistic function
+modules for generating probabilistic load factor time series forecasts using resampling from
+historical ERA5 weather data.
 """
 
 __version__ = "0.1.0"
