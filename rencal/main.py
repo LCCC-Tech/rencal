@@ -1,6 +1,6 @@
-from weather.core.data_downloader import DownloadManager
-from weather.core.data_loader import LocalDataLoader
-from weather.utils.logger import get_logger
+from rencal.core.data_downloader import DownloadManager
+from rencal.core.data_loader import LocalDataLoader
+from rencal.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -21,13 +21,13 @@ def main():
     logger.info(weather_ds)
 
 
-def weather_data_loop():
+def run_data_loop():
     import datetime
     import random
 
     import numpy as np
 
-    from weather.simulation.weather_data import HistoricalMetadata, WeatherData
+    from rencal.simulation.weather_data import HistoricalMetadata, WeatherData
 
     loader = LocalDataLoader()
     manifest_wind = loader.check_historical_weather()
@@ -64,4 +64,4 @@ def weather_data_loop():
 
 
 if __name__ == "__main__":
-    weather_data_loop()
+    run_data_loop()

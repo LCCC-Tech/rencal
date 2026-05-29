@@ -12,9 +12,9 @@ import pytest
 import xarray as xr
 from pydantic import ValidationError
 
-from weather.core.data_loader import LocalDataLoader
-from weather.models import ERA5DatasetModel
-from weather.utils.constants import DEFAULT_SOLAR_VARIABLES, DEFAULT_WIND_VARIABLES
+from rencal.core.data_loader import LocalDataLoader
+from rencal.models import ERA5DatasetModel
+from rencal.utils.constants import DEFAULT_SOLAR_VARIABLES, DEFAULT_WIND_VARIABLES
 
 
 class TestERA5DataLoaderIntegration:

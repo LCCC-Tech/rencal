@@ -1,6 +1,6 @@
 ---
 title: WindCalibrator
-description: Reference documentation for weather.calibration.wind.wind_calibrator.
+description: Reference documentation for rencal.calibration.wind.wind_calibrator.
 ---
 
 import Segment from '@/components/pydoc/Segment.astro';
@@ -10,7 +10,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <div class="pydoc">
 
 <Section type="about">
-`weather.calibration.wind.wind_calibrator` defines the concrete wind calibration workflow for converting ERA5 wind resource data and historical generation into fitted wind power curves and long-term load-factor streams.
+`rencal.calibration.wind.wind_calibrator` defines the concrete wind calibration workflow for converting ERA5 wind resource data and historical generation into fitted wind power curves and long-term load-factor streams.
 
 `WindCalibrator` extends [`Calibrator`](/reference/calibration/calibrator/) for wind technologies, fits Weibull and logistic curve parameters per plant, and writes tabular calibration outputs plus stream artifacts for downstream simulation.
 
@@ -19,7 +19,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 ```python
 from pathlib import Path
 
-from weather.calibration.wind.wind_calibrator import WindCalibrator
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
 
 calibrator = WindCalibrator(
     data_path="data",
