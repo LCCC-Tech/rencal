@@ -1,0 +1,253 @@
+---
+title: BucketedData
+description: Reference documentation for rencal.core.bucketed_data.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.core.bucketed_data` contains shared histogram, resampling, and horizon-alignment utilities used by bucket-based simulators such as `WeatherData`.
+
+The module exposes:
+
+- `BucketedData`: utility base class with histogram and distribution optimization helpers.
+- `VersionedColumnsNDArray`: array wrapper that tracks canonical columns and transformed versions produced during resampling.
+
+#### Example
+
+```python
+# Returned from WeatherData.random_sample(...)
+sample = weather_data.random_sample(start, end)
+
+# Access canonical column
+base_stream = sample.access_col(1)
+
+# Access first transformed variant of canonical column 1
+variant_stream = sample.access_col(1, 1)
+```
+</Section>
+
+---
+
+## Constructor
+
+### VersionedColumnsNDArray
+
+<Segment>
+<Section type="signature">
+```python
+class VersionedColumnsNDArray(n_raw_features: int): VersionedColumnsNDArray
+```
+</Section>
+
+Initializes the versioned output wrapper for a sample matrix.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">n_raw_features</code> <code class="primitive">int</code></p>
+  Number of canonical (original) columns in the sample matrix.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">VersionedColumnsNDArray</code>](#VersionedColumnsNDArray)
+</InlineSection>
+</Segment>
+
+### BucketedData
+
+<Segment>
+<Section type="signature">
+```python
+class BucketedData(): BucketedData
+```
+</Section>
+
+Base utility class for bucket-driven simulators.
+
+<InlineSection>
+**Returns** [<code class="type">BucketedData</code>](#BucketedData)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### VersionedColumnsNDArray.update_mapping
+
+<Segment>
+<Section type="signature">
+```python
+update_mapping(canonical_col: int, j: int) -> int
+```
+</Section>
+
+Records where a transformed version of a canonical column is stored in the output matrix.
+</Segment>
+
+### VersionedColumnsNDArray.attach_data
+
+<Segment>
+<Section type="signature">
+```python
+attach_data(data: NDArray[np.floating]) -> VersionedColumnsNDArray
+```
+</Section>
+
+Attaches the final output matrix to the wrapper (exactly once).
+
+<InlineSection>
+**Raises**
+- <code class="type">RuntimeError</code>: If data has already been attached.
+- <code class="type">ValueError</code>: If matrix dimensionality or shape is invalid.
+</InlineSection>
+</Segment>
+
+### VersionedColumnsNDArray.access_col
+
+<Segment>
+<Section type="signature">
+```python
+access_col(canonical_col: int, version: int = 0) -> NDArray[np.floating]
+```
+</Section>
+
+Returns a view of a canonical column (`version=0`) or a transformed version (`version>=1`).
+
+<InlineSection>
+**Raises**
+- <code class="type">RuntimeError</code>: If data is not attached.
+- <code class="type">IndexError</code>: If requested version does not exist.
+</InlineSection>
+</Segment>
+
+### BucketedData.crop_time_margins_to_full_years
+
+<Segment>
+<Section type="signature">
+```python
+crop_time_margins_to_full_years() -> datetime.datetime
+```
+</Section>
+
+Computes the earliest unbiased start date ensuring at least one full year of historical seasonality coverage.
+</Segment>
+
+### BucketedData.get_histogram
+
+<Segment>
+<Section type="signature">
+```python
+get_histogram(
+    statistical_start_index: int,
+    statistical_end_index: int,
+    historical_data: NDArray[np.floating] | None,
+    number_of_bins: int,
+    ignore_zeros: bool = False,
+) -> NDArray[np.uint32]
+```
+</Section>
+
+Builds per-stream histograms over a selected historical index range.
+</Segment>
+
+### BucketedData.get_fast_histogram
+
+<Segment>
+<Section type="signature">
+```python
+get_fast_histogram(
+    first_statistical_index: int,
+    last_statistical_index: int,
+    historical_data: NDArray[np.floating],
+    hours_per_block: int,
+    prefix_histograms: NDArray[np.uint32],
+    ignore_zeros: bool = False,
+) -> NDArray[np.uint32]
+```
+</Section>
+
+Computes histograms using prefix histograms plus partial-edge corrections.
+</Segment>
+
+### BucketedData.get_absolute_index_of_date
+
+<Segment>
+<Section type="signature">
+```python
+get_absolute_index_of_date(date: datetime.datetime) -> tuple[int, int]
+```
+</Section>
+
+Maps a day to `[first_hour_index, last_hour_index)` in the historical array.
+</Segment>
+
+### BucketedData.adjust_forecasted_horizon
+
+<Segment>
+<Section type="signature">
+```python
+adjust_forecasted_horizon(
+    future_start_date: datetime.datetime,
+    future_end_date: datetime.datetime,
+) -> tuple[datetime.datetime, int]
+```
+</Section>
+
+Extends forecast horizon so stitched draw-period chunks fully cover the user request, and returns the exact output-hour count to trim to.
+</Segment>
+
+### BucketedData.append_resampled_columns
+
+<Segment>
+<Section type="signature">
+```python
+append_resampled_columns(
+    sample: NDArray[np.floating],
+    rng: np.random.Generator,
+) -> VersionedColumnsNDArray
+```
+</Section>
+
+Appends transformed stream variants to a sampled matrix by inverse-CDF resampling under optimized target distributions.
+</Segment>
+
+### BucketedData.compute_time_margins
+
+<Segment>
+<Section type="signature">
+```python
+compute_time_margins(
+    historical_start,
+    historical_end,
+    data_limit_left,
+    data_limit_right,
+) -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp, pd.Timestamp]
+```
+</Section>
+
+Normalizes requested historical bounds to valid hourly and full-day-aligned ranges.
+</Segment>
+
+### BucketedData.compute_optimized_distributions
+
+<Segment>
+<Section type="signature">
+```python
+compute_optimized_distributions(
+    previous_distribution_not_normalized: NDArray[np.uint32],
+    desired_averages: Sequence[float],
+    observations_per_column: int | Sequence[int] | NDArray,
+    tol: float = 1e-12,
+    max_iter: int = 60,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]
+```
+</Section>
+
+Computes KL-minimizing exponential tilts that match target means for each stream histogram.
+</Segment>
+
+</div>

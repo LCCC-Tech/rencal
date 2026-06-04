@@ -1,0 +1,160 @@
+---
+title: rencal.calibration.calibrator
+description: Reference documentation for rencal.calibration.calibrator.
+---
+
+import Section from '@/components/pydoc/Section.astro';
+import Segment from '@/components/pydoc/Segment.astro';
+
+<div class="pydoc">
+<Section type="about">Reference for the abstract calibrator interface for intermittent generation technologies.</Section>
+
+## Class
+
+### Calibrator
+<Segment>
+
+```python
+class Calibrator(ABC)
+```
+
+Abstract calibration workflow contract with data-loading initialization.
+
+#### Constructor
+
+```python
+Calibrator(data_path: str = None, plant_id_col: str = None)
+```
+
+Initializes loader and materializes plant, generation, and resource datasets.
+
+**Parameters**
+- `data_path (str)`: Path to input data directory.
+- `plant_id_col (str)`: Source plant ID column name.
+
+#### Abstract Methods
+
+##### calibrate
+
+```python
+calibrate() -> None
+```
+
+Top-level workflow entrypoint for a concrete calibration implementation.
+
+**Returns**
+- `None`
+
+##### extract_resource_timeseries_for_plants
+
+```python
+extract_resource_timeseries_for_plants() -> None
+```
+
+Builds plant-level resource time series required for fitting.
+
+**Returns**
+- `None`
+
+##### calculate_historical_load_factors
+
+```python
+calculate_historical_load_factors() -> None
+```
+
+Computes historical load-factor series from resource and generation data.
+
+**Returns**
+- `None`
+
+##### fit_historical_load_factor_distribution
+
+```python
+fit_historical_load_factor_distribution() -> None
+```
+
+Fits parametric distributions used by calibration.
+
+**Returns**
+- `None`
+
+##### estimate_load_factors_for_resource
+
+```python
+estimate_load_factors_for_resource() -> None
+```
+
+Estimates long-run load factors using fitted parameters and resource distribution.
+
+**Returns**
+- `None`
+
+##### generate_resource_streams
+
+```python
+generate_resource_streams() -> None
+```
+
+Generates stream artifacts for downstream simulation use.
+
+**Returns**
+- `None`
+
+##### output_historical_load_factor_distribution_parameters
+
+```python
+output_historical_load_factor_distribution_parameters() -> None
+```
+
+Writes fitted historical distribution parameters.
+
+**Returns**
+- `None`
+
+##### output_resource_per_plant
+
+```python
+output_resource_per_plant() -> None
+```
+
+Writes plant-level resource time series output.
+
+**Returns**
+- `None`
+
+##### output_resource_streams
+
+```python
+output_resource_streams() -> None
+```
+
+Writes generated stream outputs.
+
+**Returns**
+- `None`
+
+##### output_estimated_load_factors_tabular
+
+```python
+output_estimated_load_factors_tabular() -> None
+```
+
+Writes tabular summary of estimated load factors.
+
+**Returns**
+- `None`
+
+##### output_estimated_load_factors_visual
+
+```python
+output_estimated_load_factors_visual() -> None
+```
+
+Writes visual diagnostics for fitted curves and estimates.
+
+**Returns**
+- `None`
+
+</Segment>
+
+</div>

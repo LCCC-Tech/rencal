@@ -1,0 +1,215 @@
+---
+title: rencal.calibration.wind.wind_calibrator
+description: Reference documentation for rencal.calibration.wind.wind_calibrator.
+---
+
+import Section from '@/components/pydoc/Section.astro';
+import Segment from '@/components/pydoc/Segment.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+Reference for the wind-specific concrete calibrator implementation.
+
+The class fits Weibull distributions and logistic curves, estimates long-term load factors, and writes calibration + stream artifacts.
+</Section>
+
+## Class
+
+### WindCalibrator
+
+<Segment>
+
+```python
+class WindCalibrator(Calibrator)
+```
+
+#### Constructor
+
+```python
+WindCalibrator(
+    data_path: str = None,
+    plant_id_col: str = None,
+    output_path: str | Path = Path.cwd(),
+    visual_output: bool = False,
+    stream_npy_output: bool = False,
+) -> None
+```
+
+**Parameters**
+- `data_path (str)`: Path to folder containing plant, generation, and resource inputs.
+- `plant_id_col (str)`: Name of source plant ID column.
+- `output_path (str | Path)`: Directory for output artifacts.
+- `visual_output (bool)`: If `True`, writes per-plant calibration plots.
+- `stream_npy_output (bool)`: If `True`, writes NPY stream artifact in addition to parquet.
+
+#### Main Workflow Methods
+
+##### calibrate
+
+```python
+calibrate() -> None
+```
+
+Runs full workflow: resource extraction, historical LF calc, distribution fitting, LF estimation, stream generation, and artifact outputs.
+
+**Returns**
+- `None`
+
+##### extract_resource_timeseries_for_plants
+
+```python
+extract_resource_timeseries_for_plants() -> pd.DataFrame
+```
+
+Builds plant-level wind-speed time series from ERA5 components (`u100`, `v100`) using nearest-neighbor plant coordinates.
+
+**Returns**
+- `pd.DataFrame`
+
+##### calculate_historical_load_factors
+
+```python
+calculate_historical_load_factors() -> pd.DataFrame
+```
+
+Computes historical load factors by combining plant wind speeds, generation, and capacities, with duplicate and invalid-row handling.
+
+**Returns**
+- `pd.DataFrame`
+
+##### fit_historical_load_factor_distribution
+
+```python
+fit_historical_load_factor_distribution() -> pd.DataFrame
+```
+
+Fits per-plant Weibull parameters (`k`, `lambda`) and returns summary distribution table.
+
+**Returns**
+- `pd.DataFrame`
+
+##### estimate_load_factors_for_resource
+
+```python
+estimate_load_factors_for_resource() -> pd.DataFrame
+```
+
+Fits per-plant logistic curves and integrates logistic × Weibull to estimate expected load factor.
+
+**Returns**
+- `pd.DataFrame`
+
+**Raises**
+- `ValueError`: If no calibration summary rows are produced.
+
+##### generate_resource_streams
+
+```python
+generate_resource_streams() -> pd.DataFrame
+```
+
+Applies calibrated (or generic fallback) logistic parameters to plant wind-speed series and pivots to stream table.
+
+**Returns**
+- `pd.DataFrame`
+
+#### Math / Utility Methods
+
+##### logistic_function (static)
+
+```python
+logistic_function(
+    x: int | float | np.ndarray,
+    b: float,
+    c: float,
+    g: float,
+) -> float | np.ndarray
+```
+
+Generalized logistic function implemented in log domain for numerical stability.
+
+**Parameters**
+- `x`: Wind speed value(s).
+- `b`: Steepness parameter.
+- `c`: Inflection location parameter.
+- `g`: Asymmetry parameter.
+
+**Returns**
+- `float | np.ndarray`
+
+##### weibull_function (static)
+
+```python
+weibull_function(
+    x: int | float | np.ndarray,
+    k_val: float,
+    lambda_val: float,
+) -> float | np.ndarray
+```
+
+Computes Weibull density value(s) for provided wind speed input.
+
+**Parameters**
+- `x`: Wind speed value(s).
+- `k_val`: Shape parameter.
+- `lambda_val`: Scale parameter.
+
+**Returns**
+- `float | np.ndarray`
+
+#### Output Methods
+
+##### output_historical_load_factor_distribution_parameters
+
+```python
+output_historical_load_factor_distribution_parameters() -> None
+```
+
+Writes Weibull parameter table to CSV.
+
+##### output_resource_per_plant
+
+```python
+output_resource_per_plant() -> None
+```
+
+Writes plant-level wind-speed table to CSV.
+
+##### output_resource_streams
+
+```python
+output_resource_streams() -> None
+```
+
+Writes generated stream table to parquet and optionally NPY.
+
+##### output_estimated_load_factors_tabular
+
+```python
+output_estimated_load_factors_tabular() -> None
+```
+
+Writes calibration summary table to CSV.
+
+##### output_estimated_load_factors_visual
+
+```python
+output_estimated_load_factors_visual(
+    logistic_params: np.ndarray,
+    load_factors: pd.DataFrame,
+) -> None
+```
+
+Writes fitted-curve diagnostic plot for plant sample.
+
+**Parameters**
+- `logistic_params (np.ndarray)`: Fitted logistic parameters.
+- `load_factors (pd.DataFrame)`: Plant load-factor observations.
+
+**Returns**
+- `None`
+
+</Segment>
+
+</div>

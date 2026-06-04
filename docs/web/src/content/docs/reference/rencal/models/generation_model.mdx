@@ -1,0 +1,140 @@
+---
+title: rencal.models.generation_model
+description: Reference documentation for rencal.models.generation_model.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+Reference for `GenerationDatasetModel`, the validated container for generation/settlement time series.
+</Section>
+
+## Class
+
+### GenerationDatasetModel
+
+<Segment>
+
+```python
+class GenerationDatasetModel(PandasDatasetModel)
+```
+
+Dataset for hourly generation observations keyed by plant and time.
+
+#### Class Attributes
+
+- `required_columns = ["plant_id", "time", "quantity"]`
+- `required_datatypes = {"plant_id": "object", "quantity": "float64"}`
+- `date_column = "time"`
+
+#### Fields
+
+- `data: pd.DataFrame`
+
+#### Methods
+
+##### validate_data
+
+```python
+validate_data(data: pd.DataFrame) -> pd.DataFrame
+```
+
+Runs required-column, datatype, and time-column validation.
+
+**Parameters**
+- `data (pd.DataFrame)`: Input generation DataFrame.
+
+**Returns**
+- `pd.DataFrame`: Validated DataFrame.
+
+##### get_plant_ids
+
+```python
+get_plant_ids() -> list[str]
+```
+
+Returns unique plant IDs present in the dataset.
+
+**Returns**
+- `list[str]`
+
+##### get_time_range
+
+```python
+get_time_range() -> dict[str, Any] | None
+```
+
+Returns summary with earliest timestamp, latest timestamp, and count of unique time points.
+
+**Returns**
+- `dict[str, Any] | None`: `{"start", "end", "periods"}` summary.
+
+##### filter_by_plant_id
+
+```python
+filter_by_plant_id(plant_id: str) -> GenerationDatasetModel
+```
+
+Returns a new model containing rows for a single plant ID.
+
+**Parameters**
+- `plant_id (str)`: Plant ID to filter by.
+
+**Returns**
+- `GenerationDatasetModel`
+
+##### filter_by_date_range
+
+```python
+filter_by_date_range(
+    start_date: str,
+    end_date: str,
+    date_col: str | None = None,
+) -> GenerationDatasetModel
+```
+
+Returns a new model filtered to the inclusive date interval.
+
+**Parameters**
+- `start_date (str)`: Inclusive lower date bound.
+- `end_date (str)`: Inclusive upper date bound.
+- `date_col (str | None)`: Date column name (defaults to `"time"`).
+
+**Returns**
+- `GenerationDatasetModel`
+
+**Raises**
+- `ValueError`: If selected date column is not present.
+
+##### to_pandas
+
+```python
+to_pandas() -> pd.DataFrame
+```
+
+Returns a copy of the underlying DataFrame.
+
+**Returns**
+- `pd.DataFrame`
+
+##### to_xarray
+
+```python
+to_xarray() -> xr.Dataset
+```
+
+Converts the dataset to xarray using `xr.Dataset.from_dataframe`.
+
+**Returns**
+- `xr.Dataset`
+
+#### Notes
+
+- `__repr__` includes plant count, record count, and detected time range.
+
+</Segment>
+
+</div>

@@ -196,4 +196,114 @@ Loads ERA5 NetCDF files from the configured local ERA5 directory, combines them 
 </InlineSection>
 </Segment>
 
+### LocalDataLoader.path_resolver_weather_data
+
+<Segment>
+<Section type="signature">
+```python
+path_resolver_weather_data(basename: str) -> str | Path
+```
+</Section>
+
+Resolves a calibrated weather artifact basename to a file path under the configured local calibrated directory.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">basename</code> <code class="primitive">str</code></p>
+  Name of the calibrated weather artifact (for example, a `.npy` filename).
+</Section>
+
+<InlineSection>
+**Returns** <code class="primitive">str</code> | <code class="primitive">Path</code>
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.check_historical_weather
+
+<Segment>
+<Section type="signature">
+```python
+check_historical_weather() -> dict[str, Any]
+```
+</Section>
+
+Validates the calibrated historical wind `.npy` artifact against its manifest and returns manifest metadata enriched with the artifact basename.
+
+<InlineSection>
+**Returns** <code class="primitive">dict[str, Any]</code>
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">FileNotFoundError</code>: If the calibrated wind NPY file does not exist.
+- <code class="type">ValueError</code>: If checksum, shape, or file size validation fails.
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.get_prefix_histograms
+
+<Segment>
+<Section type="signature">
+```python
+get_prefix_histograms() -> NDArray | None
+```
+</Section>
+
+Loads calibrated prefix histograms for fast distribution lookups (memory-mapped read-only). Returns `None` when histogram artifacts are not available.
+
+<InlineSection>
+**Returns** <code class="primitive">NDArray</code> | <code class="primitive">None</code>
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.get_historical_weather
+
+<Segment>
+<Section type="signature">
+```python
+get_historical_weather() -> NDArray | None
+```
+</Section>
+
+Loads calibrated historical wind load-factor data (memory-mapped read-only). Returns `None` when the artifact does not exist or cannot be loaded.
+
+<InlineSection>
+**Returns** <code class="primitive">NDArray</code> | <code class="primitive">None</code>
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.verify_npy_against_manifest
+
+<Segment>
+<Section type="signature">
+```python
+verify_npy_against_manifest(
+    npy_path: str | Path,
+    manifest_path: str | Path,
+) -> dict[str, Any]
+```
+</Section>
+
+Static validator for calibrated `.npy` artifacts. Verifies SHA-256 checksum, expected column count, and file size against manifest metadata.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">npy_path</code> <code class="primitive">str</code> | <code class="primitive">Path</code></p>
+  Filesystem path to the NPY artifact.
+
+- <p><code class="key">manifest_path</code> <code class="primitive">str</code> | <code class="primitive">Path</code></p>
+  Filesystem path to the associated JSON manifest.
+</Section>
+
+<InlineSection>
+**Returns** <code class="primitive">dict[str, Any]</code>
+</InlineSection>
+
+<InlineSection>
+**Raises** <code class="type">ValueError</code> when checksum or manifest consistency checks fail.
+</InlineSection>
+</Segment>
+
 </div>

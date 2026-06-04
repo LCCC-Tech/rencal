@@ -1,0 +1,293 @@
+---
+title: rencal.core.data_downloader
+description: Reference documentation for rencal.core.data_downloader.
+---
+
+import Section from '@/components/pydoc/Section.astro';
+import Segment from '@/components/pydoc/Segment.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+Reference for data downloaders used to fetch CfD, generation, and ERA5 calibration inputs.
+</Section>
+
+## Classes
+
+### DataDownloader
+
+<Segment>
+
+```python
+class DataDownloader(ABC)
+```
+
+Abstract base class with shared output directory setup and logger initialization.
+
+#### Attributes
+- `output_dir (Path)`: Base output directory.
+
+#### Methods
+
+##### _update_output_directory
+
+```python
+_update_output_directory(stem: str | None = None) -> None
+```
+
+Appends optional subdirectory stem, creates directory if missing.
+
+**Parameters**
+- `stem (str | None)`: Optional child folder name.
+
+##### download (abstract)
+
+```python
+download(*args: Any, **kwargs: Any) -> None
+```
+
+Abstract contract implemented by concrete downloaders.
+
+</Segment>
+
+### ERA5DataDownloader
+
+<Segment>
+
+```python
+class ERA5DataDownloader(api_key: str | None = None, api_url: str | None = None)
+```
+
+Downloader for ERA5 weather reanalysis data from the Copernicus CDS API.
+
+#### Constructor Parameters
+- `api_key (str | None)`: CDS API key (fallback: `CDS_API_KEY` env var).
+- `api_url (str | None)`: CDS API URL override (fallback: env/config default).
+
+#### Properties
+
+##### client
+
+```python
+client -> cdsapi.Client
+```
+
+Lazily initializes authenticated CDS client with SSL verification.
+
+**Raises**
+- `ValueError`: If API key is missing.
+
+#### Methods
+
+##### download
+
+```python
+download() -> None
+```
+
+Downloads or verifies yearly ERA5 files over calibration period, then verifies metadata.
+
+##### _extract_calibration_years
+
+```python
+_extract_calibration_years() -> list[int]
+```
+
+Parses calibration date range and returns inclusive list of years.
+
+**Returns**
+- `list[int]`
+
+##### _download_year
+
+```python
+_download_year(year: int, file_path: str) -> None
+```
+
+Downloads wind and solar requests for a single year, merges outputs, removes temporary files.
+
+**Parameters**
+- `year (int)`
+- `file_path (str)`
+
+##### _verify_and_update_metadata
+
+```python
+_verify_and_update_metadata(year: int, file_path: str) -> None
+```
+
+Verifies datetime coordinate presence and rewrites file metadata annotations.
+
+##### _find_datetime_coordinate
+
+```python
+_find_datetime_coordinate(ds: xr.Dataset) -> str | None
+```
+
+Finds likely datetime coordinate by coordinate name patterns.
+
+</Segment>
+
+### CfDDataDownloader
+
+<Segment>
+
+```python
+class CfDDataDownloader()
+```
+
+Downloader for CfD register and CfD-to-BMU mapping data from LCCC sources.
+
+#### Methods
+
+##### download
+
+```python
+download() -> None
+```
+
+Downloads mapping + register data, merges by `cfd_id`, and writes output CSV.
+
+##### _download_cfd_bmu_csv
+
+```python
+_download_cfd_bmu_csv() -> pd.DataFrame
+```
+
+Downloads CfD-BMU mapping CSV and normalizes key columns.
+
+##### _download_cfd_register
+
+```python
+_download_cfd_register() -> pd.DataFrame
+```
+
+Downloads register JSON and selects/renames contract fields used in calibration.
+
+</Segment>
+
+### GenerationDataDownloader
+
+<Segment>
+
+```python
+class GenerationDataDownloader()
+```
+
+Downloader for settled generation data from Elexon BMRS and hourly UTC aggregation logic.
+
+#### Methods
+
+##### download
+
+```python
+download() -> None
+```
+
+Loads CfD/BMU mapping, downloads generation, aggregates by CfD and hour, writes parquet.
+
+##### _get_cfd_plants
+
+```python
+_get_cfd_plants() -> pd.DataFrame
+```
+
+Loads local CfD/BMU mapping and records unique BMU IDs for request construction.
+
+##### _download_generation_data
+
+```python
+_download_generation_data() -> pd.DataFrame
+```
+
+Requests settled generation data from Elexon API over calibration period.
+
+##### _get_day_type_from_period_counts
+
+```python
+_get_day_type_from_period_counts(generation_df: pd.DataFrame) -> pd.Series
+```
+
+Classifies dates as normal/short/long settlement days using period counts.
+
+##### _create_hourly_utc_datetime
+
+```python
+_create_hourly_utc_datetime(generation_df: pd.DataFrame) -> pd.Series
+```
+
+Converts settlement-date/period rows to hourly UTC timestamps accounting for DST patterns.
+
+##### _divide_shared_bmu_generation (static)
+
+```python
+_divide_shared_bmu_generation(generation_df: pd.DataFrame) -> pd.DataFrame
+```
+
+Splits shared-BMU generation proportionally by plant capacity.
+
+##### _aggregate_bmu_generation_to_cfd
+
+```python
+_aggregate_bmu_generation_to_cfd(
+    cfd_df: pd.DataFrame,
+    generation_df: pd.DataFrame,
+) -> pd.DataFrame
+```
+
+Merges BMU generation with CfD mapping and performs final hourly aggregation.
+
+</Segment>
+
+### DownloadManager
+
+<Segment>
+
+```python
+class DownloadManager(cds_api_key: str | None = None, cds_api_url: str | None = None)
+```
+
+Facade coordinating all downloader types.
+
+#### Attributes
+- `cfd: CfDDataDownloader`
+- `generation: GenerationDataDownloader`
+- `era5: ERA5DataDownloader`
+
+#### Methods
+
+##### download_cfd
+
+```python
+download_cfd() -> None
+```
+
+Runs CfD register + BMU mapping flow.
+
+##### download_generation_data
+
+```python
+download_generation_data() -> None
+```
+
+Runs generation data download/aggregation flow.
+
+##### download_era5
+
+```python
+download_era5() -> None
+```
+
+Runs ERA5 download flow.
+
+##### download_all
+
+```python
+download_all() -> None
+```
+
+Runs all download flows in dependency order.
+
+</Segment>
+
+</div>

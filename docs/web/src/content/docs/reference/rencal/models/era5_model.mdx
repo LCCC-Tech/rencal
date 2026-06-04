@@ -1,0 +1,165 @@
+---
+title: rencal.models.era5_model
+description: Reference documentation for rencal.models.era5_model.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+Reference for `ERA5DatasetModel`, the validated xarray container for ERA5 weather data.
+</Section>
+
+## Class
+
+### ERA5DatasetModel
+
+<Segment>
+
+```python
+class ERA5DatasetModel(XArrayDatasetModel)
+```
+
+Dataset model for ERA5 weather variables and time-indexed coordinates.
+
+#### Class Attributes
+
+- `required_columns = ["u100", "v100"]`
+- `required_datatypes = {"u100": "float32", "v100": "float32"}`
+- `date_column = "time"`
+
+#### Fields
+
+- `data: xr.Dataset`
+
+#### Methods
+
+##### validate_data
+
+```python
+validate_data(data: xr.Dataset) -> xr.Dataset
+```
+
+Runs required-variable, dtype, and time-axis validation.
+
+**Parameters**
+- `data (xr.Dataset)`: Input ERA5 dataset.
+
+**Returns**
+- `xr.Dataset`: Validated dataset.
+
+##### get_wind_components
+
+```python
+get_wind_components() -> xr.Dataset
+```
+
+Returns the `u100` and `v100` wind component variables.
+
+**Returns**
+- `xr.Dataset`
+
+##### get_solar_variables
+
+```python
+get_solar_variables() -> xr.Dataset
+```
+
+Returns `ssrd` and `t2m` variables.
+
+**Returns**
+- `xr.Dataset`
+
+##### get_spatial_bounds
+
+```python
+get_spatial_bounds() -> dict[str, float] | None
+```
+
+Returns latitude/longitude min/max bounds when those coordinates are present.
+
+**Returns**
+- `dict[str, float] | None`
+
+##### get_time_range
+
+```python
+get_time_range() -> dict[str, Any] | None
+```
+
+Returns earliest timestamp, latest timestamp, and total time periods.
+
+**Returns**
+- `dict[str, Any] | None`
+
+##### select_variables
+
+```python
+select_variables(variables: list[str]) -> ERA5DatasetModel
+```
+
+Returns a new model containing only requested variables.
+
+**Parameters**
+- `variables (list[str])`: Variable names to retain.
+
+**Returns**
+- `ERA5DatasetModel`
+
+**Raises**
+- `ValueError`: If any requested variable is not present.
+
+##### filter_by_date_range
+
+```python
+filter_by_date_range(
+    start_date: str,
+    end_date: str,
+    date_col: str | None = None,
+) -> ERA5DatasetModel
+```
+
+Returns a new model with data sliced to the requested date range.
+
+**Parameters**
+- `start_date (str)`: Inclusive lower date bound.
+- `end_date (str)`: Inclusive upper date bound.
+- `date_col (str | None)`: Time coordinate to slice (defaults to detected `"time"`).
+
+**Returns**
+- `ERA5DatasetModel`
+
+**Raises**
+- `ValueError`: If no suitable time dimension exists.
+
+##### to_pandas
+
+```python
+to_pandas() -> pd.DataFrame
+```
+
+Converts the xarray dataset to a pandas DataFrame.
+
+**Returns**
+- `pd.DataFrame`
+
+##### to_xarray
+
+```python
+to_xarray() -> xr.Dataset
+```
+
+Returns a copy of the underlying xarray dataset.
+
+**Returns**
+- `xr.Dataset`
+
+#### Notes
+
+- `__repr__` includes variable list, dimensions, time range, and spatial bounds when available.
+
+</Segment>
+
+</div>

@@ -1,0 +1,235 @@
+---
+title: ShortDate
+description: Reference documentation for rencal.core.short_date.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.core.short_date` defines a year-agnostic calendar date object used to partition the year into simulation buckets.
+
+`ShortDate` stores month/day pairs, validates them against non-leap-year semantics for deterministic partitioning, and implements rich comparison operators so it can be ordered and searched efficiently inside bucket definitions.
+
+#### Example
+
+```python
+import datetime as dt
+
+from rencal.core.short_date import ShortDate
+
+start = ShortDate.from_list([1, 1])
+end = ShortDate(dt.datetime(2024, 3, 1))
+
+assert start < end
+```
+</Section>
+
+---
+
+## Constructor
+
+### ShortDate
+
+<Segment>
+<Section type="signature">
+```python
+class ShortDate(date: datetime.datetime | Any): ShortDate
+```
+</Section>
+
+Creates a `ShortDate` by extracting `.month` and `.day` from the provided object.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">date</code> <code class="primitive">datetime.datetime</code> | <code class="primitive">Any</code></p>
+  Any object exposing `month` and `day` integer attributes.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">ShortDate</code>](#ShortDate)
+</InlineSection>
+</Segment>
+
+## Class Methods
+
+### ShortDate.from_dict
+
+<Segment>
+<Section type="signature">
+```python
+from_dict(date_dictionary: dict[str, int]) -> ShortDate
+```
+</Section>
+
+Constructs a `ShortDate` from a dictionary containing `month` and `day` keys.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">date_dictionary</code> <code class="primitive">dict[str, int]</code></p>
+  Dictionary with `month` and `day` integer values.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">ShortDate</code>](#ShortDate)
+</InlineSection>
+</Segment>
+
+### ShortDate.from_list
+
+<Segment>
+<Section type="signature">
+```python
+from_list(date_list: list[int]) -> ShortDate
+```
+</Section>
+
+Constructs a `ShortDate` from a two-element list in `[month, day]` order.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">date_list</code> <code class="primitive">list[int]</code></p>
+  Two-item list where index 0 is month and index 1 is day.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">ShortDate</code>](#ShortDate)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### ShortDate.to_datetime
+
+<Segment>
+<Section type="signature">
+```python
+to_datetime(context_year: int) -> datetime.datetime
+```
+</Section>
+
+Converts the short date to a full datetime in the supplied context year.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">context_year</code> <code class="primitive">int</code></p>
+  Year used to create the returned datetime.
+</Section>
+
+<InlineSection>
+**Returns** <code class="primitive">datetime.datetime</code>
+</InlineSection>
+</Segment>
+
+### ShortDate.add_with_context
+
+<Segment>
+<Section type="signature">
+```python
+add_with_context(timedelta: datetime.timedelta, context_year: int) -> datetime.datetime
+```
+</Section>
+
+Adds a timedelta to this short date interpreted in the provided context year.
+
+<InlineSection>
+**Returns** <code class="primitive">datetime.datetime</code>
+</InlineSection>
+</Segment>
+
+### ShortDate.subtract_with_context
+
+<Segment>
+<Section type="signature">
+```python
+subtract_with_context(timedelta: datetime.timedelta, context_year: int) -> datetime.datetime
+```
+</Section>
+
+Subtracts a timedelta from this short date interpreted in the provided context year.
+
+<InlineSection>
+**Returns** <code class="primitive">datetime.datetime</code>
+</InlineSection>
+</Segment>
+
+### ShortDate.__sub__
+
+<Segment>
+<Section type="signature">
+```python
+__sub__(timedelta: datetime.timedelta | ShortDate) -> ShortDate | int
+```
+</Section>
+
+Supports subtraction with either a `datetime.timedelta` (returns shifted `ShortDate`) or another `ShortDate` (returns day difference as `int`).
+
+<InlineSection>
+**Returns** <code class="primitive">ShortDate</code> | <code class="primitive">int</code>
+</InlineSection>
+</Segment>
+
+## Properties
+
+### month
+
+<Segment>
+Month value (1-12) with validation.
+
+<InlineSection>
+**Type** <code class="primitive">int</code>
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">TypeError</code>: If month is not an integer.
+- <code class="type">ValueError</code>: If month is outside [1, 12].
+</InlineSection>
+</Segment>
+
+### day
+
+<Segment>
+Day value validated against a non-leap-year calendar for deterministic partition rules.
+
+<InlineSection>
+**Type** <code class="primitive">int</code>
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">TypeError</code>: If day is not an integer.
+- <code class="type">ValueError</code>: If day is not valid for the configured month.
+</InlineSection>
+</Segment>
+
+## Constants
+
+### MONTHLY_BUCKET_DEFINITION
+
+<Segment>
+Default monthly bucket boundaries represented as ordered `ShortDate` values.
+
+<InlineSection>
+**Type** <code class="primitive">list[ShortDate]</code>
+</InlineSection>
+</Segment>
+
+### WEEKLY_BUCKET_DEFINITION
+
+<Segment>
+Default weekly-ish bucket boundaries represented as ordered `ShortDate` values.
+
+<InlineSection>
+**Type** <code class="primitive">list[ShortDate]</code>
+</InlineSection>
+</Segment>
+
+</div>

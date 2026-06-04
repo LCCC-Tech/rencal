@@ -1,0 +1,120 @@
+---
+title: rencal.models.plant_model
+description: Reference documentation for rencal.models.plant_model.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+Reference for `PlantDatasetModel`, the validated container for CfD plant metadata.
+</Section>
+
+## Class
+
+### PlantDatasetModel
+
+<Segment>
+
+```python
+class PlantDatasetModel(PandasDatasetModel)
+```
+
+Dataset for plant/facility records with geography, technology, and capacity.
+
+#### Class Attributes
+
+- `required_columns = ["plant_id", "latitude", "longitude", "technology", "capacity"]`
+- `required_datatypes = {"plant_id": "object", "latitude": "float64", "longitude": "float64", "technology": "object", "capacity": "float64"}`
+- `date_column = None`
+
+#### Fields
+
+- `data: pd.DataFrame`
+
+#### Methods
+
+##### validate_data
+
+```python
+validate_data(data: pd.DataFrame) -> pd.DataFrame
+```
+
+Runs schema validation for required columns and configured datatypes.
+
+**Parameters**
+- `data (pd.DataFrame)`: Input DataFrame containing plant data.
+
+**Returns**
+- `pd.DataFrame`: Validated DataFrame.
+
+##### get_geographic_bounds
+
+```python
+get_geographic_bounds() -> dict[str, float]
+```
+
+Returns min/max latitude and longitude across all rows.
+
+**Returns**
+- `dict[str, float]`: Dictionary with `lat_min`, `lat_max`, `lon_min`, and `lon_max`.
+
+##### filter_by_technology
+
+```python
+filter_by_technology(technologies: list[str]) -> PlantDatasetModel
+```
+
+Returns a new model filtered to rows whose `technology` value is in the provided list.
+
+**Parameters**
+- `technologies (list[str])`: List of technology labels to include.
+
+**Returns**
+- `PlantDatasetModel`: Filtered dataset instance.
+
+**Raises**
+- `ValueError`: If no plants match the requested technology list.
+
+##### get_wind_plants
+
+```python
+get_wind_plants() -> PlantDatasetModel
+```
+
+Convenience wrapper around `filter_by_technology` using configured wind technology labels.
+
+**Returns**
+- `PlantDatasetModel`: Dataset containing wind plants only.
+
+##### to_pandas
+
+```python
+to_pandas() -> pd.DataFrame
+```
+
+Returns a copy of the underlying DataFrame.
+
+**Returns**
+- `pd.DataFrame`
+
+##### to_xarray
+
+```python
+to_xarray() -> xr.Dataset
+```
+
+Converts the dataset to xarray using `xr.Dataset.from_dataframe`.
+
+**Returns**
+- `xr.Dataset`
+
+#### Notes
+
+- String representation includes number of plants, total capacity, technology sample, and geographic bounds.
+
+</Segment>
+
+</div>

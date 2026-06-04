@@ -1,0 +1,143 @@
+---
+title: Wind Calibration Components
+description: A focused concepts guide to the two model components used by the wind calibrator.
+draft: true
+---
+
+# Wind Calibration Components
+
+| Concept | Description |
+| :------ | :---------- |
+| Objective | Explain the two model components used to estimate wind load factors: the logistic power curve and the Weibull wind speed distribution |
+| Scope | Conceptual model used in `weather.calibration.wind.wind_calibrator.WindCalibrator` |
+| Why two components | One component maps wind speed to output, the other describes how often each wind speed occurs |
+| Output impact | Drives `Calibration Summary.csv` (parameters and estimated load factor) and `Wind Streams.parquet` |
+
+## Context
+
+The wind calibration model combines two ideas:
+
+1. **Power conversion behaviour**: how turbine output (load factor) changes as wind speed increases.
+2. **Local wind climate**: how frequently different wind speeds are observed at a plant location.
+
+In this project, these are represented by:
+
+- a **generalised logistic curve** for output response, and
+- a **Weibull distribution** for wind-speed likelihood.
+
+Together, they provide both:
+
+- hourly load-factor estimates from wind speeds, and
+- a long-term expected load factor per plant.
+
+## Component 1: Logistic Power Curve
+
+The logistic curve models expected load factor as a function of wind speed.
+
+The general form is:
+
+$$
+f(x,a,b,c,d,g) = d + \frac{a - d}{(1 + (x/c)^b)^g}
+$$
+
+For wind load factors, the implementation fixes bounds to:
+
+- `a = 0` (minimum output),
+- `d = 1` (maximum output),
+
+so only the shape parameters are fitted:
+
+- `b`: steepness (how quickly output ramps),
+- `c`: inflection location (where ramping happens),
+- `g`: asymmetry.
+
+In code this is fitted with least-squares (`scipy.optimize.curve_fit`) in:
+
+- `WindCalibrator.estimate_load_factors_for_resource()`
+
+and evaluated by:
+
+- `WindCalibrator.logistic_function()`.
+
+## Component 2: Weibull Wind-Speed Distribution
+
+The Weibull distribution models the likelihood of observing each wind speed at a location.
+
+Its density is:
+
+$$
+f(x) = \frac{k}{\lambda} \left(\frac{x}{\lambda}\right)^{k - 1} e^{-\left(\frac{x}{\lambda}\right)^k}
+$$
+
+with:
+
+- `k`: shape parameter,
+- `\lambda`: scale parameter.
+
+In code, parameters are fitted from historical wind speeds per plant using `scipy.stats.weibull_min.fit` in:
+
+- `WindCalibrator.fit_historical_load_factor_distribution()`
+
+and evaluated by:
+
+- `WindCalibrator.weibull_function()`.
+
+## How They Combine
+
+The two model components are multiplied and integrated over wind speed to estimate long-term expected load factor:
+
+$$
+\mathbb{E}[\text{load factor}] = \int_0^{\infty} \text{logistic}(x) \cdot \text{weibull}(x)\,dx
+$$
+
+Interpretation:
+
+- the logistic term says **what output is expected at speed x**,
+- the Weibull term says **how often speed x happens**,
+- integration gives a probability-weighted average output.
+
+In code this is computed with `scipy.integrate.quad` in:
+
+- `WindCalibrator.estimate_load_factors_for_resource()`.
+
+## How Each Component Is Used in Practice
+
+The two components have different jobs in the workflow:
+
+- **Weibull distribution (`k`, `\lambda`)** is used for a **long-term expected-value estimate**.
+  - It probability-weights wind speeds when computing the scalar `Estimated Load Factor` for each plant.
+  - This is effectively a long-term point estimate (expected average load factor / expected long-run generation level), not an hourly time-series model.
+
+- **Logistic power curve (`b`, `c`, `g`)** is used for **time-series conversion**.
+  - It maps wind speed to load factor hour-by-hour to produce `Wind Streams.parquet`.
+  - Those stream artifacts are then used by downstream simulation components (for example Monte Carlo weather sampling in `weather.simulation.weather_data.WeatherData`).
+
+## Where This Appears in Outputs
+
+### Calibration Summary
+
+`Calibration Summary.csv` includes:
+
+- fitted logistic parameters (`a`, `b`, `c`, `d`, `g`),
+- an `Estimated Load Factor` from the integral above (the long-term expected load factor estimate).
+
+### Wind Streams
+
+`Wind Streams.parquet` is produced by applying fitted (or fallback generic) logistic parameters to the full plant wind-speed time series.
+
+This stream output is what downstream stochastic simulation workflows consume; Weibull parameters are not used directly in hourly stream generation.
+
+## Calibrated vs Generic Curves
+
+If plant-specific fitting is unavailable or unsuitable, the workflow falls back to generic curve parameters.
+
+- If both onshore and offshore calibrated sets are available, technology-specific generic rows are created.
+- Otherwise, a single generic row is used.
+
+This allows stream generation for plants without robust individual calibration.
+
+## Related Pages
+
+- [Calibration of Renewables Power Curves](/concepts/renewablescalibration/)
+- [WindCalibrator Reference](/reference/calibration/windcalibrator/)
+- [Calibrator Reference](/reference/calibration/calibrator/)
