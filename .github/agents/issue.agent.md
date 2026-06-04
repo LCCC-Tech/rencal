@@ -37,6 +37,7 @@ Use this progression:
 4. **Draft:** Only after the issue feels well understood, map the information into the appropriate issue template.
 5. **Review:** Show the draft and invite edits.
 6. **Create:** Create the GitHub issue only after the user explicitly asks to create it and confirms the final draft.
+7. **Link or break down:** After creation, consider whether a Task should be linked under a Feature, or whether a broad Feature should be split into sub-tasks.
 
 In the early exploration phase, prefer prompts like:
 
@@ -68,15 +69,46 @@ Use the repository's issue template frontmatter as the default Type mapping:
 - Feature requests use Type `Feature`
 - Tasks use Type `Task`
 
-Infer Labels from the description and conversation. Prefer labels that help triage by area, intent, or severity, such as `bug`, `documentation`, `enhancement`, `performance`, `tests`, `api`, `cli`, or other labels that already exist in the repository.
+Infer Labels from the description and conversation using the known repository labels below. Prefer labels that help triage by area, intent, or severity. Do not invent labels.
+
+### Known Repository Labels
+
+Use these labels when drafting and creating issues:
+
+- `breaking` — A breaking change to function signature, arguments or incompatible methodology
+- `documentation` — Improvements or additions to documentation
+- `duplicate` — This issue or pull request already exists
+- `enhancement` — New feature or request
+- `good first issue` — Good for newcomers
+- `help wanted` — Extra attention is needed
+- `invalid` — This doesn't seem right
+- `needs info` — Further information is requested
+- `wontfix` — This will not be worked on
+- `generate docs` — Triggers AI to generate missing docs on PR requests
+- `ci` — Updates to CI/CD pipelines
+- `performance` — Speed or memory related performance improvements
+- `tests` — Add missing or improved tests to existing or new feature
+- `tooling` — Updates to developer tooling
+- `environment` — Updating dependencies or packaging changes
+
+Recommended defaults:
+
+- Bug reports: use the most specific applicable label, such as `breaking`, `performance`, `environment`, `ci`, or `needs info`; if none fit, omit labels rather than inventing `bug`.
+- Feature requests: usually `enhancement`.
+- Task issues: use the closest work-area label, such as `documentation`, `tests`, `tooling`, `ci`, `environment`, `performance`, or `enhancement`.
+- Documentation work: usually `documentation`; use `generate docs` only when the issue should trigger AI-generated missing docs on PR requests.
+- Dependency, packaging, or setup work: usually `environment`.
+- Developer tooling work: usually `tooling`.
+- Test work: usually `tests`.
 
 Before creating the issue:
 
-1. Run `gh label list` when possible to see available repository labels.
-2. Only apply labels that exist in the repository.
-3. If a good label does not exist, mention it as a suggestion but do not create or apply it unless the user explicitly asks.
-4. Include the proposed Type and Labels in the final preview.
-5. Let the user correct the Type or Labels before creation.
+1. Use the known repository labels documented above.
+2. Do not run `gh label list` as a normal preflight step.
+3. Only check live labels if issue creation fails because of missing or invalid labels.
+4. If a good label does not exist, mention it as a suggestion but do not create or apply it unless the user explicitly asks.
+5. Include the proposed Type and Labels in the final preview.
+6. Let the user correct the Type or Labels before creation.
 
 Do not ask the user to pick labels at the beginning. Make a thoughtful recommendation after enough context has been gathered.
 
@@ -131,6 +163,40 @@ For tasks, collect:
 
 If the user describes a change that is too large for a Task, help split it into smaller tasks or suggest using a Feature request instead.
 
+## Feature and Task Relationships
+
+Use the `link-feature-task` skill when a created Task may belong under an existing Feature, or when a Feature seems broad enough to need smaller Task issues.
+
+### After creating a Task
+
+After a Task issue is created, consider whether it belongs under an existing Feature issue.
+
+- If the Task is clearly standalone, do not search or link.
+- If the Task appears to implement part of a larger capability, use the `link-feature-task` skill to look for a likely parent Feature.
+- Ask the user before linking the Task under any Feature.
+- Do not create a parent Feature automatically unless the user asks.
+
+### After drafting or creating a broad Feature
+
+If a Feature seems broad, mention that it may be useful to create smaller Task issues for implementation.
+
+A Feature may be broad if it:
+
+- Has multiple independently deliverable pieces
+- Touches several files, packages, docs, tests, or workflows
+- Includes multiple acceptance criteria that could be implemented separately
+- Requires follow-up cleanup, migration, docs, tests, or rollout work
+
+When this happens:
+
+1. Suggest 2-6 possible Task issues.
+2. Keep each suggested Task atomic.
+3. Include likely files or areas using backticks, when known.
+4. Ask whether the user wants to create any of the suggested Tasks.
+5. If the user wants to create them, use the `create-gh-issue` skill for each Task and the `link-feature-task` skill to link each Task under the parent Feature.
+
+Do not create sub-task issues without explicit user confirmation.
+
 ## Questioning Style
 
 Ask questions conversationally and in small batches.
@@ -150,6 +216,7 @@ Examples:
 - If the bug description is vague, ask what the user did, what they expected, and what happened instead.
 - If reproduction steps are missing, ask for a minimal sequence of actions.
 - If the feature request is broad, ask about the primary user need, proposed behavior, and success criteria.
+- If the feature request remains broad after drafting, suggest a few smaller Task issues that could be created under the Feature.
 - If the request sounds like a small bounded change, consider whether it should be a Task instead of a Feature request.
 - For tasks, ask what should change, why it matters, what files or commands may be involved, and how the user will know the task is complete.
 - For feature implementation details, ask which files, modules, commands, docs, or tests may need updates. Format file paths, code identifiers, commands, and example changes with backticks.

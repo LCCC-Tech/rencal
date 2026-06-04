@@ -20,8 +20,8 @@ Before running `gh issue create`, ensure:
    - `.github/ISSUE_TEMPLATE/bug_report.md`
    - `.github/ISSUE_TEMPLATE/feature_request.md`
    - `.github/ISSUE_TEMPLATE/task.md`
-4. Labels have been inferred from the description and conversation.
-5. Any labels to apply have been checked against existing repository labels.
+4. Labels have been inferred from the description and conversation using the known repository labels below.
+5. Labels have not been pre-checked with GitHub unless a previous creation attempt failed because of labels.
 6. The user has reviewed and confirmed the final issue draft, Type, and Labels.
 7. The issue body does not include secrets, credentials, private keys, tokens, private URLs, or sensitive personal information.
 
@@ -33,8 +33,8 @@ Before running `gh issue create`, ensure:
    - Bug reports use Type `Bug`
    - Feature requests use Type `Feature`
    - Tasks use Type `Task`
-4. Infer useful Labels from the description and conversation.
-5. Run `gh label list` when possible and only apply labels that exist in the repository.
+4. Infer useful Labels from the description and conversation using the known repository labels below.
+5. Do not run `gh label list` as a normal preflight step. The known labels in this skill are the default source of truth.
 6. Preview the issue for the user:
    - Issue type
    - Title
@@ -80,7 +80,43 @@ Before running `gh issue create`, ensure:
 
    If neither path can set the Type for this repository, create the issue without Type only after telling the user and getting confirmation.
 
-10. Return the created issue URL to the user.
+   If issue creation fails because one or more labels are missing or invalid, then run `gh label list`, compare the requested labels against the currently available labels, remove or replace invalid labels, preview the corrected labels, and retry after user confirmation.
+
+10. If the created issue Type is `Task`, use the `link-feature-task` skill to consider whether the new Task belongs under an existing Feature issue.
+    - Do not search for a parent Feature if the Task is clearly standalone.
+    - If a likely parent Feature is found, ask the user before linking.
+    - Do not link automatically.
+11. Return the created issue URL to the user.
+
+## Known Repository Labels
+
+Use these known repository labels when inferring labels. Do not call `gh label list` unless creating the issue fails because of labels.
+
+- `breaking` — A breaking change to function signature, arguments or incompatible methodology
+- `documentation` — Improvements or additions to documentation
+- `duplicate` — This issue or pull request already exists
+- `enhancement` — New feature or request
+- `good first issue` — Good for newcomers
+- `help wanted` — Extra attention is needed
+- `invalid` — This doesn't seem right
+- `needs info` — Further information is requested
+- `wontfix` — This will not be worked on
+- `generate docs` — Triggers AI to generate missing docs on PR requests
+- `ci` — Updates to CI/CD pipelines
+- `performance` — Speed or memory related performance improvements
+- `tests` — Add missing or improved tests to existing or new feature
+- `tooling` — Updates to developer tooling
+- `environment` — Updating dependencies or packaging changes
+
+Recommended defaults:
+
+- Bug reports: use the most specific applicable label, such as `breaking`, `performance`, `environment`, `ci`, or `needs info`; if none fit, omit labels rather than inventing `bug`.
+- Feature requests: usually `enhancement`.
+- Documentation changes: usually `documentation`; use `generate docs` only when the issue should trigger AI-generated missing docs on PR requests.
+- Tasks: usually choose the closest work-area label, such as `documentation`, `tests`, `tooling`, `ci`, `environment`, `performance`, or `enhancement`; omit labels if none clearly fit.
+- Dependency, packaging, or setup work: usually `environment`.
+- Developer tooling work: usually `tooling`.
+- Test work: usually `tests`.
 
 ## Bug Report Body Format
 
@@ -151,7 +187,7 @@ Steps to reproduce the behavior:
 - Do not create an issue without explicit user confirmation.
 - Do not invent labels, assignees, milestones, or projects.
 - Do not create new labels unless the user explicitly asks.
-- Do not apply labels that do not already exist in the repository.
+- Do not apply labels outside the known repository labels unless the user explicitly asks or `gh label list` confirms they exist after a label-related failure.
 - Do not include secrets, credentials, private keys, tokens, private URLs, or sensitive personal information.
 - If the user includes sensitive content, warn them and redact it before creating the issue.
 - If `gh` is not authenticated, tell the user to run `gh auth login`.
