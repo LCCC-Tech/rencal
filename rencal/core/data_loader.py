@@ -305,7 +305,8 @@ class LocalDataLoader(DataLoader):
             try:
                 with xr.open_dataset(file_path) as ds:
                     time_dim = self._get_time_dimension(ds)
-                    ds = ds.rename({time_dim: "time"})
+                    if time_dim != "time":
+                        ds = ds.rename({time_dim: "time"})
                     ds = self._cast_data_variables_to_float32(ds)
                     datasets.append(ds)
                 logger.debug("Successfully loaded %s", file_path)
