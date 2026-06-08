@@ -1,17 +1,16 @@
 ---
-title: DataLoader
+title: rencal.core.data_loader
 description: Reference documentation for rencal.core.data_loader.
 ---
 
 import Segment from '@/components/pydoc/Segment.astro';
 import Section from '@/components/pydoc/Section.astro';
-import NestedTitle from '@/components/pydoc/NestedTitle.astro';
 import InlineSection from '@/components/pydoc/InlineSection.astro';
 
 <div class="pydoc">
 
 <Section type="about">
-`rencal.core.data_loader` defines the loader interface and local filesystem implementation used to read plant, generation, and ERA5 weather datasets into typed dataset models.
+`rencal.core.data_loader` defines dataset loading interfaces and local implementations for plant, generation, ERA5, and calibrated weather artifacts.
 
 #### Example
 
@@ -25,8 +24,6 @@ era5 = loader.load_era5_data()
 ```
 </Section>
 
----
-
 ## Constructor
 
 ### DataLoader
@@ -38,7 +35,7 @@ class DataLoader(ABC): DataLoader
 ```
 </Section>
 
-Abstract base class defining the data loading interface.
+Abstract loading contract for plant, generation, and ERA5 datasets.
 
 <InlineSection>
 **Returns** [<code class="type">DataLoader</code>](#DataLoader)
@@ -54,13 +51,13 @@ class LocalDataLoader(data_path: str = DOWNLOAD_DATA_DIR): LocalDataLoader
 ```
 </Section>
 
-Loads datasets from local files under a base data directory.
+Local filesystem-backed implementation.
 
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">data_path</code> <code class="primitive">str</code></p>
-  Base directory containing `plant/`, `generation/`, and `era5/` subdirectories.
+  Base path containing `plant/`, `generation/`, `era5/`, and `calibrated/` artifacts.
 </Section>
 
 <InlineSection>
@@ -79,10 +76,10 @@ load_plant_data() -> PlantDatasetModel
 ```
 </Section>
 
-Abstract method for loading CfD register plant/location/capacity data.
+Load CfD plant/location/capacity data.
 
 <InlineSection>
-**Returns** [<code class="type">PlantDatasetModel</code>](#PlantDatasetModel)
+**Returns** [<code class="type">PlantDatasetModel</code>](/reference/rencal/models/rencalmodelsplant_model/#plantdatasetmodel)
 </InlineSection>
 </Segment>
 
@@ -95,10 +92,10 @@ load_generation_data() -> GenerationDatasetModel
 ```
 </Section>
 
-Abstract method for loading settlement/generation time series data.
+Load generation/settlement time series.
 
 <InlineSection>
-**Returns** [<code class="type">GenerationDatasetModel</code>](#GenerationDatasetModel)
+**Returns** [<code class="type">GenerationDatasetModel</code>](/reference/rencal/models/rencalmodelsgeneration_model/#generationdatasetmodel)
 </InlineSection>
 </Segment>
 
@@ -111,10 +108,10 @@ load_era5_data() -> ERA5DatasetModel
 ```
 </Section>
 
-Abstract method for loading ERA5 weather data.
+Load ERA5 weather data using standard variables.
 
 <InlineSection>
-**Returns** [<code class="type">ERA5DatasetModel</code>](#ERA5DatasetModel)
+**Returns** [<code class="type">ERA5DatasetModel</code>](/reference/rencal/models/rencalmodelsera5_model/#era5datasetmodel)
 </InlineSection>
 </Segment>
 
@@ -127,22 +124,22 @@ load_plant_data(id_column: str = PLANT_ID_COLUMN) -> PlantDatasetModel
 ```
 </Section>
 
-Loads plant data from the configured local plant file and normalizes the plant ID column.
+Loads local plant data and normalizes plant ID column.
 
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">id_column</code> <code class="primitive">str</code></p>
-  Source column name containing plant identifiers.
+  Source column containing plant IDs.
 </Section>
 
 <InlineSection>
-**Returns** [<code class="type">PlantDatasetModel</code>](#PlantDatasetModel)
+**Returns** [<code class="type">PlantDatasetModel</code>](/reference/rencal/models/rencalmodelsplant_model/#plantdatasetmodel)
 </InlineSection>
 
 <InlineSection>
 **Raises**
-- <code class="type">FileNotFoundError</code>: If the plant data file does not exist.
+- <code class="type">FileNotFoundError</code>: If plant data file is missing.
 </InlineSection>
 </Segment>
 
@@ -155,22 +152,22 @@ load_generation_data(id_column: str = PLANT_ID_COLUMN) -> GenerationDatasetModel
 ```
 </Section>
 
-Loads generation data from the configured local generation file and normalizes the plant ID column.
+Loads local generation data and normalizes plant ID column.
 
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">id_column</code> <code class="primitive">str</code></p>
-  Source column name containing plant identifiers in the generation dataset.
+  Source column containing plant IDs.
 </Section>
 
 <InlineSection>
-**Returns** [<code class="type">GenerationDatasetModel</code>](#GenerationDatasetModel)
+**Returns** [<code class="type">GenerationDatasetModel</code>](/reference/rencal/models/rencalmodelsgeneration_model/#generationdatasetmodel)
 </InlineSection>
 
 <InlineSection>
 **Raises**
-- <code class="type">FileNotFoundError</code>: If the generation data file does not exist.
+- <code class="type">FileNotFoundError</code>: If generation data file is missing.
 </InlineSection>
 </Segment>
 
@@ -183,16 +180,16 @@ load_era5_data() -> ERA5DatasetModel
 ```
 </Section>
 
-Loads ERA5 NetCDF files from the configured local ERA5 directory, combines them on the time dimension, and filters to standard wind/solar variables.
+Loads ERA5 NetCDF files, normalizes time dimension, concatenates and filters to standard variables.
 
 <InlineSection>
-**Returns** [<code class="type">ERA5DatasetModel</code>](#ERA5DatasetModel)
+**Returns** [<code class="type">ERA5DatasetModel</code>](/reference/rencal/models/rencalmodelsera5_model/#era5datasetmodel)
 </InlineSection>
 
 <InlineSection>
 **Raises**
-- <code class="type">FileNotFoundError</code>: If no ERA5 NetCDF files are found.
-- <code class="type">ValueError</code>: If no files can be loaded successfully, no valid time dimension is present, concatenation fails, or no standard ERA5 variables are available.
+- <code class="type">FileNotFoundError</code>: If no ERA5 files are found.
+- <code class="type">ValueError</code>: If loading/concat/variable checks fail.
 </InlineSection>
 </Segment>
 
@@ -205,7 +202,7 @@ path_resolver_weather_data(basename: str) -> str | Path
 ```
 </Section>
 
-Resolves a calibrated weather artifact basename to a file path under the configured local calibrated directory.
+Resolves calibrated weather artifact basename to local path.
 
 <Section type="parameters">
 #### Parameters
@@ -228,7 +225,7 @@ check_historical_weather() -> dict[str, Any]
 ```
 </Section>
 
-Validates the calibrated historical wind `.npy` artifact against its manifest and returns manifest metadata enriched with the artifact basename.
+Validates historical weather NPY against manifest and returns manifest metadata.
 
 <InlineSection>
 **Returns** <code class="primitive">dict[str, Any]</code>
@@ -236,7 +233,7 @@ Validates the calibrated historical wind `.npy` artifact against its manifest an
 
 <InlineSection>
 **Raises**
-- <code class="type">FileNotFoundError</code>: If the calibrated wind NPY file does not exist.
+- <code class="type">FileNotFoundError</code>: If the calibrated wind NPY artifact does not exist.
 - <code class="type">ValueError</code>: If checksum, shape, or file size validation fails.
 </InlineSection>
 </Segment>
@@ -249,6 +246,8 @@ Validates the calibrated historical wind `.npy` artifact against its manifest an
 get_prefix_histograms() -> NDArray | None
 ```
 </Section>
+
+Loads prefix histogram artifact when available.
 
 Loads calibrated prefix histograms for fast distribution lookups (memory-mapped read-only). Returns `None` when histogram artifacts are not available.
 
@@ -265,6 +264,8 @@ Loads calibrated prefix histograms for fast distribution lookups (memory-mapped 
 get_historical_weather() -> NDArray | None
 ```
 </Section>
+
+Loads historical weather NPY artifact when available.
 
 Loads calibrated historical wind load-factor data (memory-mapped read-only). Returns `None` when the artifact does not exist or cannot be loaded.
 
@@ -285,7 +286,7 @@ verify_npy_against_manifest(
 ```
 </Section>
 
-Static validator for calibrated `.npy` artifacts. Verifies SHA-256 checksum, expected column count, and file size against manifest metadata.
+Verifies checksum and artifact metadata consistency against manifest.
 
 <Section type="parameters">
 #### Parameters
@@ -302,7 +303,7 @@ Static validator for calibrated `.npy` artifacts. Verifies SHA-256 checksum, exp
 </InlineSection>
 
 <InlineSection>
-**Raises** <code class="type">ValueError</code> when checksum or manifest consistency checks fail.
+**Raises** <code class="type">ValueError</code> on checksum or metadata mismatch.
 </InlineSection>
 </Segment>
 

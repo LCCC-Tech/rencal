@@ -1,5 +1,5 @@
 ---
-title: IntermittentBucketer
+title: rencal.simulation.intermittent_bucketer
 description: Reference documentation for rencal.simulation.intermittent_bucketer.
 ---
 
@@ -10,9 +10,9 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <div class="pydoc">
 
 <Section type="about">
-`rencal.simulation.intermittent_bucketer` provides the default bucketer used by intermittent weather simulations.
+`rencal.simulation.intermittent_bucketer` provides the default single-category bucketer for intermittency sampling.
 
-`IntermittentBucketer` extends `Bucketer` with a single category (no extra categorical filtering), while preserving month-based bucket seasonality for random historical draw selection.
+[`IntermittentBucketer`](/reference/rencal/simulation/rencalsimulationintermittent_bucketer/#intermittentbucketer) extends [`Bucketer`](/reference/rencal/core/rencalcorebucketer/#bucketer) with a single category (no extra categorical filtering), while preserving month-based bucket seasonality for random historical draw selection.
 
 #### Example
 
@@ -28,8 +28,6 @@ bucketer = IntermittentBucketer(
 ```
 </Section>
 
----
-
 ## Constructor
 
 ### IntermittentBucketer
@@ -40,13 +38,13 @@ bucketer = IntermittentBucketer(
 class IntermittentBucketer(
     historical_start_date,
     historical_end_date,
-    draw_period: int = 7,
-    bucket_definition = MONTHLY_BUCKET_DEFINITION,
+    draw_period=7,
+    bucket_definition=MONTHLY_BUCKET_DEFINITION,
 ): IntermittentBucketer
 ```
 </Section>
 
-Creates an intermittent bucketer with one category and monthly buckets by default.
+Constructs a one-category bucketer with monthly bucket partition defaults.
 
 <Section type="parameters">
 #### Parameters
@@ -80,7 +78,11 @@ assign_category(date) -> int
 ```
 </Section>
 
-Returns `0` for all dates (single-category behavior).
+Returns category `0` for every date.
+
+<InlineSection>
+**Returns** <code class="primitive">int</code>
+</InlineSection>
 </Segment>
 
 ### IntermittentBucketer.tabulate_date_info
@@ -92,7 +94,11 @@ tabulate_date_info(date) -> list[int]
 ```
 </Section>
 
-Stores per-date lookup metadata as a single-element list containing the bucket index.
+Returns lookup payload with the computed bucket index.
+
+<InlineSection>
+**Returns** <code class="primitive">list[int]</code>
+</InlineSection>
 </Segment>
 
 </div>

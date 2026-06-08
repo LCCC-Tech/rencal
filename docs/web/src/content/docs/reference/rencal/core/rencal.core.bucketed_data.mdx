@@ -1,5 +1,5 @@
 ---
-title: BucketedData
+title: rencal.core.bucketed_data
 description: Reference documentation for rencal.core.bucketed_data.
 ---
 
@@ -10,12 +10,12 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <div class="pydoc">
 
 <Section type="about">
-`rencal.core.bucketed_data` contains shared histogram, resampling, and horizon-alignment utilities used by bucket-based simulators such as `WeatherData`.
+`rencal.core.bucketed_data` contains shared histogram and distribution utilities used by bucketer-driven simulators.
 
 The module exposes:
 
-- `BucketedData`: utility base class with histogram and distribution optimization helpers.
-- `VersionedColumnsNDArray`: array wrapper that tracks canonical columns and transformed versions produced during resampling.
+- [`BucketedData`](/reference/rencal/core/rencalcorebucketed_data/#bucketeddata): utility base class with histogram and distribution optimization helpers.
+- [`VersionedColumnsNDArray`](/reference/rencal/core/rencalcorebucketed_data/#versionedcolumnsndarray): array wrapper that tracks canonical columns and transformed variants produced during resampling.
 
 #### Example
 
@@ -31,8 +31,6 @@ variant_stream = sample.access_col(1, 1)
 ```
 </Section>
 
----
-
 ## Constructor
 
 ### VersionedColumnsNDArray
@@ -44,13 +42,13 @@ class VersionedColumnsNDArray(n_raw_features: int): VersionedColumnsNDArray
 ```
 </Section>
 
-Initializes the versioned output wrapper for a sample matrix.
+Tracks canonical and transformed column mappings for sampled output arrays.
 
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">n_raw_features</code> <code class="primitive">int</code></p>
-  Number of canonical (original) columns in the sample matrix.
+  Number of canonical (original) columns in the sampled matrix.
 </Section>
 
 <InlineSection>
@@ -67,7 +65,7 @@ class BucketedData(): BucketedData
 ```
 </Section>
 
-Base utility class for bucket-driven simulators.
+Base utility class for shared bucketer/sampling operations.
 
 <InlineSection>
 **Returns** [<code class="type">BucketedData</code>](#BucketedData)
@@ -85,7 +83,11 @@ update_mapping(canonical_col: int, j: int) -> int
 ```
 </Section>
 
-Records where a transformed version of a canonical column is stored in the output matrix.
+Registers a transformed column index for a canonical column.
+
+<InlineSection>
+**Returns** <code class="primitive">int</code>
+</InlineSection>
 </Segment>
 
 ### VersionedColumnsNDArray.attach_data
@@ -97,7 +99,11 @@ attach_data(data: NDArray[np.floating]) -> VersionedColumnsNDArray
 ```
 </Section>
 
-Attaches the final output matrix to the wrapper (exactly once).
+Attaches final output matrix to wrapper.
+
+<InlineSection>
+**Returns** [<code class="type">VersionedColumnsNDArray</code>](#VersionedColumnsNDArray)
+</InlineSection>
 
 <InlineSection>
 **Raises**
@@ -115,12 +121,16 @@ access_col(canonical_col: int, version: int = 0) -> NDArray[np.floating]
 ```
 </Section>
 
-Returns a view of a canonical column (`version=0`) or a transformed version (`version>=1`).
+Returns canonical or transformed column view.
+
+<InlineSection>
+**Returns** <code class="primitive">NDArray[np.floating]</code>
+</InlineSection>
 
 <InlineSection>
 **Raises**
-- <code class="type">RuntimeError</code>: If data is not attached.
-- <code class="type">IndexError</code>: If requested version does not exist.
+- <code class="type">RuntimeError</code>: If matrix data is not attached.
+- <code class="type">IndexError</code>: If requested transformed version is unavailable.
 </InlineSection>
 </Segment>
 
@@ -133,7 +143,11 @@ crop_time_margins_to_full_years() -> datetime.datetime
 ```
 </Section>
 
-Computes the earliest unbiased start date ensuring at least one full year of historical seasonality coverage.
+Computes unbiased historical start date with full seasonal coverage.
+
+<InlineSection>
+**Returns** <code class="primitive">datetime.datetime</code>
+</InlineSection>
 </Segment>
 
 ### BucketedData.get_histogram
@@ -151,7 +165,11 @@ get_histogram(
 ```
 </Section>
 
-Builds per-stream histograms over a selected historical index range.
+Computes histogram matrix for selected rows and mask columns.
+
+<InlineSection>
+**Returns** <code class="primitive">NDArray[np.uint32]</code>
+</InlineSection>
 </Segment>
 
 ### BucketedData.get_fast_histogram
@@ -170,7 +188,11 @@ get_fast_histogram(
 ```
 </Section>
 
-Computes histograms using prefix histograms plus partial-edge corrections.
+Computes histogram matrix using prefix histograms and partial-edge corrections.
+
+<InlineSection>
+**Returns** <code class="primitive">NDArray[np.uint32]</code>
+</InlineSection>
 </Segment>
 
 ### BucketedData.get_absolute_index_of_date
@@ -182,7 +204,11 @@ get_absolute_index_of_date(date: datetime.datetime) -> tuple[int, int]
 ```
 </Section>
 
-Maps a day to `[first_hour_index, last_hour_index)` in the historical array.
+Maps date to absolute hourly index range.
+
+<InlineSection>
+**Returns** <code class="primitive">tuple[int, int]</code>
+</InlineSection>
 </Segment>
 
 ### BucketedData.adjust_forecasted_horizon
@@ -197,7 +223,11 @@ adjust_forecasted_horizon(
 ```
 </Section>
 
-Extends forecast horizon so stitched draw-period chunks fully cover the user request, and returns the exact output-hour count to trim to.
+Expands horizon boundary for draw-period chunking and returns hour count to trim output.
+
+<InlineSection>
+**Returns** <code class="primitive">tuple[datetime.datetime, int]</code>
+</InlineSection>
 </Segment>
 
 ### BucketedData.append_resampled_columns
@@ -212,7 +242,11 @@ append_resampled_columns(
 ```
 </Section>
 
-Appends transformed stream variants to a sampled matrix by inverse-CDF resampling under optimized target distributions.
+Appends transformed streams and returns version-aware output wrapper.
+
+<InlineSection>
+**Returns** [<code class="type">VersionedColumnsNDArray</code>](#VersionedColumnsNDArray)
+</InlineSection>
 </Segment>
 
 ### BucketedData.compute_time_margins
@@ -229,7 +263,46 @@ compute_time_margins(
 ```
 </Section>
 
-Normalizes requested historical bounds to valid hourly and full-day-aligned ranges.
+Normalizes historical margins to strict hourly/day boundaries.
+
+<InlineSection>
+**Returns** <code class="primitive">tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp, pd.Timestamp]</code>
+</InlineSection>
+</Segment>
+
+### BucketedData.rowwise_logsumexp
+
+<Segment>
+<Section type="signature">
+```python
+rowwise_logsumexp(a: NDArray[np.float64]) -> NDArray[np.float64]
+```
+</Section>
+
+Computes numerically stable row-wise `log(sum(exp(a)))`.
+
+<InlineSection>
+**Returns** <code class="primitive">NDArray[np.float64]</code>
+</InlineSection>
+</Segment>
+
+### BucketedData.data_mean_and_var_under_logweights_probability
+
+<Segment>
+<Section type="signature">
+```python
+data_mean_and_var_under_logweights_probability(
+    data: NDArray[np.float64],
+    logweights: NDArray[np.float64],
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]
+```
+</Section>
+
+Computes mean and variance under normalized row-wise log-weights.
+
+<InlineSection>
+**Returns** <code class="primitive">tuple[NDArray[np.float64], NDArray[np.float64]]</code>
+</InlineSection>
 </Segment>
 
 ### BucketedData.compute_optimized_distributions
@@ -247,7 +320,11 @@ compute_optimized_distributions(
 ```
 </Section>
 
-Computes KL-minimizing exponential tilts that match target means for each stream histogram.
+Optimizes tilted distributions matching desired averages.
+
+<InlineSection>
+**Returns** <code class="primitive">tuple[NDArray[np.float64], NDArray[np.float64]]</code>
+</InlineSection>
 </Segment>
 
 </div>

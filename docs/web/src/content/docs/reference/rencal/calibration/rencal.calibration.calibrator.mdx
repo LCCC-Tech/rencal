@@ -1,5 +1,5 @@
 ---
-title: Calibrator
+title: rencal.calibration.calibrator
 description: Reference documentation for rencal.calibration.calibrator.
 ---
 
@@ -10,11 +10,11 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <div class="pydoc">
 
 <Section type="about">
-`rencal.calibration.calibrator` defines the abstract base class for intermittent generator calibration workflows.
+`rencal.calibration.calibrator` defines the abstract calibration interface used by intermittent technology-specific calibrators.
 
-`Calibrator` is responsible for loading the plant, generation, and ERA5 resource datasets needed by a concrete calibrator implementation, then exposing the required workflow steps as abstract methods.
+[`Calibrator`](/reference/rencal/calibration/rencalcalibrationcalibrator/#calibrator) is responsible for loading plant, generation, and ERA5 resource datasets required by a concrete calibrator implementation, then exposing the required workflow steps as abstract methods.
 
-Because this class inherits from `ABC`, instantiate a concrete subclass such as `WindCalibrator` rather than `Calibrator` directly.
+Because this class inherits from `ABC`, instantiate a concrete subclass such as [`WindCalibrator`](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/#windcalibrator) rather than [`Calibrator`](/reference/rencal/calibration/rencalcalibrationcalibrator/#calibrator) directly.
 
 #### Example
 
@@ -30,8 +30,6 @@ calibrator.calibrate()
 ```
 </Section>
 
----
-
 ## Constructor
 
 ### Calibrator
@@ -43,18 +41,16 @@ class Calibrator(data_path: str = None, plant_id_col: str = None): Calibrator
 ```
 </Section>
 
-Initialise a calibrator instance.
-
-The `Calibrator` is an abstract class that specifies the methods any intermittent generator's calibration should include, as well as setting up and loading input datasets from the configuration file or user-specified paths.
+Initializes a local loader ([`LocalDataLoader`](/reference/rencal/core/rencalcoredata_loader/#localdataloader)) and materializes plant, generation, and resource datasets.
 
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">data_path</code> <code class="primitive">str</code></p>
-  Path to the directory containing the input data files.
+  Path to input data directory.
 
 - <p><code class="key">plant_id_col</code> <code class="primitive">str</code></p>
-  Name of the ID column designating a power plant in the input.
+  Source plant identifier column name.
 </Section>
 
 <InlineSection>
@@ -137,7 +133,7 @@ estimate_load_factors_for_resource() -> None
 ```
 </Section>
 
-Estimates load factors based on historical distribution and full resource availability.
+Estimates load factors from historical distribution and full resource history.
 
 <InlineSection>
 **Returns** None
@@ -153,7 +149,7 @@ generate_resource_streams() -> None
 ```
 </Section>
 
-Generates load factor streams for available resource time series for each generator.
+Generates resource/load-factor streams for downstream simulation.
 
 <InlineSection>
 **Returns** None
@@ -169,7 +165,7 @@ output_historical_load_factor_distribution_parameters() -> None
 ```
 </Section>
 
-Writes historical load factor parameters to a CSV file.
+Writes historical distribution parameters.
 
 <InlineSection>
 **Returns** None
@@ -185,7 +181,7 @@ output_resource_per_plant() -> None
 ```
 </Section>
 
-Writes resource time series for each plant to a CSV file.
+Writes plant-wise resource time series output.
 
 <InlineSection>
 **Returns** None
@@ -201,7 +197,7 @@ output_resource_streams() -> None
 ```
 </Section>
 
-Writes resource streams to a parquet file.
+Writes resource streams output.
 
 <InlineSection>
 **Returns** None
@@ -217,7 +213,7 @@ output_estimated_load_factors_tabular() -> None
 ```
 </Section>
 
-Outputs table of estimated load factors.
+Writes tabular estimated load-factor output.
 
 <InlineSection>
 **Returns** None
@@ -233,7 +229,7 @@ output_estimated_load_factors_visual() -> None
 ```
 </Section>
 
-Outputs a series of plots of estimated load factors and calibrated curves.
+Writes visual estimated load-factor and fitted-curve outputs.
 
 <InlineSection>
 **Returns** None

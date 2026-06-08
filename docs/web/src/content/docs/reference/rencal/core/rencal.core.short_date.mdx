@@ -1,5 +1,5 @@
 ---
-title: ShortDate
+title: rencal.core.short_date
 description: Reference documentation for rencal.core.short_date.
 ---
 
@@ -10,9 +10,9 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <div class="pydoc">
 
 <Section type="about">
-`rencal.core.short_date` defines a year-agnostic calendar date object used to partition the year into simulation buckets.
+`rencal.core.short_date` defines year-agnostic month/day values used by bucket definitions.
 
-`ShortDate` stores month/day pairs, validates them against non-leap-year semantics for deterministic partitioning, and implements rich comparison operators so it can be ordered and searched efficiently inside bucket definitions.
+[`ShortDate`](/reference/rencal/core/rencalcoreshort_date/#shortdate) stores month/day pairs, validates them against non-leap-year semantics for deterministic partitioning, and implements rich comparison operators so it can be ordered and searched efficiently inside bucket definitions.
 
 #### Example
 
@@ -28,8 +28,6 @@ assert start < end
 ```
 </Section>
 
----
-
 ## Constructor
 
 ### ShortDate
@@ -37,11 +35,11 @@ assert start < end
 <Segment>
 <Section type="signature">
 ```python
-class ShortDate(date: datetime.datetime | Any): ShortDate
+class ShortDate: ShortDate
 ```
 </Section>
 
-Creates a `ShortDate` by extracting `.month` and `.day` from the provided object.
+Stores month/day and provides context-aware conversion/comparison utilities.
 
 <Section type="parameters">
 #### Parameters
@@ -55,24 +53,24 @@ Creates a `ShortDate` by extracting `.month` and `.day` from the provided object
 </InlineSection>
 </Segment>
 
-## Class Methods
+## Methods
 
 ### ShortDate.from_dict
 
 <Segment>
 <Section type="signature">
 ```python
-from_dict(date_dictionary: dict[str, int]) -> ShortDate
+from_dict(date_dictionary: dict) -> ShortDate
 ```
 </Section>
 
-Constructs a `ShortDate` from a dictionary containing `month` and `day` keys.
+Builds short date from dictionary containing `month` and `day`.
 
 <Section type="parameters">
 #### Parameters
 
-- <p><code class="key">date_dictionary</code> <code class="primitive">dict[str, int]</code></p>
-  Dictionary with `month` and `day` integer values.
+- <p><code class="key">date_dictionary</code> <code class="primitive">dict</code></p>
+  Dictionary with `month` and `day` keys.
 </Section>
 
 <InlineSection>
@@ -85,25 +83,23 @@ Constructs a `ShortDate` from a dictionary containing `month` and `day` keys.
 <Segment>
 <Section type="signature">
 ```python
-from_list(date_list: list[int]) -> ShortDate
+from_list(date_list: list) -> ShortDate
 ```
 </Section>
 
-Constructs a `ShortDate` from a two-element list in `[month, day]` order.
+Builds short date from two-item `[month, day]` list.
 
 <Section type="parameters">
 #### Parameters
 
-- <p><code class="key">date_list</code> <code class="primitive">list[int]</code></p>
-  Two-item list where index 0 is month and index 1 is day.
+- <p><code class="key">date_list</code> <code class="primitive">list</code></p>
+  Two-item list of `[month, day]`.
 </Section>
 
 <InlineSection>
 **Returns** [<code class="type">ShortDate</code>](#ShortDate)
 </InlineSection>
 </Segment>
-
-## Methods
 
 ### ShortDate.to_datetime
 
@@ -114,13 +110,13 @@ to_datetime(context_year: int) -> datetime.datetime
 ```
 </Section>
 
-Converts the short date to a full datetime in the supplied context year.
+Converts short date to datetime with provided context year.
 
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">context_year</code> <code class="primitive">int</code></p>
-  Year used to create the returned datetime.
+  Year used as the context for conversion.
 </Section>
 
 <InlineSection>
@@ -137,7 +133,17 @@ add_with_context(timedelta: datetime.timedelta, context_year: int) -> datetime.d
 ```
 </Section>
 
-Adds a timedelta to this short date interpreted in the provided context year.
+Adds timedelta to short date in supplied context year.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">timedelta</code> <code class="primitive">datetime.timedelta</code></p>
+  Time delta to add.
+
+- <p><code class="key">context_year</code> <code class="primitive">int</code></p>
+  Year used as the context for conversion.
+</Section>
 
 <InlineSection>
 **Returns** <code class="primitive">datetime.datetime</code>
@@ -153,7 +159,17 @@ subtract_with_context(timedelta: datetime.timedelta, context_year: int) -> datet
 ```
 </Section>
 
-Subtracts a timedelta from this short date interpreted in the provided context year.
+Subtracts timedelta from short date in supplied context year.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">timedelta</code> <code class="primitive">datetime.timedelta</code></p>
+  Time delta to subtract.
+
+- <p><code class="key">context_year</code> <code class="primitive">int</code></p>
+  Year used as the context for conversion.
+</Section>
 
 <InlineSection>
 **Returns** <code class="primitive">datetime.datetime</code>
@@ -169,19 +185,99 @@ __sub__(timedelta: datetime.timedelta | ShortDate) -> ShortDate | int
 ```
 </Section>
 
-Supports subtraction with either a `datetime.timedelta` (returns shifted `ShortDate`) or another `ShortDate` (returns day difference as `int`).
+Subtracts timedelta to shift short date or computes day distance to another short date.
 
 <InlineSection>
 **Returns** <code class="primitive">ShortDate</code> | <code class="primitive">int</code>
 </InlineSection>
 </Segment>
 
-## Properties
-
-### month
+### ShortDate.__gt__
 
 <Segment>
-Month value (1-12) with validation.
+<Section type="signature">
+```python
+__gt__(date: ShortDate) -> bool
+```
+</Section>
+
+Compares two short dates using leap-year context for full date ordering.
+
+<InlineSection>
+**Returns** <code class="primitive">bool</code>
+</InlineSection>
+</Segment>
+
+### ShortDate.__lt__
+
+<Segment>
+<Section type="signature">
+```python
+__lt__(date: ShortDate) -> bool
+```
+</Section>
+
+Compares two short dates using leap-year context for full date ordering.
+
+<InlineSection>
+**Returns** <code class="primitive">bool</code>
+</InlineSection>
+</Segment>
+
+### ShortDate.__ge__
+
+<Segment>
+<Section type="signature">
+```python
+__ge__(date: ShortDate) -> bool
+```
+</Section>
+
+Compares two short dates using leap-year context for full date ordering.
+
+<InlineSection>
+**Returns** <code class="primitive">bool</code>
+</InlineSection>
+</Segment>
+
+### ShortDate.__le__
+
+<Segment>
+<Section type="signature">
+```python
+__le__(date: ShortDate) -> bool
+```
+</Section>
+
+Compares two short dates using leap-year context for full date ordering.
+
+<InlineSection>
+**Returns** <code class="primitive">bool</code>
+</InlineSection>
+</Segment>
+
+### ShortDate.__eq__
+
+<Segment>
+<Section type="signature">
+```python
+__eq__(date: ShortDate) -> bool
+```
+</Section>
+
+Compares two short dates using leap-year context for equality checks.
+
+<InlineSection>
+**Returns** <code class="primitive">bool</code>
+</InlineSection>
+</Segment>
+
+## Properties
+
+### ShortDate.month
+
+<Segment>
+Month value of the short date.
 
 <InlineSection>
 **Type** <code class="primitive">int</code>
@@ -194,10 +290,10 @@ Month value (1-12) with validation.
 </InlineSection>
 </Segment>
 
-### day
+### ShortDate.day
 
 <Segment>
-Day value validated against a non-leap-year calendar for deterministic partition rules.
+Day value of the short date.
 
 <InlineSection>
 **Type** <code class="primitive">int</code>
@@ -215,7 +311,7 @@ Day value validated against a non-leap-year calendar for deterministic partition
 ### MONTHLY_BUCKET_DEFINITION
 
 <Segment>
-Default monthly bucket boundaries represented as ordered `ShortDate` values.
+Default monthly short-date bucket boundaries.
 
 <InlineSection>
 **Type** <code class="primitive">list[ShortDate]</code>
@@ -225,7 +321,7 @@ Default monthly bucket boundaries represented as ordered `ShortDate` values.
 ### WEEKLY_BUCKET_DEFINITION
 
 <Segment>
-Default weekly-ish bucket boundaries represented as ordered `ShortDate` values.
+Default weekly short-date bucket boundaries.
 
 <InlineSection>
 **Type** <code class="primitive">list[ShortDate]</code>

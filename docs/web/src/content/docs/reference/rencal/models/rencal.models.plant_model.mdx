@@ -1,0 +1,141 @@
+---
+title: rencal.models.plant_model
+description: Reference documentation for rencal.models.plant_model.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.models.plant_model` defines the validated plant dataset model for location, technology, and capacity metadata.
+</Section>
+
+## Constructor
+
+### PlantDatasetModel
+
+<Segment>
+<Section type="signature">
+```python
+class PlantDatasetModel(PandasDatasetModel): PlantDatasetModel
+```
+</Section>
+
+Dataset model for CfD plant/facility metadata.
+
+<InlineSection>
+**Required Columns** <code class="primitive">plant_id</code>, <code class="primitive">latitude</code>, <code class="primitive">longitude</code>, <code class="primitive">technology</code>, <code class="primitive">capacity</code>
+</InlineSection>
+
+<InlineSection>
+**Returns** [<code class="type">PlantDatasetModel</code>](#PlantDatasetModel)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### PlantDatasetModel.validate_data
+
+<Segment>
+<Section type="signature">
+```python
+validate_data(data: pd.DataFrame) -> pd.DataFrame
+```
+</Section>
+
+Validates required schema columns and dtypes.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### PlantDatasetModel.get_geographic_bounds
+
+<Segment>
+<Section type="signature">
+```python
+get_geographic_bounds() -> dict[str, float]
+```
+</Section>
+
+Returns geographic min/max latitude and longitude.
+
+<InlineSection>
+**Returns** <code class="primitive">dict[str, float]</code>
+</InlineSection>
+</Segment>
+
+### PlantDatasetModel.filter_by_technology
+
+<Segment>
+<Section type="signature">
+```python
+filter_by_technology(technologies: list[str]) -> PlantDatasetModel
+```
+</Section>
+
+Filters plants by technology labels.
+
+<InlineSection>
+**Returns** [<code class="type">PlantDatasetModel</code>](#PlantDatasetModel)
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">ValueError</code>: If no plants match selected technologies.
+</InlineSection>
+</Segment>
+
+### PlantDatasetModel.get_wind_plants
+
+<Segment>
+<Section type="signature">
+```python
+get_wind_plants() -> PlantDatasetModel
+```
+</Section>
+
+Convenience filter returning wind plants only.
+
+<InlineSection>
+**Returns** [<code class="type">PlantDatasetModel</code>](#PlantDatasetModel)
+</InlineSection>
+</Segment>
+
+### PlantDatasetModel.to_pandas
+
+<Segment>
+<Section type="signature">
+```python
+to_pandas() -> pd.DataFrame
+```
+</Section>
+
+Returns DataFrame copy.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### PlantDatasetModel.to_xarray
+
+<Segment>
+<Section type="signature">
+```python
+to_xarray() -> xr.Dataset
+```
+</Section>
+
+Converts DataFrame to xarray dataset.
+
+<InlineSection>
+**Returns** <code class="primitive">xr.Dataset</code>
+</InlineSection>
+</Segment>
+
+</div>

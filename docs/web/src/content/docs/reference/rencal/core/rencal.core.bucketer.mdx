@@ -1,5 +1,5 @@
 ---
-title: Bucketer
+title: rencal.core.bucketer
 description: Reference documentation for rencal.core.bucketer.
 ---
 
@@ -10,9 +10,9 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <div class="pydoc">
 
 <Section type="about">
-`rencal.core.bucketer` provides the abstract `Bucketer` base class used to build calendar-aware historical sampling pools for simulation workflows.
+`rencal.core.bucketer` provides the base class for calendar-aware bucket sampling of historical draw periods.
 
-`Bucketer` partitions the year into custom date buckets (defined by ordered `ShortDate` boundaries), optionally separates dates into categories, and precomputes lookup tables used by `random_sample()` to draw consecutive historical periods.
+[`Bucketer`](/reference/rencal/core/rencalcorebucketer/#bucketer) partitions the year into custom date buckets (defined by ordered [`ShortDate`](/reference/rencal/core/rencalcoreshort_date/#shortdate) boundaries), optionally separates dates into categories, and precomputes lookup tables used by [`random_sample()`](/reference/rencal/core/rencalcorebucketer/#bucketerrandom_sample) to draw consecutive historical periods.
 
 #### Example
 
@@ -36,8 +36,6 @@ sample_starts = bucketer.random_sample(
 ```
 </Section>
 
----
-
 ## Constructor
 
 ### Bucketer
@@ -55,7 +53,7 @@ class Bucketer(
 ```
 </Section>
 
-Builds the bucket and lookup structures used for sampling. Construction eagerly calls `populate_buckets()`.
+Builds bucket/category lookup structures used by sampling operations.
 
 <Section type="parameters">
 #### Parameters
@@ -82,14 +80,14 @@ Builds the bucket and lookup structures used for sampling. Construction eagerly 
 
 <InlineSection>
 **Raises**
-- <code class="type">ValueError</code>: If historical dates are not ordered, the definition has fewer than 2 boundaries, boundaries are not strictly increasing, or any bucket interval is smaller than `draw_period`.
-- <code class="type">TypeError</code>: If `bucket_definition` is not a list.
+- <code class="type">TypeError</code>: If bucket definition is not a list.
+- <code class="type">ValueError</code>: If date ordering or bucket constraints are invalid.
 </InlineSection>
 </Segment>
 
 ## Methods
 
-### bucket_of
+### Bucketer.bucket_of
 
 <Segment>
 <Section type="signature">
@@ -98,7 +96,7 @@ bucket_of(start_of_draw_period: datetime.datetime) -> int
 ```
 </Section>
 
-Returns the bucket index for a draw period start date. The method first checks memoized date info in `lookup_structure`; on cache miss it performs a binary search over `bucket_definition`.
+Returns bucket index for a draw period start date.
 
 <Section type="parameters">
 #### Parameters
@@ -108,11 +106,11 @@ Returns the bucket index for a draw period start date. The method first checks m
 </Section>
 
 <InlineSection>
-**Returns** Bucket index used for lookups in `bucket_structure`.
+**Returns** <code class="primitive">int</code>
 </InlineSection>
 </Segment>
 
-### assign_category
+### Bucketer.assign_category
 
 <Segment>
 <Section type="signature">
@@ -121,7 +119,7 @@ assign_category(date: datetime.datetime) -> int
 ```
 </Section>
 
-Abstract hook implemented by subclasses. Maps a draw-period start date to a category index in the range `[0, categories - 1]`.
+Abstract hook for mapping dates to category indices.
 
 <Section type="parameters">
 #### Parameters
@@ -131,11 +129,11 @@ Abstract hook implemented by subclasses. Maps a draw-period start date to a cate
 </Section>
 
 <InlineSection>
-**Raises** <code class="type">NotImplementedError</code> in the base class.
+**Raises** <code class="type">NotImplementedError</code>
 </InlineSection>
 </Segment>
 
-### tabulate_date_info
+### Bucketer.tabulate_date_info
 
 <Segment>
 <Section type="signature">
@@ -144,7 +142,7 @@ tabulate_date_info(date: datetime.datetime) -> list
 ```
 </Section>
 
-Abstract hook implemented by subclasses to persist precomputed date metadata in `lookup_structure`. By contract, element `0` must be the bucket index for `date` (used by `bucket_of()` memoization).
+Abstract hook for storing per-date lookup metadata.
 
 <Section type="parameters">
 #### Parameters
@@ -154,11 +152,11 @@ Abstract hook implemented by subclasses to persist precomputed date metadata in 
 </Section>
 
 <InlineSection>
-**Raises** <code class="type">NotImplementedError</code> in the base class.
+**Raises** <code class="type">NotImplementedError</code>
 </InlineSection>
 </Segment>
 
-### populate_buckets
+### Bucketer.populate_buckets
 
 <Segment>
 <Section type="signature">
@@ -167,10 +165,14 @@ populate_buckets() -> None
 ```
 </Section>
 
-Fills `bucket_structure` with all valid historical draw-period start dates and populates `lookup_structure` for both historical and near-future dates.
+Populates historical and future lookup structures.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
 </Segment>
 
-### random_sample
+### Bucketer.random_sample
 
 <Segment>
 <Section type="signature">
@@ -178,12 +180,12 @@ Fills `bucket_structure` with all valid historical draw-period start dates and p
 random_sample(
     future_start_date: datetime.datetime,
     future_end_date: datetime.datetime,
-    rng_python: random.Random,
+    rng_python,
 ) -> list[datetime.datetime]
 ```
 </Section>
 
-Generates a sequence of sampled historical start dates that can be stitched in `draw_period`-day chunks to cover a future interval.
+Samples historical draw-period start dates to cover a future horizon.
 
 <Section type="parameters">
 #### Parameters
@@ -199,76 +201,76 @@ Generates a sequence of sampled historical start dates that can be stitched in `
 </Section>
 
 <InlineSection>
-**Returns** List of historical draw-period start dates.
+**Returns** <code class="primitive">list[datetime.datetime]</code>
 </InlineSection>
 </Segment>
 
 ## Properties
 
-### historical_start_date
+### Bucketer.historical_start_date
 
 <Segment>
-Configured lower bound of available historical sampling data.
+Start date (midnight) of historical data coverage.
 
 <InlineSection>
 **Type** <code class="primitive">datetime.datetime</code>
 </InlineSection>
 </Segment>
 
-### historical_end_date
+### Bucketer.historical_end_date
 
 <Segment>
-Configured upper bound of available historical sampling data.
+End date (midnight) of historical data coverage.
 
 <InlineSection>
 **Type** <code class="primitive">datetime.datetime</code>
 </InlineSection>
 </Segment>
 
-### categories
+### Bucketer.categories
 
 <Segment>
-Number of category partitions supported by this bucketer.
+Number of category partitions used in additional date filtering.
 
 <InlineSection>
 **Type** <code class="primitive">int</code>
 </InlineSection>
 </Segment>
 
-### draw_period
+### Bucketer.draw_period
 
 <Segment>
-Number of consecutive days represented by each sampled draw.
+Number of continuous days sampled per draw.
 
 <InlineSection>
 **Type** <code class="primitive">int</code>
 </InlineSection>
 </Segment>
 
-### bucket_definition
+### Bucketer.bucket_definition
 
 <Segment>
-Ordered list of bucket boundaries used to partition the year.
+Sorted short-date partition defining year buckets.
 
 <InlineSection>
 **Type** <code class="primitive">list[ShortDate]</code>
 </InlineSection>
 </Segment>
 
-### bucket_structure
+### Bucketer.bucket_structure
 
 <Segment>
-Nested mapping of category index to bucket index to list of eligible historical start dates.
+Nested category/bucket lookup populated with historical draw start dates.
 
 <InlineSection>
 **Type** <code class="primitive">dict[int, dict[int, list[datetime.datetime]]]</code>
 </InlineSection>
 </Segment>
 
-### lookup_structure
+### Bucketer.lookup_structure
 
 <Segment>
-Memoized per-date metadata populated by `tabulate_date_info()` and consulted by `bucket_of()`.
+Memoized lookup table for date metadata and bucket assignments.
 
 <InlineSection>
 **Type** <code class="primitive">dict[datetime.datetime, list]</code>

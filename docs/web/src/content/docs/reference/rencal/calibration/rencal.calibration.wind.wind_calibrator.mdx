@@ -1,5 +1,5 @@
 ---
-title: WindCalibrator
+title: rencal.calibration.wind.wind_calibrator
 description: Reference documentation for rencal.calibration.wind.wind_calibrator.
 ---
 
@@ -12,7 +12,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <Section type="about">
 `rencal.calibration.wind.wind_calibrator` defines the concrete wind calibration workflow for converting ERA5 wind resource data and historical generation into fitted wind power curves and long-term load-factor streams.
 
-`WindCalibrator` extends [`Calibrator`](/reference/calibration/calibrator/) for wind technologies, fits Weibull and logistic curve parameters per plant, and writes tabular calibration outputs plus stream artifacts for downstream simulation.
+[`WindCalibrator`](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/#windcalibrator) extends [`Calibrator`](/reference/rencal/calibration/rencalcalibrationcalibrator/) for wind technologies, fits Weibull and logistic curve parameters per plant, and writes tabular calibration outputs plus stream artifacts for downstream simulation.
 
 #### Example
 
@@ -90,7 +90,7 @@ calibrate() -> None
 
 Triggers the full wind calibration workflow.
 
-This workflow extracts plant-level wind speeds, computes historical load factors, fits Weibull and logistic parameters, writes calibration summary artifacts, generates wind streams, and writes the resulting output files.
+This workflow extracts plant-level wind speeds, computes historical load factors, fits Weibull and logistic parameters, writes calibration summary artifacts, generates wind streams, and writes resulting outputs.
 
 <InlineSection>
 **Returns** None
@@ -159,6 +159,11 @@ Estimates load factors based on the historical distribution and the whole resour
 <InlineSection>
 **Returns** <code class="primitive">pd.DataFrame</code>
 </InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">ValueError</code>: If no calibration summary rows were produced.
+</InlineSection>
 </Segment>
 
 ### WindCalibrator.logistic_function
@@ -177,15 +182,17 @@ logistic_function(
 
 Defines a generalised logistic function in the log domain for stability and calculates its value for any numeric input `x`.
 
-The generalised logistic function has 5 parameters defining its shape; however, this implementation forces the minimum and maximum values the function can take to 0 and 1, respectively, as load factors can vary between those two.
+For deeper conceptual context, see [Logistic Power Curve](/concepts/rencal/calibration/logistic_power_curve/).
 
-The non-log-domain logistic function looks like this:
+The generalized logistic function has five shape parameters; this implementation constrains minimum/maximum to 0 and 1 respectively because load factors are bounded to `[0, 1]`.
+
+The non-log-domain form is:
 
 $$
 f(x) = d + \frac{a - d}{\left(1 + \left(\frac{x}{c}\right)^b\right)^g}
 $$
 
-where `a` is the minimum bound, `b` is the steepness, `c` is the inflection point location, `d` is the maximum bound, and `g` is the asymmetry.
+where `b` is steepness, `c` is inflection location, and `g` is asymmetry.
 
 <Section type="parameters">
 #### Parameters
@@ -223,13 +230,15 @@ weibull_function(
 
 Calculates the value of a specified Weibull distribution for any numeric input `x`.
 
-The equation of the Weibull distribution is as follows:
+For deeper conceptual context, see [Weibull Wind-Speed Distribution](/concepts/rencal/calibration/weibull_wind_speed_distribution/).
+
+The Weibull density is:
 
 $$
 f(x) = \frac{k}{\lambda} \left(\frac{x}{\lambda}\right)^{k - 1} \left(e^{-\left(\frac{x}{\lambda}\right)^k}\right)
 $$
 
-where `k` is the shape parameter, `λ` is the scale parameter, and `e` is Euler's number.
+where `k` is shape and `λ` is scale.
 
 <Section type="parameters">
 #### Parameters
@@ -344,6 +353,16 @@ output_estimated_load_factors_visual(
 </Section>
 
 Outputs a series of plots of estimated load and fitted curves per plant.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">logistic_params</code> <code class="primitive">np.ndarray</code></p>
+  Fitted logistic parameters.
+
+- <p><code class="key">load_factors</code> <code class="primitive">pd.DataFrame</code></p>
+  Plant load-factor observations.
+</Section>
 
 <InlineSection>
 **Returns** None

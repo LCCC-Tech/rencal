@@ -1,26 +1,26 @@
 ---
-title: DataDownloader
-description: A reference page for rencal data downloaders and the download manager.
+title: rencal.core.data_downloader
+description: Reference documentation for rencal.core.data_downloader.
 ---
 
 import Segment from '@/components/pydoc/Segment.astro';
 import Section from '@/components/pydoc/Section.astro';
-import NestedTitle from '@/components/pydoc/NestedTitle.astro';
 import InlineSection from '@/components/pydoc/InlineSection.astro';
 
 <div class="pydoc">
 
 <Section type="about">
-The data downloader module provides a common base class plus concrete implementations for acquiring weather and energy data used by the forecasting pipeline. It includes downloaders for ERA5 reanalysis data (Copernicus CDS), CfD register and BMU mappings (LCCC), and Elexon BMRS generation data, plus a manager that orchestrates the full workflow.
+`rencal.core.data_downloader` defines downloaders for CfD register/mapping, generation data, and ERA5 weather data, plus a coordinating download manager.
 
 #### Implementation Overview
 
 The data downloaders handle:
+
 - Directory setup for persisted data downloads
 - ERA5 retrieval and metadata verification
 - CfD register and BMU mapping enrichment
 - Generation data aggregation to hourly UTC
-- A unified `DownloadManager` API for running all steps
+- A unified [`DownloadManager`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanager) API for running all steps
 
 #### Prerequisites
 
@@ -34,13 +34,9 @@ The data downloaders handle:
 ERA5 downloads require a CDS API key. You can provide it in either of the following ways:
 
 - **Environment variable**: Set `CDS_API_KEY` in your environment, and optionally `CDS_API_URL` to override the default.
-- **Constructor argument**: Pass `api_key` (and optionally `api_url`) directly to `ERA5DataDownloader` or `DownloadManager`.
-
-If no key is provided, ERA5 downloads will raise an error when the client is initialized.
+- **Constructor argument**: Pass `api_key` (and optionally `api_url`) directly to [`ERA5DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#era5datadownloader) or [`DownloadManager`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanager).
 
 #### Example Usage
-
-Using environment variables:
 
 ```python
 import os
@@ -51,22 +47,25 @@ os.environ["CDS_API_KEY"] = "uid:token"
 downloader = DownloadManager()
 downloader.download_era5()
 ```
-
-Passing the key explicitly:
-
-```python
-from rencal.core.data_downloader import ERA5DataDownloader
-
-era5 = ERA5DataDownloader(api_key="uid:token")
-era5.download()
-```
-
-The default output directory is `data/` (via `DOWNLOAD_DATA_DIR`) and data is written to subfolders such as `era5/`, `plant/`, and `generation/`.
 </Section>
 
----
-
 ## Constructor
+
+### DataDownloader
+
+<Segment>
+<Section type="signature">
+```python
+class DataDownloader(ABC): DataDownloader
+```
+</Section>
+
+Abstract base downloader with shared output directory and logger behavior.
+
+<InlineSection>
+**Returns** [<code class="type">DataDownloader</code>](#DataDownloader)
+</InlineSection>
+</Segment>
 
 ### ERA5DataDownloader
 
@@ -77,14 +76,16 @@ class ERA5DataDownloader(api_key: str | None = None, api_url: str | None = None)
 ```
 </Section>
 
+Downloader for ERA5 data from the Copernicus CDS API.
+
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">api_key</code> <code class="primitive">str</code> | <code class="primitive">None</code></p>
-  Copernicus CDS API key. If not provided, the downloader reads the `CDS_API_KEY` environment variable.
+  Copernicus CDS API key. If not provided, the downloader reads `CDS_API_KEY`.
 
 - <p><code class="key">api_url</code> <code class="primitive">str</code> | <code class="primitive">None</code></p>
-  Optional CDS API URL override. If not provided, the downloader uses `CDS_API_URL` from the environment (if set) or the default constant.
+  Optional CDS API URL override.
 </Section>
 
 <InlineSection>
@@ -100,6 +101,8 @@ class ERA5DataDownloader(api_key: str | None = None, api_url: str | None = None)
 class CfDDataDownloader(): CfDDataDownloader
 ```
 </Section>
+
+Downloader for CfD register and BMU mapping datasets.
 
 <Section type="parameters">
 #### Parameters
@@ -121,6 +124,8 @@ class GenerationDataDownloader(): GenerationDataDownloader
 ```
 </Section>
 
+Downloader for Elexon settled generation and UTC aggregation flow.
+
 <Section type="parameters">
 #### Parameters
 
@@ -141,14 +146,16 @@ class DownloadManager(cds_api_key: str | None = None, cds_api_url: str | None = 
 ```
 </Section>
 
+Facade class orchestrating all download flows.
+
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">cds_api_key</code> <code class="primitive">str</code> | <code class="primitive">None</code></p>
-  Optional CDS API key forwarded to the ERA5 downloader. If not provided, `CDS_API_KEY` is read from the environment.
+  Optional CDS API key forwarded to [`ERA5DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#era5datadownloader).
 
 - <p><code class="key">cds_api_url</code> <code class="primitive">str</code> | <code class="primitive">None</code></p>
-  Optional CDS API URL override forwarded to the ERA5 downloader.
+  Optional CDS API URL override forwarded to [`ERA5DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#era5datadownloader).
 </Section>
 
 <InlineSection>
@@ -157,6 +164,22 @@ class DownloadManager(cds_api_key: str | None = None, cds_api_url: str | None = 
 </Segment>
 
 ## Methods
+
+### DataDownloader.download
+
+<Segment>
+<Section type="signature">
+```python
+download(*args: Any, **kwargs: Any) -> None
+```
+</Section>
+
+Abstract method implemented by concrete downloaders.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
 
 ### ERA5DataDownloader.download
 
@@ -167,7 +190,7 @@ download() -> None
 ```
 </Section>
 
-Downloads ERA5 reanalysis data for all calibration years. Each year is retrieved in two requests (wind and solar), merged into a single NetCDF file, and validated for time metadata. Existing files are verified and reused when possible.
+Downloads ERA5 yearly NetCDF artifacts for the calibration horizon and verifies metadata.
 
 <InlineSection>
 **Returns** None
@@ -183,7 +206,7 @@ download() -> None
 ```
 </Section>
 
-Downloads the CfD register from the LCCC API and the BMU mapping CSV, merges them by CfD ID, and writes the resulting dataset to CSV.
+Downloads CfD register and BMU mapping, merges, and writes output CSV.
 
 <InlineSection>
 **Returns** None
@@ -199,7 +222,7 @@ download() -> None
 ```
 </Section>
 
-Loads the CfD/BMU mapping, retrieves settled generation data from Elexon for all associated BMUs, aggregates to hourly UTC by CfD ID, and writes the data to Parquet.
+Downloads settled generation data and writes hourly UTC aggregated parquet output.
 
 <InlineSection>
 **Returns** None
@@ -215,7 +238,7 @@ download_cfd() -> None
 ```
 </Section>
 
-Downloads CfD register data and BMU mappings from LCCC sources.
+Runs CfD/BMU downloader.
 
 <InlineSection>
 **Returns** None
@@ -231,7 +254,7 @@ download_generation_data() -> None
 ```
 </Section>
 
-Downloads and aggregates Elexon BMRS generation data for CfD-associated BMUs.
+Runs generation downloader.
 
 <InlineSection>
 **Returns** None
@@ -247,7 +270,7 @@ download_era5() -> None
 ```
 </Section>
 
-Downloads ERA5 weather reanalysis data for the calibration period.
+Runs ERA5 downloader.
 
 <InlineSection>
 **Returns** None
@@ -263,7 +286,7 @@ download_all() -> None
 ```
 </Section>
 
-Runs all download steps in sequence: CfD register and BMU mapping, generation data, then ERA5.
+Runs all download flows in sequence.
 
 <InlineSection>
 **Returns** None
@@ -272,23 +295,23 @@ Runs all download steps in sequence: CfD register and BMU mapping, generation da
 
 ## Properties
 
-### output_dir
+### DataDownloader.output_dir
 
 <Segment>
-Base output directory for downloaded files. Each downloader creates a subdirectory (e.g., `era5/`, `plant/`, `generation/`).
+Base output directory for downloaded files. Concrete downloaders write to subfolders such as `era5/`, `plant/`, and `generation/`.
 
 <InlineSection>
 **Type** <code class="primitive">pathlib.Path</code>
 </InlineSection>
 </Segment>
 
-### client
+### ERA5DataDownloader.client
 
 <Segment>
-Lazy-initialized CDS API client used by the ERA5 downloader. The client is created only when the first ERA5 request is made.
+Lazy-initialized CDS API client.
 
 <InlineSection>
-**Type** [<code class="type">cdsapi.Client</code>](https://pypi.org/project/cdsapi/)
+**Type** <code class="primitive">cdsapi.Client</code>
 </InlineSection>
 </Segment>
 
