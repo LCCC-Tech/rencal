@@ -1,7 +1,6 @@
 ---
-title: Wind Calibrator Concepts
+title: Wind Power Curve Calibration
 description: An overview of the wind generator power curve calibration process
-draft: true
 ---
 
 # Calibration of Renewables Power Curves
@@ -87,33 +86,16 @@ To calibrate the power curve for the CFD wind farm the following data are needed
 - Actual hourly load factor data (generation/capacity) for a significant time interval.
 - Hourly actual wind speed data for the closest available location (from ERA5 dataset) for the same period the actual load factors data are available.
 
-Among all the models available to forecast the wind farm output, the five-parameter logistic function (5PL) has been chosen.
-This function combines the simplicity of one single analytical expression and an accurate representation of the wind farm power curve once it has been calibrated.
-See the reference [here](https://onlinelibrary.wiley.com/doi/full/10.1155/2016/8519785).
+Wind calibration in rencal uses two model components:
 
-The 5PL function is the following:
+- a [logistic power curve](./logistic_power_curve/) to map wind speed to expected load factor;
+- a [Weibull wind-speed distribution](./weibull_wind_speed_distribution/) to describe how frequently wind speeds occur at each plant location.
 
-$$
-f(x,a,b,c,d,g) = d + \frac{a - d}{(1 + (x/c)^{b})^{g}}
-$$
+Among available models for plant output conversion, the five-parameter logistic function (5PL) has been chosen because it combines a single analytical expression with good empirical fit once calibrated.
+For deeper mathematical detail, see [Logistic Power Curve](./logistic_power_curve/).
 
-The five parameters a, b, c, d and g can be interpreted as follows:
-
-- a: lower bound representing minimum production
-
-- b: slope of the curve
-
-- c: inflection point of the curve
-
-- d: upper bound representing maximum production
-
-- g: asymmetry factor; curve is symmetric for g=1
-
-The effect of the variation of these parameters on the shape of a power curve defined by the 5PL function is shown below:
-
-![Effects of parameters A-D on the shape of the generalised logistic function](src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionParamsAtoD.png)
-
-![Effect of parameter G on the shape of the generalised logistic function](src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionParamsG.png)
+The Weibull component is then used with the logistic curve to estimate long-term expected load factor by probability-weighting wind speeds.
+For details, see [Weibull Wind-Speed Distribution](./weibull_wind_speed_distribution/).
 
 To use the 5PL function to forecast wind energy output it is necessary beforehand to define the five parameters through a calibration process run over actual wind speed and generation data.
 
@@ -136,3 +118,10 @@ A default power curve should be used for generators whose calibration is not sui
 e.g. model (yellow line) below approximates the actual data (blue dots).
 
 ![Wind Calibration Plot](src/assets/concepts/RenewablesCalibration/WindCalibrationPlot.png)
+
+## Related Pages
+
+- [Wind Calibration Components](./weibull_and_logistic_curve/)
+- [Logistic Power Curve](./logistic_power_curve/)
+- [Weibull Wind-Speed Distribution](./weibull_wind_speed_distribution/)
+- [WindCalibrator Reference](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/)

@@ -1,0 +1,59 @@
+---
+title: Weibull Wind-Speed Distribution
+description: How rencal models local wind-speed frequency for long-term expected load factor estimates.
+---
+
+# Weibull Wind-Speed Distribution
+
+## Context
+
+The Weibull distribution models how frequently different wind speeds occur at a plant location.
+
+In calibration, this describes local wind climate and is combined with the logistic power curve to estimate long-term expected load factor.
+
+## Weibull density
+
+$$
+f(x) = \frac{k}{\lambda} \left(\frac{x}{\lambda}\right)^{k - 1} e^{-\left(\frac{x}{\lambda}\right)^k}
+$$
+
+where:
+
+- `k`: shape parameter
+- `\lambda`: scale parameter
+
+## Why this model is used
+
+- Standard and interpretable representation of wind-speed frequency.
+- Compactly captures location-specific wind regimes.
+- Supports expected-value calculations for long-term load-factor estimates.
+
+## How it combines with the logistic curve
+
+Long-term expected load factor is computed as:
+
+$$
+\mathbb{E}[\text{load factor}] = \int_0^{\infty} \text{logistic}(x) \cdot \text{weibull}(x)\,dx
+$$
+
+Interpretation:
+
+- logistic term: expected output at wind speed `x`
+- Weibull term: how often wind speed `x` occurs
+- integral: probability-weighted average output
+
+## How it is used in rencal
+
+- Weibull parameters are fitted in [`WindCalibrator.fit_historical_load_factor_distribution()`](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/#windcalibratorfit_historical_load_factor_distribution).
+- Density is evaluated in [`WindCalibrator.weibull_function()`](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/#windcalibratorweibull_function).
+- Integral is computed in [`WindCalibrator.estimate_load_factors_for_resource()`](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/#windcalibratorestimate_load_factors_for_resource).
+
+`Calibration Summary.csv` reports fitted parameters and an `Estimated Load Factor` derived from this expected-value calculation.
+
+Note: Weibull parameters are not directly used for hourly stream generation; those streams come from applying logistic curves to hourly wind speed data.
+
+## Related pages
+
+- [Wind Power Curve Calibration](./wind_power_curve_calibration/)
+- [Logistic Power Curve](./logistic_power_curve/)
+- [WindCalibrator Reference](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/)
