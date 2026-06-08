@@ -5,7 +5,7 @@ import pandas as pd
 import xarray as xr
 from pydantic import BaseModel, Field
 
-from weather.utils.logger import get_logger
+from rencal.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

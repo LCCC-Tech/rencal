@@ -1,6 +1,6 @@
 ---
 title: Calibrator
-description: Reference documentation for weather.calibration.calibrator.
+description: Reference documentation for rencal.calibration.calibrator.
 ---
 
 import Segment from '@/components/pydoc/Segment.astro';
@@ -10,7 +10,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <div class="pydoc">
 
 <Section type="about">
-`weather.calibration.calibrator` defines the abstract base class for intermittent generator calibration workflows.
+`rencal.calibration.calibrator` defines the abstract base class for intermittent generator calibration workflows.
 
 `Calibrator` is responsible for loading the plant, generation, and ERA5 resource datasets needed by a concrete calibrator implementation, then exposing the required workflow steps as abstract methods.
 
@@ -19,7 +19,7 @@ Because this class inherits from `ABC`, instantiate a concrete subclass such as 
 #### Example
 
 ```python
-from weather.calibration.wind.wind_calibrator import WindCalibrator
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
 
 calibrator = WindCalibrator(
     data_path="data",

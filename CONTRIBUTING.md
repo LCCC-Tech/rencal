@@ -53,8 +53,8 @@ Enhancement suggestions are welcome! Please:
 
 ```bash
 # Clone your fork
-git clone https://github.com/your-username/weather.git
-cd weather
+git clone https://github.com/your-username/rencal.git
+cd rencal
 
 # Create a virtual environment
 python -m venv venv
@@ -75,7 +75,7 @@ pre-commit install
 pytest
 
 # Run with coverage
-pytest --cov=weather --cov-report=html
+pytest --cov=rencal --cov-report=html
 
 # Run specific test file
 pytest tests/test_wind_models.py
@@ -99,14 +99,14 @@ We use `black` for code formatting and `isort` for import sorting:
 
 ```bash
 # Format code
-black weather/ tests/
+black rencal/ tests/
 
 # Sort imports
-isort weather/ tests/
+isort rencal/ tests/
 
 # Check without modifying
-black --check weather/ tests/
-isort --check-only weather/ tests/
+black --check rencal/ tests/
+isort --check-only rencal/ tests/
 ```
 
 ### Docstrings
@@ -160,7 +160,7 @@ Closes #123
 
 ```python
 import pytest
-from weather.models import WindModel
+from rencal.models import WindModel
 
 class TestWindModel:
     def test_initialization(self):
@@ -203,7 +203,7 @@ class TestWindModel:
 If you need help:
 
 1. Check the [documentation](docs/)
-2. Search existing [issues](https://github.com/LCCC/weather/issues)
+2. Search existing [issues](https://github.com/LCCC/rencal/issues)
 3. Ask in discussions
 4. Contact maintainers
 

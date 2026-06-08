@@ -1,5 +1,5 @@
 """
-Utility modules for the weather package.
+Utility modules for the rencal package.
 """
 
 from .constants import (

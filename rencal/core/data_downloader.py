@@ -12,7 +12,7 @@ import requests
 import xarray as xr
 from tqdm import tqdm
 
-from weather.utils.constants import (
+from rencal.utils.constants import (
     AREA_BOUNDING_BOX_COORDINATES,
     CALIBRATION_END_DATE,
     CALIBRATION_START_DATE,
@@ -31,8 +31,8 @@ from weather.utils.constants import (
     OCTOBER_BACK_MINUTES,
     PLANT_DATA_FILE_NAME,
 )
-from weather.utils.logger import get_logger
-from weather.utils.types import ParsedURL
+from rencal.utils.logger import get_logger
+from rencal.utils.types import ParsedURL
 
 logger = get_logger(__name__)
 
@@ -41,7 +41,7 @@ class DataDownloader(ABC):
     """Abstract base class for data downloaders.
 
     This class provides a common interface and shared functionality for downloading
-    various types of weather and energy data. Concrete implementations should inherit
+    various types of rencal and energy data. Concrete implementations should inherit
     from this class and implement the abstract download method.
 
     Attributes:
@@ -756,10 +756,10 @@ class GenerationDataDownloader(DataDownloader):
 
 
 class DownloadManager:
-    """Main weather data downloader with support for multiple data sources.
+    """Main rencal data downloader with support for multiple data sources.
 
     Provides a unified interface for downloading all required data sources
-    for weather forecasting and renewable energy analysis. Manages instances
+    for load factor forecasting and renewable energy analysis. Manages instances
     of specialized downloaders for different data types and coordinates
     the overall download process.
 

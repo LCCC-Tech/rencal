@@ -1,6 +1,6 @@
-# Weather Forecasting and Modelling
+# RenCal Ren(ewable)Cal(ibration)
 
-An open-source Python library for renewable energy forecasting using ERA5 weather data and statistical sampling techniques.
+An Python library calibrating power curves for renewable energy plants and probablistic forecasting of load factor time series for plants using ERA5 weather data, historical generation, and plant characteristic data.
 
 ## Overview
 
@@ -33,8 +33,8 @@ uv sync --group notebook     # Jupyter notebook dependencies
 ## Quick Start
 
 ```python
-from weather.simulation.weather_data import WeatherData, HistoricalMetadata
-from weather.core.data_loader import LocalDataLoader
+from rencal.simulation.weather_data import WeatherData, HistoricalMetadata
+from rencal.core.data_loader import LocalDataLoader
 
 loader = LocalDataLoader()
 
@@ -50,7 +50,7 @@ one_path = wind_sampler.random_sample(future_start_date,
     future_end_date)
 ```
 
-**Note**: ERA5 data loading must be implemented by users. See `weather.data.ERA5DataLoader` stub.
+**Note**: ERA5 data loading must be implemented by users. See `rencal.core.data_loader.ERA5DataLoader` stub.
 
 ## Development
 
@@ -59,15 +59,9 @@ one_path = wind_sampler.random_sample(future_start_date,
 uv run pytest
 
 # Run tests with coverage
-uv run pytest --cov=weather --cov-report=html
+uv run pytest --cov=rencal --cov-report=html
 
 # Code formatting and linting
-uv run ruff format weather/     # Format code
-uv run ruff check weather/      # Lint code
-uv run basedpyright weather/    # Type checking
-
-# Run pre-commit hooks
-uv run pre-commit run --all-files
-```
-
-See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
+uv run ruff format rencal/     # Format code
+uv run ruff check rencal/      # Lint code
+uv run basedpyright rencal/    # Type checking

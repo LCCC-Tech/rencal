@@ -4,8 +4,8 @@ import pandas as pd
 import xarray as xr
 from pydantic import Field, field_validator
 
-from weather.models.base import PandasDatasetModel
-from weather.utils.logger import get_logger
+from rencal.models.base import PandasDatasetModel
+from rencal.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

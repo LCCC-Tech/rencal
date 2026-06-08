@@ -441,29 +441,29 @@ class WindCalibrator(Calibrator):
         return cfd_wind_data
 
     def _create_generic_power_curve(self) -> None:
-        """Generates generic power curve parameters from available fitted data."""
+        """Generates generic power curve parameters from the median of available fitted data."""
         summary_with_tech = self.summary.merge(
             self.plants.data[[INTERNAL_PLANT_ID, "technology"]], how="left", on=INTERNAL_PLANT_ID
         )
         unique_summary_tech = summary_with_tech["technology"].unique()
         if all(wind_tech in unique_summary_tech for wind_tech in WIND_TECHNOLOGY_TYPES):
-            tech_means = (
+            tech_medians = (
                 summary_with_tech.groupby("technology")
-                .agg({"a": "first", "b": "mean", "c": "mean", "d": "first", "g": "mean"})
+                .agg({"a": "first", "b": "median", "c": "median", "d": "first", "g": "median"})
                 .reset_index()
                 .rename(columns={"technology": INTERNAL_PLANT_ID})
             )
-            tech_means["estimated_load_factor"] = 0
-            tech_means[INTERNAL_PLANT_ID] = "Generic " + tech_means[INTERNAL_PLANT_ID]
-            self.summary = pd.concat([self.summary, tech_means])
+            tech_medians["estimated_load_factor"] = 0
+            tech_medians[INTERNAL_PLANT_ID] = "Generic " + tech_medians[INTERNAL_PLANT_ID]
+            self.summary = pd.concat([self.summary, tech_medians])
         else:
             self.summary.loc[len(self.summary)] = [
                 "Generic",
                 0,
-                self.summary["b"].mean(),
-                self.summary["c"].mean(),
+                self.summary["b"].median(),
+                self.summary["c"].median(),
                 1,
-                self.summary["g"].mean(),
+                self.summary["g"].median(),
                 0,
             ]
 
