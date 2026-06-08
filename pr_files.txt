@@ -1,2 +1,0 @@
-weather/core/data_loader.py
-wind_calibration_tutorial.ipynb
