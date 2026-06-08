@@ -2,11 +2,11 @@ name: Update Documentation AI
 
 on:
     pull_request:
-        branches: [main]
+        types: [labeled]
 
 jobs:
     update-docs:
-        if: github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event.label.name == 'generate docs'
         runs-on: ubuntu-latest
         environment: copilot
         permissions:
