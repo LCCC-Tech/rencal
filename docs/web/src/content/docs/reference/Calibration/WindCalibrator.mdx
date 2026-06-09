@@ -21,12 +21,20 @@ from pathlib import Path
 
 from rencal.calibration.wind.wind_calibrator import WindCalibrator
 
+# Using local data files
 calibrator = WindCalibrator(
     data_path="data",
     plant_id_col="plant_id",
     output_path=Path("outputs"),
     visual_output=False,
     stream_npy_output=True,
+)
+calibrator.calibrate()
+
+# Using a custom loader (e.g. reading inputs from cloud storage)
+calibrator = WindCalibrator(
+    loader=my_cloud_loader,
+    output_path=Path("outputs"),
 )
 calibrator.calibrate()
 ```
@@ -47,6 +55,7 @@ class WindCalibrator(
     output_path: str | Path = Path.cwd(),
     visual_output: bool = False,
     stream_npy_output: bool = False,
+    loader: DataLoader | None = None,
 ): WindCalibrator
 ```
 </Section>
@@ -70,6 +79,9 @@ Calibrates wind power curves for a set of timestamps and CFD IDs.
 
 - <p><code class="key">stream_npy_output</code> <code class="primitive">bool</code></p>
   If True, wind streams are written in NPY format alongside PARQUET.
+
+- <p><code class="key">loader</code> <code class="primitive">DataLoader | None</code></p>
+  Optional pre-configured data loader used instead of the default `LocalDataLoader` (e.g. a cloud loader reading inputs directly from their original Blob locations). When provided it overrides `data_path`.
 </Section>
 
 <InlineSection>
