@@ -12,6 +12,7 @@ from scipy.integrate import quad
 from scipy.optimize import curve_fit
 from scipy.stats import weibull_min
 
+from ...core.data_loader import DataLoader
 from ...utils.constants import (
     DEFAULT_LOGISTIC_FN_ASYMMETRY,
     DEFAULT_LOGISTIC_FN_STEEPNESS,
@@ -33,7 +34,6 @@ from ...utils.constants import (
     WIND_TECHNOLOGY_TYPES,
 )
 from ...utils.logger import get_logger
-from ...core.data_loader import DataLoader
 from ..calibrator import Calibrator
 
 logger = get_logger(__name__)
