@@ -12,7 +12,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <Section type="about">
 `rencal.simulation.weather_data` defines metadata descriptors and the intermittent weather sampler used to create future hourly load-factor streams from historical artifacts.
 
-[`WeatherData`](/reference/rencal/simulation/rencalsimulationweather_data/#weatherdata) uses a JSON-parsed [`HistoricalMetadata`](/reference/rencal/simulation/rencalsimulationweather_data/#historicalmetadata) descriptor plus a process-scope cache keyed by historical NPY basename to enable safe lazy loading. It supports two sampling modes via `ignore_zeros`:
+[`WeatherData`](/reference/RenCal/Simulation/rencalsimulationweather_data/#weatherdata) uses a JSON-parsed [`HistoricalMetadata`](/reference/RenCal/Simulation/rencalsimulationweather_data/#historicalmetadata) descriptor plus a process-scope cache keyed by historical NPY basename to enable safe lazy loading. It supports two sampling modes via `ignore_zeros`:
 
 - **ignore_zeros = False (wind):** all loadfactor values participate in histogram building and resampling.
 - **ignore_zeros = True (solar):** zero-valued hours (nighttime) are preserved; histograms and inverse-CDF resampling operate only on non-zero values.

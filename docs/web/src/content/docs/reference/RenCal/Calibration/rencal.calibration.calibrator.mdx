@@ -12,9 +12,9 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <Section type="about">
 `rencal.calibration.calibrator` defines the abstract calibration interface used by intermittent technology-specific calibrators.
 
-[`Calibrator`](/reference/rencal/calibration/rencalcalibrationcalibrator/#calibrator) is responsible for loading plant, generation, and ERA5 resource datasets required by a concrete calibrator implementation, then exposing the required workflow steps as abstract methods.
+[`Calibrator`](/reference/RenCal/Calibration/rencalcalibrationcalibrator/#calibrator) is responsible for loading plant, generation, and ERA5 resource datasets required by a concrete calibrator implementation, then exposing the required workflow steps as abstract methods.
 
-Because this class inherits from `ABC`, instantiate a concrete subclass such as [`WindCalibrator`](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/#windcalibrator) rather than [`Calibrator`](/reference/rencal/calibration/rencalcalibrationcalibrator/#calibrator) directly.
+Because this class inherits from `ABC`, instantiate a concrete subclass such as [`WindCalibrator`](/reference/RenCal/Calibration/rencalcalibrationwindwind_calibrator/#windcalibrator) rather than [`Calibrator`](/reference/RenCal/Calibration/rencalcalibrationcalibrator/#calibrator) directly.
 
 #### Example
 
@@ -41,7 +41,7 @@ class Calibrator(data_path: str = None, plant_id_col: str = None): Calibrator
 ```
 </Section>
 
-Initializes a local loader ([`LocalDataLoader`](/reference/rencal/core/rencalcoredata_loader/#localdataloader)) and materializes plant, generation, and resource datasets.
+Initializes a local loader ([`LocalDataLoader`](/reference/RenCal/Core/rencalcoredata_loader/#localdataloader)) and materializes plant, generation, and resource datasets.
 
 <Section type="parameters">
 #### Parameters

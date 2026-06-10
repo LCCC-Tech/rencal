@@ -20,7 +20,7 @@ The data downloaders handle:
 - ERA5 retrieval and metadata verification
 - CfD register and BMU mapping enrichment
 - Generation data aggregation to hourly UTC
-- A unified [`DownloadManager`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanager) API for running all steps
+- A unified [`DownloadManager`](/reference/RenCal/Core/rencalcoredata_downloader/#downloadmanager) API for running all steps
 
 #### Prerequisites
 
@@ -34,7 +34,7 @@ The data downloaders handle:
 ERA5 downloads require a CDS API key. You can provide it in either of the following ways:
 
 - **Environment variable**: Set `CDS_API_KEY` in your environment, and optionally `CDS_API_URL` to override the default.
-- **Constructor argument**: Pass `api_key` (and optionally `api_url`) directly to [`ERA5DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#era5datadownloader) or [`DownloadManager`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanager).
+- **Constructor argument**: Pass `api_key` (and optionally `api_url`) directly to [`ERA5DataDownloader`](/reference/RenCal/Core/rencalcoredata_downloader/#era5datadownloader) or [`DownloadManager`](/reference/RenCal/Core/rencalcoredata_downloader/#downloadmanager).
 
 #### Example Usage
 
@@ -152,10 +152,10 @@ Facade class orchestrating all download flows.
 #### Parameters
 
 - <p><code class="key">cds_api_key</code> <code class="primitive">str</code> | <code class="primitive">None</code></p>
-  Optional CDS API key forwarded to [`ERA5DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#era5datadownloader).
+  Optional CDS API key forwarded to [`ERA5DataDownloader`](/reference/RenCal/Core/rencalcoredata_downloader/#era5datadownloader).
 
 - <p><code class="key">cds_api_url</code> <code class="primitive">str</code> | <code class="primitive">None</code></p>
-  Optional CDS API URL override forwarded to [`ERA5DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#era5datadownloader).
+  Optional CDS API URL override forwarded to [`ERA5DataDownloader`](/reference/RenCal/Core/rencalcoredata_downloader/#era5datadownloader).
 </Section>
 
 <InlineSection>
