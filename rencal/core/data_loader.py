@@ -32,12 +32,12 @@ class DataLoader(ABC):
     """Abstract base class for loading different data sources"""
 
     @abstractmethod
-    def load_plant_data(self) -> PlantDatasetModel:
+    def load_plant_data(self, id_column: str = PLANT_ID_COLUMN) -> PlantDatasetModel:
         """Load CfD register with location/capacity data"""
         pass
 
     @abstractmethod
-    def load_generation_data(self) -> GenerationDatasetModel:
+    def load_generation_data(self, id_column: str = PLANT_ID_COLUMN) -> GenerationDatasetModel:
         """Load settlement/generation time series"""
         pass
 

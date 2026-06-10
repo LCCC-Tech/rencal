@@ -2,11 +2,16 @@
 
 from abc import ABC, abstractmethod
 
-from ..core.data_loader import LocalDataLoader
+from ..core.data_loader import DataLoader, LocalDataLoader
 
 
 class Calibrator(ABC):
-    def __init__(self, data_path: str = None, plant_id_col: str = None):
+    def __init__(
+        self,
+        data_path: str = None,
+        plant_id_col: str = None,
+        loader: DataLoader | None = None,
+    ):
         """
         Initialise a calibrator instance.
 
@@ -17,8 +22,15 @@ class Calibrator(ABC):
         Args:
             data_path (str): Path to the directory containing the input data files.
             plant_id_col (str): Name of the ID column designating a power plant in the input.
+            loader (DataLoader | None): Optional pre-configured data loader. When supplied it
+                is used as-is (overriding ``data_path``), allowing inputs to be read from
+                non-default locations or sources (e.g. a cloud loader reading directly from
+                Blob storage) instead of the default ``LocalDataLoader`` layout.
         """
-        self.loader = LocalDataLoader(data_path) if data_path else LocalDataLoader()
+        if loader is not None:
+            self.loader = loader
+        else:
+            self.loader = LocalDataLoader(data_path) if data_path else LocalDataLoader()
         self.plants = (
             self.loader.load_plant_data(plant_id_col)
             if plant_id_col
