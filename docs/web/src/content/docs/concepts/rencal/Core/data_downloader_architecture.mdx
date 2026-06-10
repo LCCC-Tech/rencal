@@ -1,0 +1,124 @@
+---
+title: Data Downloader Architecture
+description: How RenCal orchestrates external data acquisition for ERA5 weather, CfD plant metadata, and Elexon generation time series.
+---
+
+# Data Downloader Architecture
+
+The `rencal.core.data_downloader` module is responsible for acquiring source datasets used by RenCal calibration and simulation workflows.
+
+Where the [Data Loader Architecture](./data_loader_architecture/) focuses on reading local artifacts into validated models, the downloader layer is responsible for creating those local artifacts in the first place.
+
+## Why this module exists
+
+RenCal depends on multiple external data providers with different protocols and formats:
+
+- **Copernicus CDS API** for ERA5 weather (`.nc`),
+- **LCCC APIs/CSV** for CfD register and BMU mapping (`.csv`),
+- **Elexon BMRS API** for generation settlement data (JSON -> parquet).
+
+`data_downloader.py` centralises this acquisition logic behind shared abstractions so ingestion remains reproducible and easier to operate.
+
+## Core abstraction: `DataDownloader`
+
+`DataDownloader` is an abstract base class that provides:
+
+- a shared output root (`DOWNLOAD_DATA_DIR`),
+- `_update_output_directory(...)` for source-specific subfolders,
+- a required `download()` method for concrete implementations.
+
+This creates a consistent contract across all external data download flows.
+
+## Concrete downloaders
+
+### `ERA5DataDownloader`
+
+Responsibilities:
+
+- determine download years from `CALIBRATION_START_DATE` and `CALIBRATION_END_DATE`,
+- authenticate with CDS (`cdsapi.Client`) using env/config,
+- request wind and solar variables separately, then merge to a single yearly NetCDF,
+- verify file structure and annotate metadata,
+- skip or verify existing historical files while refreshing current-year outputs.
+
+Notable reliability mechanisms:
+
+- lazy CDS client initialization with explicit error messages for missing API key,
+- per-year verification via `_verify_and_update_metadata(...)`,
+- progress visibility via `tqdm`.
+
+### `CfDDataDownloader`
+
+Responsibilities:
+
+- download CfD register data,
+- download CfD-to-BMU mapping CSV,
+- normalise key fields and merge datasets,
+- persist plant-level output to `plant/{PLANT_DATA_FILE_NAME}`.
+
+This dataset is a dependency for generation downloads and for plant-level model ingestion.
+
+### `GenerationDataDownloader`
+
+Responsibilities:
+
+- load locally saved CfD/BMU data to determine relevant BMU IDs,
+- request settled generation data from Elexon over calibration window,
+- map settlement periods to hourly UTC timestamps,
+- handle daylight-saving edge cases (normal/short/long settlement days),
+- allocate shared BMU generation proportionally to plant capacity,
+- aggregate to plant-level hourly quantities and save parquet.
+
+This stage converts operational market settlement records into model-ready time series.
+
+## Orchestration: `DownloadManager`
+
+`DownloadManager` composes the three concrete downloaders and exposes:
+
+- `download_cfd()`
+- `download_generation_data()`
+- `download_era5()`
+- `download_all()`
+
+`download_all()` enforces dependency order:
+
+1. CfD register + BMU mapping,
+2. generation data (depends on BMUs from CfD data),
+3. ERA5 weather data.
+
+## Downloader vs loader boundary
+
+The two modules are complementary:
+
+- **Downloader layer** (`data_downloader.py`): fetches and writes raw/normalized artifacts.
+- **Loader layer** (`data_loader.py`): reads those artifacts and returns validated dataset models.
+
+```text
+External APIs/files -> DataDownloader -> local artifacts -> DataLoader -> DatasetModel objects
+```
+
+## Relationship to dataset models
+
+The downloader does not directly instantiate model classes, but it produces the files consumed by the loader methods that return:
+
+- `PlantDatasetModel`
+- `GenerationDatasetModel`
+- `ERA5DatasetModel`
+
+For model-layer details and validation behavior, see [Dataset Models](../Models/dataset_models/).
+
+## Operational notes
+
+- **Credentials:** ERA5 requires a valid `CDS_API_KEY` (or explicit `api_key`).
+- **Idempotence:** existing outputs are reused/skipped where appropriate.
+- **Temporal correctness:** generation conversion logic accounts for UK settlement-day DST behavior before UTC aggregation.
+
+## Related pages
+
+- [Data Loader Architecture](./data_loader_architecture/)
+- [Dataset Models](../Models/dataset_models/)
+- [Data Downloader Reference](/reference/RenCal/Core/rencal.core.data_downloader/)
+- [Data Loader Reference](/reference/RenCal/Core/rencal.core.data_loader/)
+- [PlantDatasetModel Reference](/reference/RenCal/Models/rencal.models.plant_model/)
+- [GenerationDatasetModel Reference](/reference/RenCal/Models/rencal.models.generation_model/)
+- [ERA5DatasetModel Reference](/reference/RenCal/Models/rencal.models.era5_model/)
