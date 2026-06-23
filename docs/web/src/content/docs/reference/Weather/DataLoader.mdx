@@ -1,0 +1,285 @@
+---
+title: DataLoader
+description: Reference documentation for rencal.core.data_loader.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import NestedTitle from '@/components/pydoc/NestedTitle.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.core.data_loader` defines the loader interface and local filesystem implementation used to read plant, generation, and ERA5 weather datasets into typed dataset models.
+
+#### Example
+
+```python
+from rencal.core.data_loader import LocalDataLoader
+
+loader = LocalDataLoader()
+plant = loader.load_plant_data()
+generation = loader.load_generation_data()
+era5 = loader.load_era5_data()
+```
+</Section>
+
+---
+
+## Constructor
+
+### DataLoader
+
+<Segment>
+<Section type="signature">
+```python
+class DataLoader(ABC): DataLoader
+```
+</Section>
+
+Abstract base class defining the data loading interface.
+
+<InlineSection>
+**Returns** [<code class="type">DataLoader</code>](#DataLoader)
+</InlineSection>
+</Segment>
+
+### LocalDataLoader
+
+<Segment>
+<Section type="signature">
+```python
+class LocalDataLoader(data_path: str = DOWNLOAD_DATA_DIR): LocalDataLoader
+```
+</Section>
+
+Loads datasets from local files under a base data directory.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">data_path</code> <code class="primitive">str</code></p>
+  Base directory containing `plant/`, `generation/`, and `era5/` subdirectories.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">LocalDataLoader</code>](#LocalDataLoader)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### DataLoader.load_plant_data
+
+<Segment>
+<Section type="signature">
+```python
+load_plant_data() -> PlantDatasetModel
+```
+</Section>
+
+Abstract method for loading CfD register plant/location/capacity data.
+
+<InlineSection>
+**Returns** [<code class="type">PlantDatasetModel</code>](#PlantDatasetModel)
+</InlineSection>
+</Segment>
+
+### DataLoader.load_generation_data
+
+<Segment>
+<Section type="signature">
+```python
+load_generation_data() -> GenerationDatasetModel
+```
+</Section>
+
+Abstract method for loading settlement/generation time series data.
+
+<InlineSection>
+**Returns** [<code class="type">GenerationDatasetModel</code>](#GenerationDatasetModel)
+</InlineSection>
+</Segment>
+
+### DataLoader.load_era5_data
+
+<Segment>
+<Section type="signature">
+```python
+load_era5_data() -> ERA5DatasetModel
+```
+</Section>
+
+Abstract method for loading ERA5 weather data.
+
+<InlineSection>
+**Returns** [<code class="type">ERA5DatasetModel</code>](#ERA5DatasetModel)
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.load_plant_data
+
+<Segment>
+<Section type="signature">
+```python
+load_plant_data(id_column: str = PLANT_ID_COLUMN) -> PlantDatasetModel
+```
+</Section>
+
+Loads plant data from the configured local plant file and normalizes the plant ID column.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">id_column</code> <code class="primitive">str</code></p>
+  Source column name containing plant identifiers.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">PlantDatasetModel</code>](#PlantDatasetModel)
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">FileNotFoundError</code>: If the plant data file does not exist.
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.load_generation_data
+
+<Segment>
+<Section type="signature">
+```python
+load_generation_data(id_column: str = PLANT_ID_COLUMN) -> GenerationDatasetModel
+```
+</Section>
+
+Loads generation data from the configured local generation file and normalizes the plant ID column.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">id_column</code> <code class="primitive">str</code></p>
+  Source column name containing plant identifiers in the generation dataset.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">GenerationDatasetModel</code>](#GenerationDatasetModel)
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">FileNotFoundError</code>: If the generation data file does not exist.
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.load_era5_data
+
+<Segment>
+<Section type="signature">
+```python
+load_era5_data() -> ERA5DatasetModel
+```
+</Section>
+
+Loads ERA5 NetCDF files from the configured local ERA5 directory, combines them on the time dimension, and filters to standard wind/solar variables.
+
+<InlineSection>
+**Returns** [<code class="type">ERA5DatasetModel</code>](#ERA5DatasetModel)
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">FileNotFoundError</code>: If no ERA5 NetCDF files are found.
+- <code class="type">ValueError</code>: If no files can be loaded successfully, no valid time dimension is present, concatenation fails, or no standard ERA5 variables are available.
+</InlineSection>
+</Segment>
+
+
+### LocalDataLoader.check_historical_weather
+
+<Segment>
+<Section type="signature">
+```python
+check_historical_weather() -> dict
+```
+</Section>
+
+Returns the manifest metadata for the calibrated historical wind NPY file and validates it against its manifest (SHA-256 hash, shape, and file size).
+
+<InlineSection>
+**Returns** <code class="type">dict</code> — Manifest dictionary containing artifact metadata (hash, columns, size) plus a `basename` key for use in downstream executors.
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">FileNotFoundError</code>: If the historical wind NPY file does not exist.
+- <code class="type">ValueError</code>: If the SHA-256 hash, column count, or file size does not match the manifest.
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.get_historical_weather
+
+<Segment>
+<Section type="signature">
+```python
+get_historical_weather() -> NDArray | None
+```
+</Section>
+
+Returns a memory-mapped NumPy array of the calibrated historical wind data, or `None` if the file does not exist or cannot be loaded.
+
+<InlineSection>
+**Returns** <code class="type">NDArray | None</code>
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.get_prefix_histograms
+
+<Segment>
+<Section type="signature">
+```python
+get_prefix_histograms() -> NDArray | None
+```
+</Section>
+
+Returns a memory-mapped NumPy array of the calibrated wind prefix histograms, or `None` if the file does not exist or cannot be loaded.
+
+<InlineSection>
+**Returns** <code class="type">NDArray | None</code>
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.verify_npy_against_manifest
+
+<Segment>
+<Section type="signature">
+```python
+@staticmethod
+verify_npy_against_manifest(npy_path: str | Path, manifest_path: str | Path) -> dict
+```
+</Section>
+
+Validates a NPY file against its JSON manifest by checking SHA-256 hash, column count (second dimension), and file size. Raises `ValueError` on any mismatch.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">npy_path</code> <code class="primitive">str | Path</code></p>
+  Path to the `.npy` file to validate.
+- <p><code class="key">manifest_path</code> <code class="primitive">str | Path</code></p>
+  Path to the corresponding `.manifest.json` file.
+</Section>
+
+<InlineSection>
+**Returns** <code class="type">dict</code> — The parsed manifest dictionary.
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">ValueError</code>: If SHA-256 hash, column count, or file size does not match.
+</InlineSection>
+</Segment>
+
+</div>

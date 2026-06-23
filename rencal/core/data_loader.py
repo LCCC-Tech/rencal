@@ -32,12 +32,12 @@ class DataLoader(ABC):
     """Abstract base class for loading different data sources"""
 
     @abstractmethod
-    def load_plant_data(self) -> PlantDatasetModel:
+    def load_plant_data(self, id_column: str = PLANT_ID_COLUMN) -> PlantDatasetModel:
         """Load CfD register with location/capacity data"""
         pass
 
     @abstractmethod
-    def load_generation_data(self) -> GenerationDatasetModel:
+    def load_generation_data(self, id_column: str = PLANT_ID_COLUMN) -> GenerationDatasetModel:
         """Load settlement/generation time series"""
         pass
 
@@ -305,7 +305,8 @@ class LocalDataLoader(DataLoader):
             try:
                 with xr.open_dataset(file_path) as ds:
                     time_dim = self._get_time_dimension(ds)
-                    ds = ds.rename({time_dim: "time"})
+                    if time_dim != "time":
+                        ds = ds.rename({time_dim: "time"})
                     ds = self._cast_data_variables_to_float32(ds)
                     datasets.append(ds)
                 logger.debug("Successfully loaded %s", file_path)

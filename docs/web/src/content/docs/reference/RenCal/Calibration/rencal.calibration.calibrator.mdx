@@ -37,7 +37,11 @@ calibrator.calibrate()
 <Segment>
 <Section type="signature">
 ```python
-class Calibrator(data_path: str = None, plant_id_col: str = None): Calibrator
+class Calibrator(
+    data_path: str = None,
+    plant_id_col: str = None,
+    loader: DataLoader | None = None,
+): Calibrator
 ```
 </Section>
 
@@ -50,7 +54,10 @@ Initializes a local loader ([`LocalDataLoader`](/reference/RenCal/Core/rencalcor
   Path to input data directory.
 
 - <p><code class="key">plant_id_col</code> <code class="primitive">str</code></p>
-  Source plant identifier column name.
+  Name of the ID column designating a power plant in the input.
+
+- <p><code class="key">loader</code> <code class="primitive">DataLoader | None</code></p>
+  Optional pre-configured data loader. When supplied it is used as-is (overriding `data_path`), allowing inputs to be read from non-default locations or sources (e.g. a cloud loader reading directly from Blob storage) instead of the default `LocalDataLoader` layout.
 </Section>
 
 <InlineSection>

@@ -12,6 +12,7 @@ from scipy.integrate import quad
 from scipy.optimize import curve_fit
 from scipy.stats import weibull_min
 
+from ...core.data_loader import DataLoader
 from ...utils.constants import (
     DEFAULT_LOGISTIC_FN_ASYMMETRY,
     DEFAULT_LOGISTIC_FN_STEEPNESS,
@@ -48,6 +49,7 @@ class WindCalibrator(Calibrator):
         output_path: str | Path = Path.cwd(),
         visual_output: bool = False,
         stream_npy_output: bool = False,
+        loader: DataLoader | None = None,
     ) -> None:
         """
         Constructor for the WindCalibrator class.
@@ -58,11 +60,16 @@ class WindCalibrator(Calibrator):
             output_path (str | Path): Location to write the output files to.
             visual_output (bool): If True, each calibrated plant's power curve is plotted to the output folder.
             stream_npy_output (bool): If True, wind streams are written in NPY format alongside PARQUET.
+            loader (DataLoader | None): Optional pre-configured data loader used instead of the
+                default ``LocalDataLoader`` (e.g. a cloud loader reading inputs directly from
+                their original Blob locations). When provided it overrides ``data_path``.
 
         """
         super_args = {}
         if data_path:
             super_args["data_path"] = data_path
+        if loader is not None:
+            super_args["loader"] = loader
         if plant_id_col:
             super_args["plant_id_col"] = plant_id_col
             logger.debug("Runtime-specified plant id column: %s", plant_id_col)
@@ -441,29 +448,29 @@ class WindCalibrator(Calibrator):
         return cfd_wind_data
 
     def _create_generic_power_curve(self) -> None:
-        """Generates generic power curve parameters from available fitted data."""
+        """Generates generic power curve parameters from the median of available fitted data."""
         summary_with_tech = self.summary.merge(
             self.plants.data[[INTERNAL_PLANT_ID, "technology"]], how="left", on=INTERNAL_PLANT_ID
         )
         unique_summary_tech = summary_with_tech["technology"].unique()
         if all(wind_tech in unique_summary_tech for wind_tech in WIND_TECHNOLOGY_TYPES):
-            tech_means = (
+            tech_medians = (
                 summary_with_tech.groupby("technology")
-                .agg({"a": "first", "b": "mean", "c": "mean", "d": "first", "g": "mean"})
+                .agg({"a": "first", "b": "median", "c": "median", "d": "first", "g": "median"})
                 .reset_index()
                 .rename(columns={"technology": INTERNAL_PLANT_ID})
             )
-            tech_means["estimated_load_factor"] = 0
-            tech_means[INTERNAL_PLANT_ID] = "Generic " + tech_means[INTERNAL_PLANT_ID]
-            self.summary = pd.concat([self.summary, tech_means])
+            tech_medians["estimated_load_factor"] = 0
+            tech_medians[INTERNAL_PLANT_ID] = "Generic " + tech_medians[INTERNAL_PLANT_ID]
+            self.summary = pd.concat([self.summary, tech_medians])
         else:
             self.summary.loc[len(self.summary)] = [
                 "Generic",
                 0,
-                self.summary["b"].mean(),
-                self.summary["c"].mean(),
+                self.summary["b"].median(),
+                self.summary["c"].median(),
                 1,
-                self.summary["g"].mean(),
+                self.summary["g"].median(),
                 0,
             ]
 
