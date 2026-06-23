@@ -90,43 +90,8 @@ jobs:
                   git tag -a "${TAG}" -m "Release ${TAG}"
                   git push origin "refs/tags/${TAG}"
 
-    build-dev:
-        name: Build distributions (dev)
-        if: >
-            false &&
-            github.event.workflow_run.conclusion == 'success' &&
-            github.event.workflow_run.head_branch == 'dev'
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@v5
-              with:
-                  ref: ${{ github.event.workflow_run.head_sha }}
-                  fetch-depth: 0
-                  fetch-tags: true
-
-            - name: Install uv
-              uses: astral-sh/setup-uv@v3
-              with:
-                  version: "latest"
-
-            - name: Set up Python
-              run: uv python install 3.12
-
-            - name: Build wheel and sdist
-              run: uv build
-
-            - name: Upload distributions
-              uses: actions/upload-artifact@v4
-              with:
-                  name: python-package-distributions
-                  path: dist/
-
     build-main:
-        name: Build distributions (main)
+        name: Build distributions
         if: >
             false &&
             github.event.workflow_run.conclusion == 'success' &&
@@ -174,12 +139,12 @@ jobs:
         if: >
             false &&
             github.event.workflow_run.conclusion == 'success' &&
-            github.event.workflow_run.head_branch == 'dev'
-        needs: [build-dev]
+            github.event.workflow_run.head_branch == 'main'
+        needs: [build-main]
         runs-on: ubuntu-latest
         environment:
             name: testpypi
-            url: https://test.pypi.org/p/rencal-lccc
+            url: https://test.pypi.org/project/rencal/
         permissions:
             id-token: write
 
@@ -196,17 +161,45 @@ jobs:
                   repository-url: https://test.pypi.org/legacy/
                   skip-existing: true
 
+    smoke-test-testpypi:
+        name: Smoke test TestPyPI install
+        if: >
+            false &&
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.head_branch == 'main'
+        needs: [tag, publish-to-testpypi]
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Set up Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: "3.12"
+
+            - name: Install release from TestPyPI
+              env:
+                  VERSION: ${{ needs.tag.outputs.version }}
+              run: |
+                  python -m pip install --upgrade pip
+                  python -m pip install \
+                    --index-url https://test.pypi.org/simple/ \
+                    --extra-index-url https://pypi.org/simple/ \
+                    "rencal==${VERSION}"
+
+            - name: Verify package imports
+              run: python -c "import rencal; print('Installed rencal successfully')"
+
     publish-to-pypi:
         name: Publish to PyPI
         if: >
             false &&
             github.event.workflow_run.conclusion == 'success' &&
             github.event.workflow_run.head_branch == 'main'
-        needs: [tag, build-main]
+        needs: [smoke-test-testpypi]
         runs-on: ubuntu-latest
         environment:
             name: pypi
-            url: https://pypi.org/p/rencal-lccc
+            url: https://pypi.org/project/rencal/
         permissions:
             id-token: write
 
