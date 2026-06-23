@@ -37,6 +37,10 @@ export default defineConfig({
             ],
             sidebar: [
                 {
+                    label: "Intro",
+                    link: "/",
+                },
+                {
                     label: "Concepts",
                     autogenerate: {
                         directory: "concepts",

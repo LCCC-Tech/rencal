@@ -1,27 +1,178 @@
 ---
-title: Docs - Low Carbon Contracts
-description: Welcome to the Low Carbon Contracts Company's documentation site.
-template: splash
-hero:
-  title: |
-    Welcome to the Low Carbon Contracts Company's documentation site.
-    <span
-      class="font-black text-transparent
-        bg-clip-text bg-gradient-to-b
-        from-accent-700 to-accent-400
-        dark:from-accent-500 dark:to-accent-200"
-    >
-      Tailwind
-    </span>
-  tagline: Congrats on setting up a new Starlight project!
-#   image:
-#     file: ../../assets/houston.webp
-  actions:
-    - text: Read the RenCal docs
-      link: /concepts/
-      icon: right-arrow
-    - text: See our dashboards
-      link: https://www.lowcarboncontracts.uk/resources/scheme-dashboards/
-      icon: external
-      variant: minimal
+title: Intro
+description: Documentation, guides, and reference material for open source projects from the Low Carbon Contracts Company.
 ---
+
+# Low Carbon Contracts Open Source
+
+This site is the home for open source technical documentation from the Low Carbon Contracts Company.
+
+Our first featured project is **RenCal**, a Python package for renewable energy calibration and weather-driven simulation workflows. RenCal helps turn plant data, generation history, and ERA5 weather data into calibrated outputs and simulation-ready load factor streams.
+
+<div className="my-8 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+  <strong>Screenshot placeholder</strong>
+  <br />
+  Add a screenshot here showing the RenCal workflow, generated calibration plots, or the documentation site.
+</div>
+
+---
+
+## What is RenCal?
+
+RenCal is designed for renewable energy analysis workflows where historical generation and weather data need to be transformed into calibrated model inputs.
+
+At a high level, RenCal helps with:
+
+- downloading and organizing source data,
+- loading and validating local datasets,
+- calibrating wind generation relationships,
+- producing historical weather-conditioned streams,
+- preparing outputs for simulation and forecasting workflows.
+
+```text
+External APIs
+  -> Local data artifacts
+  -> Dataset validation
+  -> Calibration
+  -> Simulation-ready load factor streams
+```
+
+---
+
+## Get started with RenCal
+
+### Prerequisites
+
+You’ll need:
+
+1. **Python 3.12**
+2. A local Python environment manager such as `uv`
+3. Input data for plant metadata, generation history, and ERA5 weather files
+
+If you are working with ERA5 data, make sure NetCDF support is available through packages such as `xarray` and `netCDF4`.
+
+---
+
+## Install
+
+Install RenCal from PyPI once releases are available:
+
+```bash
+python -m pip install rencal
+```
+
+Or with `uv`:
+
+```bash
+uv add rencal
+```
+
+For local development from source:
+
+```bash
+git clone https://github.com/LCCC-Tech/rencal.git
+cd rencal
+uv sync --group notebook
+```
+
+---
+
+## Prepare your data
+
+RenCal calibration workflows expect local input data to be organized by source.
+
+```text
+data/
+  plant/
+    plant_data.csv
+  generation/
+    generation_data.parquet
+  era5/
+    *.nc
+
+outputs/
+  wind_calibration/
+```
+
+The key input datasets are:
+
+| Dataset | Purpose |
+|---|---|
+| Plant data | Plant metadata and CfD/BMU mapping |
+| Generation data | Historical generation by plant |
+| ERA5 weather data | Hourly reanalysis weather in NetCDF format |
+
+<div className="my-8 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+  <strong>Screenshot placeholder</strong>
+  <br />
+  Add a screenshot here showing the expected project folder structure or example input files.
+</div>
+
+---
+
+## Run a wind calibration
+
+Create a `WindCalibrator` with your input and output paths.
+
+```python
+from pathlib import Path
+
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
+
+calibrator = WindCalibrator(
+    data_path="data",
+    output_path=Path("outputs/wind_calibration"),
+    visual_output=True,
+    stream_npy_output=True,
+)
+```
+
+Then run calibration:
+
+```python
+calibrator.calibrate()
+```
+
+RenCal will run the wind calibration workflow and write outputs to your configured output directory.
+
+---
+
+## Inspect the outputs
+
+After calibration, you should see outputs similar to:
+
+```text
+outputs/
+  wind_calibration/
+    Weibull Params.csv
+    Calibration Summary.csv
+    Wind Speeds.csv
+    Wind Streams.parquet
+    PowerCurveFit_*.png
+    Wind Streams.npy
+```
+
+You can inspect these outputs with pandas:
+
+```python
+import pandas as pd
+
+weibull = pd.read_csv("outputs/wind_calibration/Weibull Params.csv")
+summary = pd.read_csv("outputs/wind_calibration/Calibration Summary.csv")
+speeds = pd.read_csv("outputs/wind_calibration/Wind Speeds.csv")
+streams = pd.read_parquet("outputs/wind_calibration/Wind Streams.parquet")
+```
+
+<div className="my-8 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+  <strong>Screenshot placeholder</strong>
+  <br />
+  Add a screenshot here showing a calibration plot or output summary table.
+</div>
+
+---
+
+## Next steps
+
+1. Learn the full [RenCal data and simulation pipeline](/concepts/RenCal/data_and_simulation_pipeline/).
+2. Follow the [Wind Calibration Tutorial](/tutorials/WindCalibrationTutorial/).
+3. Explore the [RenCal API reference](/reference/).
