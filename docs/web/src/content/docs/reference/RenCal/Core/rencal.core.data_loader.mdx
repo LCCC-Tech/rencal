@@ -128,13 +128,13 @@ load_plant_data(id_column: str = PLANT_ID_COLUMN) -> PlantDatasetModel
 ```
 </Section>
 
-Loads local plant data and normalizes plant ID column.
+Loads plant data from the configured local plant file and normalizes the plant ID column.
 
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">id_column</code> <code class="primitive">str</code></p>
-  Source column containing plant IDs.
+  Source column name containing plant identifiers.
 </Section>
 
 <InlineSection>
@@ -156,13 +156,13 @@ load_generation_data(id_column: str = PLANT_ID_COLUMN) -> GenerationDatasetModel
 ```
 </Section>
 
-Loads local generation data and normalizes plant ID column.
+Loads generation data from the configured local generation file and normalizes the plant ID column.
 
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">id_column</code> <code class="primitive">str</code></p>
-  Source column containing plant IDs.
+  Source column name containing plant identifiers in the generation dataset.
 </Section>
 
 <InlineSection>
@@ -184,7 +184,7 @@ load_era5_data() -> ERA5DatasetModel
 ```
 </Section>
 
-Loads ERA5 NetCDF files, normalizes time dimension, concatenates and filters to standard variables.
+Loads ERA5 NetCDF files from the configured local ERA5 directory, combines them on the time dimension, and filters to standard wind/solar variables.
 
 <InlineSection>
 **Returns** [<code class="type">ERA5DatasetModel</code>](/reference/RenCal/Models/rencalmodelsera5_model/#era5datasetmodel)
@@ -193,7 +193,7 @@ Loads ERA5 NetCDF files, normalizes time dimension, concatenates and filters to 
 <InlineSection>
 **Raises**
 - <code class="type">FileNotFoundError</code>: If no ERA5 files are found.
-- <code class="type">ValueError</code>: If loading/concat/variable checks fail.
+- <code class="type">ValueError</code>: If no files can be loaded successfully, no valid time dimension is present, concatenation fails, or no standard ERA5 variables are available.
 </InlineSection>
 </Segment>
 
@@ -229,10 +229,10 @@ check_historical_weather() -> dict[str, Any]
 ```
 </Section>
 
-Validates historical weather NPY against manifest and returns manifest metadata.
+Returns the manifest metadata for the calibrated historical wind NPY file and validates it against its manifest (SHA-256 hash, shape, and file size).
 
 <InlineSection>
-**Returns** <code class="primitive">dict[str, Any]</code>
+**Returns** <code class="primitive">dict[str, Any]</code> — Manifest dictionary containing artifact metadata (hash, columns, size) plus a `basename` key for use in downstream executors.
 </InlineSection>
 
 <InlineSection>
@@ -283,6 +283,7 @@ Loads calibrated historical wind load-factor data (memory-mapped read-only). Ret
 <Segment>
 <Section type="signature">
 ```python
+@staticmethod
 verify_npy_against_manifest(
     npy_path: str | Path,
     manifest_path: str | Path,
@@ -290,24 +291,24 @@ verify_npy_against_manifest(
 ```
 </Section>
 
-Verifies checksum and artifact metadata consistency against manifest.
+Validates a NPY file against its JSON manifest by checking SHA-256 hash, column count (second dimension), and file size. Raises `ValueError` on any mismatch.
 
 <Section type="parameters">
 #### Parameters
 
 - <p><code class="key">npy_path</code> <code class="primitive">str</code> | <code class="primitive">Path</code></p>
-  Filesystem path to the NPY artifact.
+  Path to the `.npy` file to validate.
 
 - <p><code class="key">manifest_path</code> <code class="primitive">str</code> | <code class="primitive">Path</code></p>
-  Filesystem path to the associated JSON manifest.
+  Path to the corresponding `.manifest.json` file.
 </Section>
 
 <InlineSection>
-**Returns** <code class="primitive">dict[str, Any]</code>
+**Returns** <code class="primitive">dict[str, Any]</code> — The parsed manifest dictionary.
 </InlineSection>
 
 <InlineSection>
-**Raises** <code class="type">ValueError</code> on checksum or metadata mismatch.
+**Raises** <code class="type">ValueError</code> on SHA-256 hash, column count, or file size mismatch.
 </InlineSection>
 </Segment>
 
