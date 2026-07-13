@@ -170,6 +170,8 @@ jobs:
                     exit 0
                   fi
 
+                  # Validate the patch applies cleanly before touching the tree.
+                  git apply --check docs.patch
                   git apply --index docs.patch
 
                   # Defense in depth: stage only the docs content directory.
