@@ -1,0 +1,98 @@
+---
+title: Data Loader Architecture
+description: How RenCal separates abstract data-loading contracts from concrete local implementations and returns validated dataset models.
+---
+
+# Data Loader Architecture
+
+The `rencal.core.data_loader` module defines how RenCal ingests plant, generation, and weather data.
+Its main design goal is to separate:
+
+- **what** the rest of the system needs (`DataLoader` interface), from
+- **how** data is fetched and validated (`LocalDataLoader` implementation).
+
+This keeps calibration and simulation logic storage-agnostic while preserving strict validation.
+
+## Why this abstraction exists
+
+RenCal consumes multiple data shapes and formats:
+
+- plant metadata (tabular),
+- generation time series (tabular),
+- ERA5 weather cubes (xarray/netCDF).
+
+Without a loader abstraction, these file-format details would leak into downstream logic.
+With `DataLoader`, consumers ask for typed datasets and do not care whether the source is local files today or another backend tomorrow.
+
+## Abstract contract: `DataLoader`
+
+`DataLoader` is an abstract base class with three required methods:
+
+- `load_plant_data() -> PlantDatasetModel`
+- `load_generation_data() -> GenerationDatasetModel`
+- `load_era5_data() -> ERA5DatasetModel`
+
+This defines RenCal's ingestion contract for all implementations.
+
+## Concrete implementation: `LocalDataLoader`
+
+`LocalDataLoader` implements the contract against local files under `DOWNLOAD_DATA_DIR`.
+
+### Data sources and behavior
+
+- **Plant data:** reads CSV, standardises ID column, returns `PlantDatasetModel`.
+- **Generation data:** reads Parquet, standardises ID column, returns `GenerationDatasetModel`.
+- **ERA5 data:** discovers `.nc` files, normalises time dimension to `time`, casts weather variables to `float32`, concatenates/sorts, filters to standard variables, returns `ERA5DatasetModel`.
+
+### Reliability helpers
+
+The loader also includes calibrated weather helpers and manifest verification utilities:
+
+- `check_historical_weather()`
+- `get_historical_weather()`
+- `get_prefix_histograms()`
+- `verify_npy_against_manifest()`
+
+`verify_npy_against_manifest()` performs integrity checks (SHA-256 hash, file size, and schema sanity checks), helping ensure simulation/calibration runs consume expected artifacts.
+
+## Data loaders return dataset models
+
+The loader layer returns validated model objects from `rencal.models` rather than raw files.
+
+| Loader method | Return type | Backing data |
+| :-- | :-- | :-- |
+| `load_plant_data()` | `PlantDatasetModel` | `pandas.DataFrame` |
+| `load_generation_data()` | `GenerationDatasetModel` | `pandas.DataFrame` |
+| `load_era5_data()` | `ERA5DatasetModel` | `xarray.Dataset` |
+
+This creates a stable handoff boundary:
+
+```text
+Storage/files -> DataLoader implementation -> DatasetModel objects -> Calibration/Simulation
+```
+
+## Extending to new backends
+
+To support new sources (for example S3 or API-backed ingestion), implement a new `DataLoader` subclass that returns the same three model types.
+
+```python
+class S3DataLoader(DataLoader):
+    def load_plant_data(self) -> PlantDatasetModel: ...
+    def load_generation_data(self) -> GenerationDatasetModel: ...
+    def load_era5_data(self) -> ERA5DatasetModel: ...
+```
+
+As long as the contract is preserved, downstream code remains unchanged.
+
+## Related pages
+
+- [Data and Simulation Pipeline](../data_and_simulation_pipeline/)
+- [Dataset Models](../Models/dataset_models/)
+- [Weather Data Sampling](../Simulation/weather_data_sampling/)
+- [Data Downloader Architecture](./data_downloader_architecture/)
+- [Data Loader Reference](/reference/RenCal/Core/rencal.core.data_loader/)
+- [Data Downloader Reference](/reference/RenCal/Core/rencal.core.data_downloader/)
+- [DatasetModel Base Reference](/reference/RenCal/Models/rencal.models.base/)
+- [PlantDatasetModel Reference](/reference/RenCal/Models/rencal.models.plant_model/)
+- [GenerationDatasetModel Reference](/reference/RenCal/Models/rencal.models.generation_model/)
+- [ERA5DatasetModel Reference](/reference/RenCal/Models/rencal.models.era5_model/)

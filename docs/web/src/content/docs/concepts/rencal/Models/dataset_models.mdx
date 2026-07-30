@@ -1,0 +1,149 @@
+---
+title: Dataset Models
+description: How RenCal standardises plant, generation, and ERA5 weather datasets using validated model abstractions.
+---
+
+# Dataset Models
+
+RenCal uses typed dataset models in `rencal.models` to create a consistent boundary between raw inputs and downstream calibration/simulation logic.
+
+Instead of passing around unvalidated DataFrames or xarray objects, RenCal wraps each dataset in a model with:
+
+- schema expectations,
+- datatype checks,
+- time-axis validation (where relevant),
+- convenience filtering and conversion methods.
+
+## Why models exist
+
+The models layer provides three important guarantees:
+
+1. **Consistency**: core workflows use the same interfaces regardless of source file details.
+2. **Validation early**: structural issues are detected at load time.
+3. **Developer ergonomics**: each model includes domain-specific helpers (for date ranges, plant IDs, technology filtering, etc.).
+
+## Pydantic in RenCal
+
+RenCal's dataset models are built on [Pydantic `BaseModel`](https://docs.pydantic.dev/latest/concepts/models/). In practice, this gives us a reliable model lifecycle where validation happens when model instances are created.
+
+We lean on a few core Pydantic features:
+
+- **Typed model fields** (for example, `data: pd.DataFrame` or `data: xr.Dataset`) to make model boundaries explicit.
+- **Field definitions** via [`Field(...)`](https://docs.pydantic.dev/latest/concepts/fields/) for model metadata and clearer intent.
+- **Custom validators** via [`@field_validator`](https://docs.pydantic.dev/latest/concepts/validators/) on each concrete model (`PlantDatasetModel`, `GenerationDatasetModel`, `ERA5DatasetModel`) to enforce schema and domain-specific checks.
+- **Model configuration** via [`model_config` / config options](https://docs.pydantic.dev/latest/concepts/config/) (in our case allowing arbitrary external types like pandas/xarray objects).
+
+### How validation flows
+
+When a loader returns a model, validation executes immediately during model construction:
+
+1. Pydantic creates the model instance and calls field validators.
+2. The model's `validate_data()` method runs class-level checks (`required_columns`, `required_datatypes`, `date_column`).
+3. If validation passes, downstream code gets a trusted model object.
+4. If validation fails, an exception is raised early, close to ingestion.
+
+This “fail-fast” pattern reduces hidden data quality issues later in calibration and simulation pipelines.
+
+## Architecture overview
+
+RenCal models are structured as a small inheritance hierarchy:
+
+```text
+DatasetModel (abstract, Pydantic)
+├── PandasDatasetModel (tabular validation rules)
+│   ├── PlantDatasetModel
+│   └── GenerationDatasetModel
+└── XArrayDatasetModel (multidimensional validation rules)
+    └── ERA5DatasetModel
+```
+
+## Base abstractions
+
+### `DatasetModel`
+
+`DatasetModel` in `rencal.models.base` defines shared abstract behavior and class-level schema fields:
+
+- `required_columns`
+- `required_datatypes`
+- `date_column`
+
+It also defines required methods for:
+
+- required-field validation,
+- datatype validation,
+- temporal validation,
+- conversion APIs (`to_pandas()`, `to_xarray()`).
+
+### `PandasDatasetModel`
+
+Adds generic DataFrame validation logic:
+
+- required column presence,
+- numeric/object dtype checks,
+- datetime validation for configured `date_column`.
+
+### `XArrayDatasetModel`
+
+Adds xarray-specific checks:
+
+- required variables,
+- variable dtype checks,
+- required time dimension/coordinate,
+- non-empty, non-null, deduplicated, ascending time coordinates.
+
+## Concrete dataset models
+
+### `PlantDatasetModel`
+
+Represents plant/facility metadata (location, technology, capacity).
+
+Notable features:
+
+- required columns such as `plant_id`, `latitude`, `longitude`, `technology`, `capacity`,
+- technology filtering (`filter_by_technology()`, `get_wind_plants()`),
+- geographic bounds and summary representation helpers.
+
+### `GenerationDatasetModel`
+
+Represents generation/settlement time-series data.
+
+Notable features:
+
+- required columns: `plant_id`, `time`, `quantity`,
+- time column enforcement and filtering by date,
+- filtering by individual plant IDs and compact summaries.
+
+### `ERA5DatasetModel`
+
+Represents weather data as an `xarray.Dataset`.
+
+Notable features:
+
+- required variables (`u100`, `v100`) and dtype constraints,
+- time dimension validation,
+- helpers for wind/solar variable access, spatial bounds, date filtering, and variable sub-selection.
+
+## Relationship with the Data Loader layer
+
+The data loader contract returns these model types directly:
+
+| Loader method | Returns |
+| :-- | :-- |
+| `load_plant_data()` | `PlantDatasetModel` |
+| `load_generation_data()` | `GenerationDatasetModel` |
+| `load_era5_data()` | `ERA5DatasetModel` |
+
+This means ingestion backends can change while preserving the same typed interface for the rest of RenCal.
+
+## Related pages
+
+- [Data and Simulation Pipeline](../data_and_simulation_pipeline/)
+- [Data Loader Architecture](../Core/data_loader_architecture/)
+- [Data Downloader Architecture](../Core/data_downloader_architecture/)
+- [Weather Data Sampling](../Simulation/weather_data_sampling/)
+- [Data Loader Reference](/reference/RenCal/Core/rencal.core.data_loader/)
+- [Data Downloader Reference](/reference/RenCal/Core/rencal.core.data_downloader/)
+- [DatasetModel Base Reference](/reference/RenCal/Models/rencal.models.base/)
+- [PlantDatasetModel Reference](/reference/RenCal/Models/rencal.models.plant_model/)
+- [GenerationDatasetModel Reference](/reference/RenCal/Models/rencal.models.generation_model/)
+- [ERA5DatasetModel Reference](/reference/RenCal/Models/rencal.models.era5_model/)

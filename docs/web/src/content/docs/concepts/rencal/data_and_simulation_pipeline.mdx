@@ -1,0 +1,81 @@
+---
+title: Data and Simulation Pipeline
+description: End-to-end view of how RenCal acquires data, validates datasets, calibrates models, and generates simulation-ready weather streams.
+---
+
+# RenCal Data and Simulation Pipeline
+
+This page gives a high-level map of the RenCal workflow from external data sources to simulation outputs.
+
+## Pipeline at a glance
+
+```text
+External APIs
+  -> DataDownloader (writes local artifacts)
+  -> DataLoader (reads and normalizes artifacts)
+  -> Dataset Models (validated data contracts)
+  -> Calibration (fit technology-specific relationships)
+  -> Simulation (sample historical weather-conditioned behavior)
+  -> Forecast-ready streams and metrics
+```
+
+## Stage 1: Data acquisition
+
+RenCal downloads source data from CDS, LCCC, and Elexon, then stores normalized artifacts under the project data directory.
+
+- ERA5 weather files (`.nc`)
+- plant + BMU mappings (`.csv`)
+- generation time series (`.parquet`)
+
+See [Data Downloader Architecture](./Core/data_downloader_architecture/).
+
+## Stage 2: Data loading and normalization
+
+`LocalDataLoader` reads local artifacts and applies ingestion-time normalization (for example plant ID alignment and ERA5 variable selection).
+
+See [Data Loader Architecture](./Core/data_loader_architecture/).
+
+## Stage 3: Dataset validation boundary
+
+Loader methods return typed model objects:
+
+- `PlantDatasetModel`
+- `GenerationDatasetModel`
+- `ERA5DatasetModel`
+
+These models enforce schema and type checks (via Pydantic + model validators), creating a fail-fast boundary before calibration and simulation.
+
+See [Dataset Models](./Models/dataset_models/).
+
+## Stage 4: Calibration
+
+Calibration modules fit plant/technology relationships between weather drivers and generation behavior (for wind, logistic + Weibull components).
+
+Start here:
+
+- [Wind Power Curve Calibration](./Calibration/wind_power_curve_calibration/)
+- [Logistic Power Curve](./Calibration/logistic_power_curve/)
+- [Weibull Wind-Speed Distribution](./Calibration/weibull_wind_speed_distribution/)
+
+## Stage 5: Simulation and sampling
+
+Simulation uses calibrated/historical artifacts to sample future periods while preserving seasonal structure through bucketing.
+
+In code terms, this stage combines:
+
+- `IntermittentBucketer` (`draw_period` block selection by seasonal bucket),
+- `WeatherData` (historical slicing + optional average overrides),
+- `BucketedData` utilities (histograms and optimized distribution transforms),
+- `VersionedColumnsNDArray` output (canonical streams plus transformed versions).
+
+Start with [Weather Data Sampling](./Simulation/weather_data_sampling/).
+For bucket design details, see [Bucketing Strategy](./Simulation/bucketing_strategy/).
+
+## Reference map
+
+- [Data Downloader Reference](/reference/RenCal/Core/rencal.core.data_downloader/)
+- [Data Loader Reference](/reference/RenCal/Core/rencal.core.data_loader/)
+- [Model Base Reference](/reference/RenCal/Models/rencal.models.base/)
+- [Calibrator Reference](/reference/RenCal/Calibration/rencal.calibration.calibrator/)
+- [Weather Data Reference](/reference/RenCal/Simulation/rencal.simulation.weather_data/)
+- [Intermittent Bucketer Reference](/reference/RenCal/Simulation/rencal.simulation.intermittent_bucketer/)

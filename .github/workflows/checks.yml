@@ -34,7 +34,7 @@ jobs:
 
             - name: Run ruff linting and formatting
               run: |
-                  uv run ruff format rencal/ tests/
+                  uv run ruff format --check rencal/ tests/
                   uv run ruff check rencal/ tests/
 
             - name: Run type checking with basedpyright

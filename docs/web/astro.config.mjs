@@ -10,9 +10,9 @@ export default defineConfig({
     vite: {
         resolve: {
             alias: {
-                '@': new URL('./src', import.meta.url).pathname
-            }
-        }
+                "@": new URL("./src", import.meta.url).pathname,
+            },
+        },
     },
     markdown: {
         remarkPlugins: [remarkMath],
@@ -36,6 +36,10 @@ export default defineConfig({
                 },
             ],
             sidebar: [
+                {
+                    label: "Intro",
+                    link: "/",
+                },
                 {
                     label: "Concepts",
                     autogenerate: {

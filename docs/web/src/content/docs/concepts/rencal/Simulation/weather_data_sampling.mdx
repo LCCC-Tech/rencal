@@ -1,0 +1,133 @@
+---
+title: Weather Data Sampling
+description: How RenCal samples historical weather-driven behavior for future periods using bucketing, cached artifacts, and distribution-aware resampling.
+---
+
+# Weather Data Sampling
+
+This page explains the simulation-side weather sampling concepts implemented in `rencal.simulation.weather_data` and `rencal.simulation.intermittent_bucketer`.
+
+## Problem this solves
+
+RenCal needs future hourly weather-conditioned generation streams that are:
+
+- statistically plausible,
+- seasonally aware,
+- compatible with calibrated plant behavior.
+
+Rather than naive random draws, the simulation layer samples historical periods with bucketing and distribution controls.
+
+## Core components
+
+### `HistoricalMetadata`
+
+`HistoricalMetadata` describes a historical NPY artifact and its temporal limits:
+
+- artifact basename,
+- path resolver,
+- left/right time bounds,
+- column list,
+- optional block size (`hours_per_block`) for histogram acceleration.
+
+This descriptor can also be built from a loader-provided manifest via `HistoricalMetadata.from_manifest(...)`, keeping simulation metadata aligned with calibrated artifact metadata.
+
+### `VersionedColumnsNDArray`
+
+`WeatherData.random_sample(...)` returns a `VersionedColumnsNDArray`, not a plain array.
+
+This wrapper keeps track of:
+
+- canonical columns from the base sampled data,
+- appended transformed versions for columns that have one or more desired-average overrides.
+
+Use:
+
+- `sample.access_col(canonical_col)` for the canonical stream,
+- `sample.access_col(canonical_col, version=1)` (or higher) for transformed variants.
+
+### `WeatherData`
+
+`WeatherData` is the main sampler object.
+
+It uses metadata + optional desired-average overrides and then samples historical periods for a requested future window.
+
+Constructor semantics that matter in practice:
+
+- `desired_averages` is a mapping: `dict[int, list[float]]`, where each key is a canonical column index and each value is one or more target averages.
+- If desired averages are provided, at least one of `historical_data` or `prefix_histograms` must be provided at construction (otherwise optimization cannot be computed).
+- `ignore_zeros=True` activates solar-style behavior: histogram building and resampling operate only on non-zero hours, while zeros are preserved.
+
+Key behaviors include:
+
+- process-scope cache by NPY basename,
+- bucket-aware random draw selection,
+- optional zero handling mode (`ignore_zeros`) for solar-like series,
+- histogram/inverse-CDF style resampling utilities,
+- version-aware output for duplicated target averages per stream.
+
+### `IntermittentBucketer`
+
+`IntermittentBucketer` applies seasonality-aware bucketing with a single category.
+
+- Date windows are assigned to monthly buckets.
+- Draws are selected from historical ranges that match bucket context.
+- Resulting samples preserve seasonal structure better than unconstrained random shuffling.
+
+For a deeper explanation of bucket design and draw mechanics, see [Bucketing Strategy](./bucketing_strategy/).
+
+## Sampling modes and zero handling
+
+`WeatherData` supports two conceptual modes:
+
+- **`ignore_zeros = False`**: all values contribute to histograms and resampling (typical wind behavior).
+- **`ignore_zeros = True`**: zero-valued hours are preserved; only non-zero values are resampled (typical solar behavior where nighttime zeros are structural).
+
+This avoids distorting physical patterns (for example, introducing solar output at night).
+
+When `ignore_zeros=True`, desired averages are internally rescaled from all-hours to non-zero-hours before optimization, so transformed daytime values still target the intended whole-series behavior.
+
+## Sampling workflow (code-level)
+
+`WeatherData.random_sample(...)` works as follows:
+
+1. load/mmap historical NPY via process-scope cache (`_HIST_CACHE`),
+2. extend right-hand horizon with `adjust_forecasted_horizon(...)` so draw-period chunking can fully cover the request,
+3. call `IntermittentBucketer.random_sample(...)` to get historical block start dates,
+4. slice historical arrays in `draw_period * 24` hour chunks and concatenate,
+5. trim to exactly requested hour count,
+6. append transformed columns (if any) via `append_resampled_columns(...)`,
+7. return `VersionedColumnsNDArray`.
+
+### Histogram path and optimization path
+
+When desired averages are present, the constructor precomputes old/new distributions:
+
+- Uses `crop_time_margins_to_full_years()` to avoid seasonal bias in training windows.
+- Uses `get_fast_histogram(...)` if prefix histograms and `hours_per_block` are available; otherwise falls back to `get_histogram(...)`.
+- Computes optimized distributions via `BucketedData.compute_optimized_distributions(...)` (exponential tilting / KL-minimizing formulation), then stores `new_cdf` for inverse-CDF mapping.
+
+## How it connects to loader/downloader layers
+
+Simulation sampling depends on upstream artifacts:
+
+1. downloader produces local weather/generation artifacts,
+2. loader validates calibrated weather artifacts + manifests,
+3. simulation reads those validated historical artifacts for draw/resample operations.
+
+See:
+
+- [Data Downloader Architecture](../Core/data_downloader_architecture/)
+- [Data Loader Architecture](../Core/data_loader_architecture/)
+- [Data and Simulation Pipeline](../data_and_simulation_pipeline/)
+
+## Related pages
+
+- [Data and Simulation Pipeline](../data_and_simulation_pipeline/)
+- [Bucketing Strategy](./bucketing_strategy/)
+- [Data Loader Architecture](../Core/data_loader_architecture/)
+- [Data Downloader Architecture](../Core/data_downloader_architecture/)
+- [Weather Data Reference](/reference/RenCal/Simulation/rencal.simulation.weather_data/)
+- [Intermittent Bucketer Reference](/reference/RenCal/Simulation/rencal.simulation.intermittent_bucketer/)
+- [Bucketer Reference](/reference/RenCal/Core/rencal.core.bucketer/)
+- [Bucketed Data Reference](/reference/RenCal/Core/rencal.core.bucketed_data/)
+- [ShortDate Reference](/reference/RenCal/Core/rencal.core.short_date/)

@@ -1,0 +1,104 @@
+---
+title: rencal.simulation.intermittent_bucketer
+description: Reference documentation for rencal.simulation.intermittent_bucketer.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.simulation.intermittent_bucketer` provides the default single-category bucketer for intermittency sampling.
+
+[`IntermittentBucketer`](/reference/RenCal/Simulation/rencalsimulationintermittent_bucketer/#intermittentbucketer) extends [`Bucketer`](/reference/RenCal/Core/rencalcorebucketer/#bucketer) with a single category (no extra categorical filtering), while preserving month-based bucket seasonality for random historical draw selection.
+
+#### Example
+
+```python
+import datetime as dt
+
+from rencal.simulation.intermittent_bucketer import IntermittentBucketer
+
+bucketer = IntermittentBucketer(
+    historical_start_date=dt.datetime(1990, 1, 1),
+    historical_end_date=dt.datetime(2025, 12, 31),
+)
+```
+</Section>
+
+## Constructor
+
+### IntermittentBucketer
+
+<Segment>
+<Section type="signature">
+```python
+class IntermittentBucketer(
+    historical_start_date,
+    historical_end_date,
+    draw_period=7,
+    bucket_definition=MONTHLY_BUCKET_DEFINITION,
+): IntermittentBucketer
+```
+</Section>
+
+Constructs a one-category bucketer with monthly bucket partition defaults.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">historical_start_date</code> <code class="primitive">datetime.datetime</code></p>
+  First historical day available for sampling.
+
+- <p><code class="key">historical_end_date</code> <code class="primitive">datetime.datetime</code></p>
+  Last historical day available for sampling.
+
+- <p><code class="key">draw_period</code> <code class="primitive">int</code></p>
+  Number of consecutive days represented by one draw.
+
+- <p><code class="key">bucket_definition</code> <code class="primitive">list[ShortDate]</code></p>
+  Bucket boundaries used for seasonality-aware sampling.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">IntermittentBucketer</code>](#IntermittentBucketer)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### IntermittentBucketer.assign_category
+
+<Segment>
+<Section type="signature">
+```python
+assign_category(date) -> int
+```
+</Section>
+
+Returns category `0` for every date.
+
+<InlineSection>
+**Returns** <code class="primitive">int</code>
+</InlineSection>
+</Segment>
+
+### IntermittentBucketer.tabulate_date_info
+
+<Segment>
+<Section type="signature">
+```python
+tabulate_date_info(date) -> list[int]
+```
+</Section>
+
+Returns lookup payload with the computed bucket index.
+
+<InlineSection>
+**Returns** <code class="primitive">list[int]</code>
+</InlineSection>
+</Segment>
+
+</div>

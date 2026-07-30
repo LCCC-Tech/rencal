@@ -1,6 +1,8 @@
 ---
 description: Updates and creates documentation
 name: docs
+target: github-copilot
+model: gpt-5-mini
 ---
 
 # docs instructions
