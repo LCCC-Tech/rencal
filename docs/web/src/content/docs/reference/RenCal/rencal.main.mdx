@@ -1,0 +1,50 @@
+---
+title: rencal.main
+description: Reference documentation for rencal.main.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.main` provides example runtime entrypoints for end-to-end data download/loading and weather sampling flows.
+</Section>
+
+## Functions
+
+### main
+
+<Segment>
+<Section type="signature">
+```python
+main() -> None
+```
+</Section>
+
+Runs the download manager and demonstrates loading/logging plant, generation, and ERA5 datasets.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### run_data_loop
+
+<Segment>
+<Section type="signature">
+```python
+run_data_loop() -> None
+```
+</Section>
+
+Demonstrates constructing [`HistoricalMetadata`](/reference/RenCal/Simulation/rencalsimulationweather_data/#historicalmetadata), loading optional histogram/historical artifacts, sampling weather data with [`WeatherData.random_sample()`](/reference/RenCal/Simulation/rencalsimulationweather_data/#weatherdatarandom_sample), and accessing transformed stream columns.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+</div>

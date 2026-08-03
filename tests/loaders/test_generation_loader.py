@@ -10,8 +10,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from weather.core.data_loader import LocalDataLoader
-from weather.models import GenerationDatasetModel, PlantDatasetModel
+from rencal.core.data_loader import LocalDataLoader
+from rencal.models import GenerationDatasetModel, PlantDatasetModel
 
 
 class TestGenerationDataLoader:

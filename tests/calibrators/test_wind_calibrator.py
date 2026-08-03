@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from weather.calibration.wind.wind_calibrator import WindCalibrator
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
 
 
 @pytest.fixture

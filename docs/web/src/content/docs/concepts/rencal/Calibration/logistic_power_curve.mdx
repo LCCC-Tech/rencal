@@ -1,0 +1,57 @@
+---
+title: Logistic Power Curve
+description: How wind speed is converted into expected load factor using a generalized logistic power curve.
+---
+
+# Logistic Power Curve
+
+## Context
+
+In wind calibration, the logistic power curve models how expected plant load factor changes as wind speed increases.
+
+It gives us a compact analytical expression that can be fitted to historical observations and then reused to convert hourly wind speed into hourly load factor.
+
+## Generalised Logistic Function (5PL)
+
+The general form is:
+
+$$
+f(x,a,b,c,d,g) = d + \frac{a - d}{(1 + (x/c)^b)^g}
+$$
+
+Parameter interpretation:
+
+- `a`: lower bound (minimum production)
+- `b`: slope/steepness
+- `c`: inflection point
+- `d`: upper bound (maximum production)
+- `g`: asymmetry factor (`g = 1` gives a symmetric shape)
+
+For wind load factors in this workflow, bounds are fixed to:
+
+- `a = 0`
+- `d = 1`
+
+So the fitted shape parameters are effectively `b`, `c`, and `g`.
+
+![Effects of parameters A-D on the shape of the generalised logistic function](src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionParamsAtoD.png)
+
+![Effect of parameter G on the shape of the generalised logistic function](src/assets/concepts/RenewablesCalibration/GeneralisedLogisticFunctionParamsG.png)
+
+## Why this model is used
+
+- Single analytical expression, easy to evaluate at scale.
+- Flexible enough to represent the S-shaped response of wind output.
+- Fitted directly to historical plant data via least-squares calibration.
+
+## How it is used in rencal
+
+- Implemented in [`WindCalibrator.logistic_function()`](/reference/RenCal/Calibration/rencalcalibrationwindwind_calibrator/#windcalibratorlogistic_function).
+- Fitted as part of calibration flow in [`WindCalibrator.estimate_load_factors_for_resource()`](/reference/RenCal/Calibration/rencalcalibrationwindwind_calibrator/#windcalibratorestimate_load_factors_for_resource).
+- Applied hour-by-hour to wind speed data to produce `Wind Streams.parquet`.
+
+## Related pages
+
+- [Wind Power Curve Calibration](./wind_power_curve_calibration/)
+- [Weibull Wind-Speed Distribution](./weibull_wind_speed_distribution/)
+- [WindCalibrator Reference](/reference/RenCal/Calibration/rencalcalibrationwindwind_calibrator/)

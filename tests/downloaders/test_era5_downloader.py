@@ -2,7 +2,7 @@
 
 import pytest
 
-from weather.core.data_downloader import ERA5DataDownloader
+from rencal.core.data_downloader import ERA5DataDownloader
 
 
 def test_era5_client_requires_api_key_when_missing(monkeypatch: pytest.MonkeyPatch) -> None:

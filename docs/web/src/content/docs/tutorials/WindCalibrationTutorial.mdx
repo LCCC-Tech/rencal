@@ -1,0 +1,141 @@
+---
+title: Wind Calibration Tutorial
+description: End-to-end walkthrough for running wind calibration locally with WindCalibrator.
+---
+
+This tutorial walks through the full workflow for running wind calibration locally using `WindCalibrator`, from downloading inputs to inspecting the generated outputs.
+
+## 1. Environment and Setup
+
+Before running:
+
+- Use **Python 3.12**.
+- Install project dependencies (including notebook extras):
+  ```bash
+  uv sync --group notebook
+  ```
+- Ensure NetCDF support is available (`xarray` + `netCDF4`) — ERA5 loading depends on it.
+
+## 2. Required Input Folder Structure
+
+`WindCalibrator` expects a base `data_path` with these subdirectories:
+
+```
+data/
+  plant/plant_data.csv
+  generation/generation_data.parquet
+  era5/*.nc
+```
+
+## 3. Downloading Calibration Inputs
+
+Three input datasets are required:
+
+1. **Plant data** — plant metadata and CfD/BMU mapping, downloaded via `CfDDataDownloader` from the LCCC API.
+2. **Generation data** — historical generation per plant, downloaded via `GenerationDataDownloader` from Elexon BMRS.
+3. **ERA5 weather data** — hourly reanalysis weather in NetCDF format, downloaded via `ERA5DataDownloader` from the Copernicus Climate Data Store (requires a valid `CDS_API_KEY` in `.env`).
+
+Use `DownloadManager` to fetch all inputs at once:
+
+```python
+from rencal.core.data_downloader import DownloadManager
+
+dm = DownloadManager()
+dm.download_all()
+```
+
+Or download step-by-step:
+
+```python
+dm = DownloadManager()
+dm.download_cfd()
+dm.download_generation_data()
+dm.download_era5()
+```
+
+## 4. Configure `WindCalibrator`
+
+```python
+from pathlib import Path
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
+
+wc = WindCalibrator(
+    data_path="data",
+    output_path=Path("outputs/wind_calibration"),
+    visual_output=True,       # save power curve PNG plots
+    stream_npy_output=True,   # save Wind Streams.npy
+)
+```
+
+Key constructor arguments:
+
+| Argument | Type | Description |
+|---|---|---|
+| `data_path` | `str` | Base folder containing `plant/`, `generation/`, `era5/` |
+| `output_path` | `Path \| str` | Directory where calibration outputs are written |
+| `visual_output` | `bool` | Save `PowerCurveFit_*.png` plots when `True` |
+| `stream_npy_output` | `bool` | Also save `Wind Streams.npy` when `True` |
+
+## 5. Run Calibration
+
+```python
+wc.calibrate()
+```
+
+The calibration executes these steps in sequence:
+
+1. **Weibull Parameters** — Estimates the Weibull distribution parameters `k` (shape) and `λ` (scale) for wind speed frequency at each wind farm.
+2. **Calibration Summary** — Fits a five-parameter logistic (5PL) power curve to each plant using actual wind speed and generation data. The 5PL function maps wind speed to load factor via parameters `a` (minimum), `b` (slope), `c` (inflection point), `d` (maximum), and `g` (asymmetry).
+3. **Wind Speeds** — Backcasts hourly wind speeds from 1980 to present for each plant using ERA5 data and the plant's longitude/latitude from `plant_data.csv`.
+4. **Wind Streams** — Applies each plant's fitted power curve to the backcasted wind speeds to produce hourly load factors from 1980 to present.
+
+> **Note:** For plants with insufficient historical generation (e.g. newly operational), a generic power curve is applied automatically.
+
+## 6. Inspect Outputs
+
+After calibration, the following files are written to `output_path`:
+
+| File | Description |
+|---|---|
+| `Weibull Params.csv` | Per-plant Weibull `k` and `λ` parameters |
+| `Calibration Summary.csv` | 5PL power curve parameters and estimated load factors per plant |
+| `Wind Speeds.csv` | Hourly wind speeds (1980–present) per `plant_id` |
+| `Wind Streams.parquet` | Hourly load factors (1980–present) per `plant_id` |
+| `PowerCurveFit_*.png` | Power curve fit plots (if `visual_output=True`) |
+| `Wind Streams.npy` | Binary wind streams array (if `stream_npy_output=True`) |
+
+```python
+import pandas as pd
+
+weibull   = pd.read_csv("outputs/wind_calibration/Weibull Params.csv")
+summary   = pd.read_csv("outputs/wind_calibration/Calibration Summary.csv")
+speeds    = pd.read_csv("outputs/wind_calibration/Wind Speeds.csv")
+streams   = pd.read_parquet("outputs/wind_calibration/Wind Streams.parquet")
+```
+
+## 7. Troubleshooting
+
+### ERA5 / NetCDF loading issues
+
+If you see warnings like `"Failed to load ... xarray IO backends ..."`:
+
+1. Confirm dependencies are installed: `uv sync --group notebook`
+2. Verify `netCDF4` is importable:
+   ```python
+   import importlib
+   for pkg in ['xarray', 'netCDF4', 'h5netcdf']:
+       spec = importlib.util.find_spec(pkg)
+       print(f'{pkg}:', 'installed' if spec else 'missing')
+   ```
+3. Confirm `.nc` files are present under `data/era5/` and are not corrupted.
+
+If no files load successfully, `WindCalibrator` raises: `ValueError: Failed to load any NetCDF files successfully`.
+
+### Common missing file errors
+
+| Error | Cause |
+|---|---|
+| `FileNotFoundError: plant_data.csv` | Missing `data/plant/plant_data.csv` |
+| `FileNotFoundError: generation_data.parquet` | Missing `data/generation/generation_data.parquet` |
+| `FileNotFoundError: No ERA5 NetCDF files found` | Missing or empty `data/era5/` directory |
+| `PermissionError` on output | Ensure `output_path` is writable |

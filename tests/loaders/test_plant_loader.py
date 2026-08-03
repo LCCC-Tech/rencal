@@ -10,9 +10,9 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from weather.core.data_loader import LocalDataLoader
-from weather.models import PlantDatasetModel
-from weather.utils.constants import WIND_TECHNOLOGY_TYPES
+from rencal.core.data_loader import LocalDataLoader
+from rencal.models import PlantDatasetModel
+from rencal.utils.constants import WIND_TECHNOLOGY_TYPES
 
 
 class TestPlantDataLoader:

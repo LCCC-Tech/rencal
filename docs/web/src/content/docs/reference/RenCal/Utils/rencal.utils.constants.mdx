@@ -1,0 +1,93 @@
+---
+title: rencal.utils.constants
+description: Reference documentation for rencal.utils.constants.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.utils.constants` loads configuration/env defaults and exposes shared constants used across download, loading, calibration, and simulation modules.
+</Section>
+
+## Constants
+
+### Runtime and paths
+
+<Segment>
+- `DOWNLOAD_DATA_DIR`
+- `RUNTIME_DATE`
+- `TIMEZONE`
+- `DAYS_IN_YEAR`
+</Segment>
+
+### Date windows
+
+<Segment>
+- `ERA5_START_YEAR`
+- `CALIBRATION_START_YEAR`
+- `CALIBRATION_START_DATE`
+- `CALIBRATION_END_DATE`
+- `SIMULATION_START_DATE`
+- `SIMULATION_END_DATE`
+</Segment>
+
+### Data schema and artifact names
+
+<Segment>
+- `PLANT_ID_COLUMN`
+- `INTERNAL_PLANT_ID`
+- `PLANT_ID_OUTPUT`
+- `PLANT_DATA_FILE_NAME`
+- `GENERATION_DATA_FILE_NAME`
+- `WIND_NPY_BASEPATH`
+- `WIND_NPY_HISTOGRAMS_BASEPATH`
+</Segment>
+
+### APIs and ERA5 configuration
+
+<Segment>
+- `CDS_API_URL`
+- `ERA5_DATASET`
+- `ERA5_PRODUCT_TYPE`
+- `AREA_BOUNDING_BOX_COORDINATES`
+- `DEFAULT_WIND_VARIABLES`
+- `DEFAULT_SOLAR_VARIABLES`
+- `ERA5_VARIABLE_MAPPING`
+- `CFD_REGISTER_API_URL`
+- `CFD_BMU_CSV_URL`
+- `ELEXON_API_URL`
+</Segment>
+
+### Settlement period mappings
+
+<Segment>
+- `NORMAL_DAY_MINUTES`
+- `MARCH_FORWARD_MINUTES`
+- `OCTOBER_BACK_MINUTES`
+</Segment>
+
+### Logging and calibration settings
+
+<Segment>
+- `QUIET_MODE`
+- `VERBOSE_MODE`
+- `DEFAULT_LOGISTIC_FN_XLOC`
+- `DEFAULT_LOGISTIC_FN_ASYMMETRY`
+- `DEFAULT_LOGISTIC_FN_STEEPNESS`
+- `LOGISTIC_FN_STEEPNESS_LBOUND` / `LOGISTIC_FN_STEEPNESS_HBOUND`
+- `LOGISTIC_FN_XLOC_LBOUND` / `LOGISTIC_FN_XLOC_HBOUND`
+- `LOGISTIC_FN_ASYMMETRY_LBOUND` / `LOGISTIC_FN_ASYMMETRY_HBOUND`
+- `LOGISTIC_FN_MAXEVAL`
+- `WIND_SPEED_LBOUND`
+- `WIND_SPEED_HBOUND`
+</Segment>
+
+<InlineSection>
+**Note** Values are loaded from `config.yml` with default fallbacks when absent.
+</InlineSection>
+
+</div>
