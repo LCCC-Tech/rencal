@@ -1,0 +1,15 @@
+# CODEOWNERS
+#
+# Review protection for security-sensitive automation. Changes to the CI
+# workflows and Copilot agent configuration must be approved by the Analytics
+# team. Senior Quants are a sub-team of Analytics, so members of that sub-team
+# are included via the parent @LCCC-Tech/analytics team.
+
+# CI / GitHub Actions workflows
+/.github/workflows/                 @LCCC-Tech/analytics
+
+# Copilot / AI agent configuration (incl. docs.agent.md)
+/.github/agents/                    @LCCC-Tech/analytics
+
+# The CODEOWNERS file itself
+/.github/CODEOWNERS                 @LCCC-Tech/analytics
