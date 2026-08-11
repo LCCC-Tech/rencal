@@ -51,11 +51,11 @@ jobs:
               id: pr_files
               env:
                   BASE_REF: ${{ github.base_ref }}
-                  HEAD_SHA: ${{ github.sha }}
+                  HEAD_SHA: ${{ github.event.pull_request.head.sha }}
               run: |
                   git fetch origin "$BASE_REF" --depth=1
                   changed_files=$(git diff --name-status "origin/${BASE_REF}...${HEAD_SHA}" \
-                    | awk '$1 == "A" || $1 == "M" {print $2}')
+                    | awk '$1 ~ /^R/ || $1 ~ /^C/ {print $3} $1 !~ /^R/ && $1 !~ /^C/ {print $2}')
 
                   if [ -z "$changed_files" ]; then
                     echo "has_files=false" >> "$GITHUB_OUTPUT"
@@ -77,19 +77,25 @@ jobs:
               run: |
                   files_list=$(printf '%s\n' "${{ steps.pr_files.outputs.files_list }}" | while IFS= read -r file; do [ -n "$file" ] && printf -- "- %s\n" "$file"; done)
                   # Replace `--allow-all-tools` with an explicit, restricted
-                  # allow-list. The agent may read files and write docs; it may
-                  # not run arbitrary shell commands.
+                  # allow-list. The agent may read files and write docs, and
+                  # may use only the read-only inspection commands it needs.
                   copilot --agent docs \
                     --prompt "Review the following changed files for user-facing documentation gaps. Update docs/web/src/content/docs/* if needed. Only edit files under docs/web/src/content/docs/.\n\nChanged files:\n$files_list" \
                     --allow-tool 'write' \
                     --allow-tool 'edit' \
                     --allow-tool 'str_replace_editor' \
-                    --deny-tool 'shell'
+                    --allow-tool 'glob' \
+                    --allow-tool 'grep' \
+                    --allow-tool 'shell(cd)' \
+                    --allow-tool 'shell(grep)' \
+                    --allow-tool 'shell(git diff)' \
+                    --allow-tool 'shell(git log)' \
+                    --allow-tool 'shell(mkdir)'
 
             - name: Verify only docs content changed
               if: steps.pr_files.outputs.has_files == 'true'
               run: |
-                  changed=$(git diff --name-only)
+                  changed=$( { git diff --name-only; git ls-files --others --exclude-standard; } | sort -u )
                   if [ -z "$changed" ]; then
                     echo "No documentation updates were produced."
                     echo "has_changes=false" >> "$GITHUB_ENV"
@@ -99,7 +105,8 @@ jobs:
                   echo "Files changed by the agent:"
                   printf '%s\n' "$changed"
 
-                  # Fail if anything outside the docs content directory changed.
+                  # Fail if anything outside the docs content directory changed,
+                  # including untracked files created by the agent.
                   offending=$(printf '%s\n' "$changed" | grep -v '^docs/web/src/content/docs/' || true)
                   if [ -n "$offending" ]; then
                     echo "::error::Agent modified files outside docs/web/src/content/docs/:"
@@ -121,7 +128,11 @@ jobs:
 
             - name: Create patch
               if: env.has_changes == 'true'
-              run: git diff -- 'docs/web/src/content/docs/**' > docs.patch
+              run: |
+                  # Stage only validated documentation changes so new files and
+                  # file metadata are included in the artifact patch.
+                  git add --all -- docs/web/src/content/docs/
+                  git diff --cached --binary -- 'docs/web/src/content/docs/**' > docs.patch
 
             - name: Upload patch artifact
               if: env.has_changes == 'true'
