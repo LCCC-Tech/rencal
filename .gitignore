@@ -197,3 +197,6 @@ models/saved/
 config/secrets.yaml
 .env.local
 .env.production
+
+# Local GitHub CLI account configuration
+.gh-cli/
