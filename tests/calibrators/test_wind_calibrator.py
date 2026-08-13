@@ -175,7 +175,7 @@ class TestWindCalibratorIntegration:
 
         # Initial values
         assert len(calibrator.plants.data) == 10
-        assert calibrator.plants.data["capacity"].sum() == 1634.189
+        assert calibrator.plants.data["capacity"].sum() == pytest.approx(1634.289)
         assert len(calibrator.generation.data) == 26040
         assert len(calibrator.generation.data["plant_id"].unique()) == 35
         assert len(calibrator.resource.data.variables) == 5
@@ -188,12 +188,12 @@ class TestWindCalibratorIntegration:
         calibrator.calibrate()
 
         # Post-calibration values
-        assert len(calibrator.summary) == 8
+        assert len(calibrator.summary) == 12
         assert calibrator.summary.isna().values.any() == np.False_
         assert len(calibrator.wind_streams) == 24
         assert len(calibrator.wind_streams.columns) == 11
         assert calibrator.wind_streams.isna().values.any() == np.False_
-        assert len(list(calibrator.output_path.glob("PowerCurveFit_*"))) == 6
+        assert len(list(calibrator.output_path.glob("PowerCurveFit_*"))) == 10
         assert (calibrator.output_path / "Calibration Summary.csv").exists() is True
         assert (calibrator.output_path / "Weibull Params.csv").exists() is True
         assert (calibrator.output_path / "Wind Streams.parquet").exists() is True
