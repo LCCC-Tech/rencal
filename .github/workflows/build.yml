@@ -1,0 +1,70 @@
+name: Build artifacts
+
+on:
+    pull_request:
+        branches: [main, dev]
+    push:
+        branches: [main, dev]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    python-package:
+        name: Build Python package
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v5
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v3
+              with:
+                  version: "latest"
+
+            - name: Set up Python
+              run: uv python install 3.12
+
+            - name: Build wheel and sdist
+              run: uv build
+
+            - name: Upload Python distributions
+              uses: actions/upload-artifact@v4
+              with:
+                  name: python-package-distributions
+                  path: dist/
+
+    docs-web:
+        name: Build docs web
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v5
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v5
+              with:
+                  node-version: "24"
+                  cache: npm
+                  cache-dependency-path: docs/web/package-lock.json
+
+            - name: Install docs dependencies
+              working-directory: docs/web
+              run: npm ci
+
+            - name: Build docs site
+              working-directory: docs/web
+              run: npm run build
+
+            - name: Upload docs site
+              uses: actions/upload-artifact@v4
+              with:
+                  name: docs-web-dist
+                  path: docs/web/dist/
