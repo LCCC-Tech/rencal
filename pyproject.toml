@@ -4,11 +4,12 @@ build-backend = "uv_build"
 
 [project]
 name = "rencal"
-version = "0.0.0"  # placeholder — CI injects the real version from the git tag before building
+version = "0.0.0"
 description = "Weather-to-power calibration and Monte Carlo load factor simulation for renewable energy applications"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "Low Carbon Contracts Company Ltd", email = "analytics@lowcarboncontracts.uk"}
 ]
@@ -88,10 +89,6 @@ Documentation = "https://docs.lowcarboncontracts.uk"
 Repository = "https://github.com/LCCC-Tech/rencal.git"
 "Bug Tracker" = "https://github.com/LCCC-Tech/rencal/issues"
 Changelog = "https://github.com/LCCC-Tech/rencal/blob/main/CHANGELOG.md"
-
-[project.scripts]
-rencal-calibrate = "rencal.calibration.cli:main"
-rencal-forecast = "rencal.models.cli:main"
 
 [tool.uv.build-backend]
 module-name = "rencal"

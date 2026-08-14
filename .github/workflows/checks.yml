@@ -1,13 +1,17 @@
 name: Run checks
+
+permissions:
+    contents: read
+
 on:
     pull_request:
-        branches: [main, dev]
+        branches: [main]
     push:
-        branches: [main, dev]
+        branches: [main]
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
     test:
@@ -19,23 +23,25 @@ jobs:
 
         steps:
             - name: Checkout code
-              uses: actions/checkout@v5
+              uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+              with:
+                  persist-credentials: false
 
             - name: Install uv
-              uses: astral-sh/setup-uv@v3
+              uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
               with:
-                  version: "latest"
+                  version: "0.10.8"
 
             - name: Set up Python
               run: uv python install ${{ matrix.python-version }}
 
             - name: Install dependencies
-              run: uv sync --group dev
+              run: uv sync --locked --group dev
 
-            - name: Run ruff linting and formatting
+            - name: Run ruff linting and formatting checks
               run: |
-                  uv run ruff format rencal/ tests/
-                  uv run ruff check rencal/ tests/
+                  uv run ruff format --check rencal/ tests/ scripts/
+                  uv run ruff check rencal/ tests/ scripts/
 
             - name: Run type checking with basedpyright
               run: uv run basedpyright --warnings

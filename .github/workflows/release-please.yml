@@ -1,0 +1,41 @@
+name: Release Please
+
+on:
+    push:
+        branches: [main]
+
+concurrency:
+    group: release-please-main
+    cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+    release-please:
+        name: Prepare or create release
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            issues: write
+            pull-requests: write
+        steps:
+            - name: Create GitHub App installation token
+              id: app-token
+              uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+              with:
+                  client-id: ${{ vars.APP_CLIENT_ID }}
+                  private-key: ${{ secrets.APP_PRIVATE_KEY }}
+                  owner: ${{ github.repository_owner }}
+                  repositories: rencal
+                  permission-contents: write
+                  permission-issues: write
+                  permission-pull-requests: write
+
+            - name: Run Release Please
+              uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+              with:
+                  # A fine-grained token or GitHub App token is required so
+                  # Release Please PRs and releases trigger their workflows.
+                  token: ${{ steps.app-token.outputs.token }}
+                  config-file: release-please-config.json
+                  manifest-file: .release-please-manifest.json

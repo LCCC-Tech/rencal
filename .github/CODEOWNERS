@@ -8,6 +8,10 @@
 # CI / GitHub Actions workflows
 /.github/workflows/                 @LCCC-Tech/analytics
 
+# Release automation configuration
+/release-please-config.json        @LCCC-Tech/analytics
+/.release-please-manifest.json     @LCCC-Tech/analytics
+
 # Copilot / AI agent configuration (incl. docs.agent.md)
 /.github/agents/                    @LCCC-Tech/analytics
 

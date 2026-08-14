@@ -1903,7 +1903,7 @@ wheels = [
 
 [[package]]
 name = "rencal"
-version = "0.0.0"
+version = "0.0.0" # x-release-please-version
 source = { editable = "." }
 dependencies = [
     { name = "cdsapi" },
