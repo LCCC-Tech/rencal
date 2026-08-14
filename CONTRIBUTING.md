@@ -74,19 +74,71 @@ and branch-protection rules must pass before merge.
 
 ## Commit messages and releases
 
-Use concise, imperative commit messages. Where practical, use
-[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+Use concise, imperative commit messages. Use
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) so
+Release Please can propose appropriate version bumps and changelog entries.
+
+The format is:
+
+```text
+<type>[optional scope]: <description>
+```
+
+Common types include:
 
 ```text
 fix: handle missing ERA5 files
 feat: add solar calibration model
 docs: clarify local data setup
+test: cover invalid plant data
+refactor: separate data loading from calibration
+chore: update development tooling
 ```
+
+Use `!` for a breaking change:
+
+```text
+feat!: change the calibration interface
+```
+
+Alternatively, include `BREAKING CHANGE:` in the commit footer. In general:
+
+- `fix` proposes a patch release.
+- `feat` proposes a minor release.
+- `!` or `BREAKING CHANGE` proposes a major release.
+
+Keep the subject short, use the imperative mood, and do not include unrelated
+changes in the same commit.
 
 Release Please uses Conventional Commits to prepare a release pull request.
 Maintainers review and merge that release pull request; contributors should
 not edit release tags, publish to PyPI, or change release versions as part of
 ordinary feature work.
+
+## Docstrings and code documentation
+
+Public modules, classes, functions, and methods should have clear docstrings.
+Use Google-style sections where relevant:
+
+```python
+def load_generation_data(path: Path) -> GenerationDatasetModel:
+    """Load and validate generation data from a parquet file.
+
+    Args:
+        path: Location of the generation data file.
+
+    Returns:
+        The validated generation dataset.
+
+    Raises:
+        FileNotFoundError: If the data file does not exist.
+        ValueError: If the data does not match the expected schema.
+    """
+```
+
+Update docstrings when behaviour, arguments, return values, or error handling
+changes. Keep examples and documentation free from internal data and
+credentials.
 
 ## Documentation
 
