@@ -57,6 +57,36 @@ uv run pytest tests/ -v
 Add or update tests for behavioural changes. Keep tests deterministic and do
 not commit operational or confidential datasets.
 
+Run the test suite with coverage when investigating coverage or adding a larger
+feature:
+
+```bash
+uv run pytest tests/ --cov=rencal --cov-report=html
+```
+
+## Building from source
+
+Build the wheel and source distribution locally with the same build backend
+used by the release workflow:
+
+```bash
+rm -rf dist/
+uv build --no-sources
+```
+
+The distributions are written to `dist/`. Before submitting packaging changes,
+check that both artefacts build successfully and that they do not contain
+tests, local data, credentials, or other development-only files.
+
+## Coding standards
+
+- Follow [PEP 8](https://peps.python.org/pep-0008/).
+- Use meaningful names and type hints for public interfaces.
+- Keep lines within the repository's 100-character formatting configuration.
+- Prefer small, focused changes with clear error handling.
+- Use the existing Ruff and BasedPyright configuration rather than introducing
+  alternative formatting or linting tools.
+
 ## Pull requests
 
 Pull requests should:
@@ -115,6 +145,10 @@ Maintainers review and merge that release pull request; contributors should
 not edit release tags, publish to PyPI, or change release versions as part of
 ordinary feature work.
 
+The release workflow builds the tagged source, publishes the exact artefacts to
+TestPyPI, smoke-tests the installation, and then publishes to PyPI. Release
+preparation is maintainer-owned.
+
 ## Docstrings and code documentation
 
 Public modules, classes, functions, and methods should have clear docstrings.
@@ -145,6 +179,9 @@ credentials.
 Keep the README, tutorials under `docs/tutorials/`, and the documentation site
 content accurate when behaviour changes. Public examples must use synthetic or
 redistributable data and must not expose internal systems or credentials.
+
+API documentation is generated from public modules and their docstrings. Add
+examples to docstrings or tutorials when they clarify a public workflow.
 
 ## Questions and support
 
