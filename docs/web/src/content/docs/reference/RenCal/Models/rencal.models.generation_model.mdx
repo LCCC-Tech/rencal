@@ -1,0 +1,157 @@
+---
+title: rencal.models.generation_model
+description: Reference documentation for rencal.models.generation_model.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.models.generation_model` defines the validated generation dataset model for time-indexed plant output.
+</Section>
+
+## Constructor
+
+### GenerationDatasetModel
+
+<Segment>
+<Section type="signature">
+```python
+class GenerationDatasetModel(PandasDatasetModel): GenerationDatasetModel
+```
+</Section>
+
+Dataset model for generation/settlement time series.
+
+<InlineSection>
+**Required Columns** <code class="primitive">plant_id</code>, <code class="primitive">time</code>, <code class="primitive">quantity</code>
+</InlineSection>
+
+<InlineSection>
+**Returns** [<code class="type">GenerationDatasetModel</code>](#GenerationDatasetModel)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### GenerationDatasetModel.validate_data
+
+<Segment>
+<Section type="signature">
+```python
+validate_data(data: pd.DataFrame) -> pd.DataFrame
+```
+</Section>
+
+Validates required columns, dtypes, and time column.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### GenerationDatasetModel.get_plant_ids
+
+<Segment>
+<Section type="signature">
+```python
+get_plant_ids() -> list[str]
+```
+</Section>
+
+Returns unique plant IDs.
+
+<InlineSection>
+**Returns** <code class="primitive">list[str]</code>
+</InlineSection>
+</Segment>
+
+### GenerationDatasetModel.get_time_range
+
+<Segment>
+<Section type="signature">
+```python
+get_time_range() -> dict[str, Any] | None
+```
+</Section>
+
+Returns start/end/period summary for time column.
+
+<InlineSection>
+**Returns** <code class="primitive">dict[str, Any] | None</code>
+</InlineSection>
+</Segment>
+
+### GenerationDatasetModel.filter_by_plant_id
+
+<Segment>
+<Section type="signature">
+```python
+filter_by_plant_id(plant_id: str) -> GenerationDatasetModel
+```
+</Section>
+
+Filters rows for a single plant ID.
+
+<InlineSection>
+**Returns** [<code class="type">GenerationDatasetModel</code>](#GenerationDatasetModel)
+</InlineSection>
+</Segment>
+
+### GenerationDatasetModel.filter_by_date_range
+
+<Segment>
+<Section type="signature">
+```python
+filter_by_date_range(start_date: str, end_date: str, date_col: str | None = None) -> GenerationDatasetModel
+```
+</Section>
+
+Filters rows by inclusive date range.
+
+<InlineSection>
+**Returns** [<code class="type">GenerationDatasetModel</code>](#GenerationDatasetModel)
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">ValueError</code>: If date column is not found.
+</InlineSection>
+</Segment>
+
+### GenerationDatasetModel.to_pandas
+
+<Segment>
+<Section type="signature">
+```python
+to_pandas() -> pd.DataFrame
+```
+</Section>
+
+Returns DataFrame copy.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### GenerationDatasetModel.to_xarray
+
+<Segment>
+<Section type="signature">
+```python
+to_xarray() -> xr.Dataset
+```
+</Section>
+
+Converts DataFrame to xarray dataset.
+
+<InlineSection>
+**Returns** <code class="primitive">xr.Dataset</code>
+</InlineSection>
+</Segment>
+
+</div>

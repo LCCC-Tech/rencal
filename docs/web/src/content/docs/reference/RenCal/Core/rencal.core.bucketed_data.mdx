@@ -1,0 +1,330 @@
+---
+title: rencal.core.bucketed_data
+description: Reference documentation for rencal.core.bucketed_data.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.core.bucketed_data` contains shared histogram and distribution utilities used by bucketer-driven simulators.
+
+The module exposes:
+
+- [`BucketedData`](/reference/RenCal/Core/rencalcorebucketed_data/#bucketeddata): utility base class with histogram and distribution optimization helpers.
+- [`VersionedColumnsNDArray`](/reference/RenCal/Core/rencalcorebucketed_data/#versionedcolumnsndarray): array wrapper that tracks canonical columns and transformed variants produced during resampling.
+
+#### Example
+
+```python
+# Returned from WeatherData.random_sample(...)
+sample = weather_data.random_sample(start, end)
+
+# Access canonical column
+base_stream = sample.access_col(1)
+
+# Access first transformed variant of canonical column 1
+variant_stream = sample.access_col(1, 1)
+```
+</Section>
+
+## Constructor
+
+### VersionedColumnsNDArray
+
+<Segment>
+<Section type="signature">
+```python
+class VersionedColumnsNDArray(n_raw_features: int): VersionedColumnsNDArray
+```
+</Section>
+
+Tracks canonical and transformed column mappings for sampled output arrays.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">n_raw_features</code> <code class="primitive">int</code></p>
+  Number of canonical (original) columns in the sampled matrix.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">VersionedColumnsNDArray</code>](#VersionedColumnsNDArray)
+</InlineSection>
+</Segment>
+
+### BucketedData
+
+<Segment>
+<Section type="signature">
+```python
+class BucketedData(): BucketedData
+```
+</Section>
+
+Base utility class for shared bucketer/sampling operations.
+
+<InlineSection>
+**Returns** [<code class="type">BucketedData</code>](#BucketedData)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### VersionedColumnsNDArray.update_mapping
+
+<Segment>
+<Section type="signature">
+```python
+update_mapping(canonical_col: int, j: int) -> int
+```
+</Section>
+
+Registers a transformed column index for a canonical column.
+
+<InlineSection>
+**Returns** <code class="primitive">int</code>
+</InlineSection>
+</Segment>
+
+### VersionedColumnsNDArray.attach_data
+
+<Segment>
+<Section type="signature">
+```python
+attach_data(data: NDArray[np.floating]) -> VersionedColumnsNDArray
+```
+</Section>
+
+Attaches final output matrix to wrapper.
+
+<InlineSection>
+**Returns** [<code class="type">VersionedColumnsNDArray</code>](#VersionedColumnsNDArray)
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">RuntimeError</code>: If data has already been attached.
+- <code class="type">ValueError</code>: If matrix dimensionality or shape is invalid.
+</InlineSection>
+</Segment>
+
+### VersionedColumnsNDArray.access_col
+
+<Segment>
+<Section type="signature">
+```python
+access_col(canonical_col: int, version: int = 0) -> NDArray[np.floating]
+```
+</Section>
+
+Returns canonical or transformed column view.
+
+<InlineSection>
+**Returns** <code class="primitive">NDArray[np.floating]</code>
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">RuntimeError</code>: If matrix data is not attached.
+- <code class="type">IndexError</code>: If requested transformed version is unavailable.
+</InlineSection>
+</Segment>
+
+### BucketedData.crop_time_margins_to_full_years
+
+<Segment>
+<Section type="signature">
+```python
+crop_time_margins_to_full_years() -> datetime.datetime
+```
+</Section>
+
+Computes unbiased historical start date with full seasonal coverage.
+
+<InlineSection>
+**Returns** <code class="primitive">datetime.datetime</code>
+</InlineSection>
+</Segment>
+
+### BucketedData.get_histogram
+
+<Segment>
+<Section type="signature">
+```python
+get_histogram(
+    statistical_start_index: int,
+    statistical_end_index: int,
+    historical_data: NDArray[np.floating] | None,
+    number_of_bins: int,
+    ignore_zeros: bool = False,
+) -> NDArray[np.uint32]
+```
+</Section>
+
+Computes histogram matrix for selected rows and mask columns.
+
+<InlineSection>
+**Returns** <code class="primitive">NDArray[np.uint32]</code>
+</InlineSection>
+</Segment>
+
+### BucketedData.get_fast_histogram
+
+<Segment>
+<Section type="signature">
+```python
+get_fast_histogram(
+    first_statistical_index: int,
+    last_statistical_index: int,
+    historical_data: NDArray[np.floating],
+    hours_per_block: int,
+    prefix_histograms: NDArray[np.uint32],
+    ignore_zeros: bool = False,
+) -> NDArray[np.uint32]
+```
+</Section>
+
+Computes histogram matrix using prefix histograms and partial-edge corrections.
+
+<InlineSection>
+**Returns** <code class="primitive">NDArray[np.uint32]</code>
+</InlineSection>
+</Segment>
+
+### BucketedData.get_absolute_index_of_date
+
+<Segment>
+<Section type="signature">
+```python
+get_absolute_index_of_date(date: datetime.datetime) -> tuple[int, int]
+```
+</Section>
+
+Maps date to absolute hourly index range.
+
+<InlineSection>
+**Returns** <code class="primitive">tuple[int, int]</code>
+</InlineSection>
+</Segment>
+
+### BucketedData.adjust_forecasted_horizon
+
+<Segment>
+<Section type="signature">
+```python
+adjust_forecasted_horizon(
+    future_start_date: datetime.datetime,
+    future_end_date: datetime.datetime,
+) -> tuple[datetime.datetime, int]
+```
+</Section>
+
+Expands horizon boundary for draw-period chunking and returns hour count to trim output.
+
+<InlineSection>
+**Returns** <code class="primitive">tuple[datetime.datetime, int]</code>
+</InlineSection>
+</Segment>
+
+### BucketedData.append_resampled_columns
+
+<Segment>
+<Section type="signature">
+```python
+append_resampled_columns(
+    sample: NDArray[np.floating],
+    rng: np.random.Generator,
+) -> VersionedColumnsNDArray
+```
+</Section>
+
+Appends transformed streams and returns version-aware output wrapper.
+
+<InlineSection>
+**Returns** [<code class="type">VersionedColumnsNDArray</code>](#VersionedColumnsNDArray)
+</InlineSection>
+</Segment>
+
+### BucketedData.compute_time_margins
+
+<Segment>
+<Section type="signature">
+```python
+compute_time_margins(
+    historical_start,
+    historical_end,
+    data_limit_left,
+    data_limit_right,
+) -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp, pd.Timestamp]
+```
+</Section>
+
+Normalizes historical margins to strict hourly/day boundaries.
+
+<InlineSection>
+**Returns** <code class="primitive">tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp, pd.Timestamp]</code>
+</InlineSection>
+</Segment>
+
+### BucketedData.rowwise_logsumexp
+
+<Segment>
+<Section type="signature">
+```python
+rowwise_logsumexp(a: NDArray[np.float64]) -> NDArray[np.float64]
+```
+</Section>
+
+Computes numerically stable row-wise `log(sum(exp(a)))`.
+
+<InlineSection>
+**Returns** <code class="primitive">NDArray[np.float64]</code>
+</InlineSection>
+</Segment>
+
+### BucketedData.data_mean_and_var_under_logweights_probability
+
+<Segment>
+<Section type="signature">
+```python
+data_mean_and_var_under_logweights_probability(
+    data: NDArray[np.float64],
+    logweights: NDArray[np.float64],
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]
+```
+</Section>
+
+Computes mean and variance under normalized row-wise log-weights.
+
+<InlineSection>
+**Returns** <code class="primitive">tuple[NDArray[np.float64], NDArray[np.float64]]</code>
+</InlineSection>
+</Segment>
+
+### BucketedData.compute_optimized_distributions
+
+<Segment>
+<Section type="signature">
+```python
+compute_optimized_distributions(
+    previous_distribution_not_normalized: NDArray[np.uint32],
+    desired_averages: Sequence[float],
+    observations_per_column: int | Sequence[int] | NDArray,
+    tol: float = 1e-12,
+    max_iter: int = 60,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]
+```
+</Section>
+
+Optimizes tilted distributions matching desired averages.
+
+<InlineSection>
+**Returns** <code class="primitive">tuple[NDArray[np.float64], NDArray[np.float64]]</code>
+</InlineSection>
+</Segment>
+
+</div>

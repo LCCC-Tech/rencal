@@ -7,12 +7,54 @@ import rehypeMathjax from "rehype-mathjax";
 
 // https://astro.build/config
 export default defineConfig({
+    experimental: {
+        // Emit per-page CSP <meta> tags with hashes for Astro/Starlight's
+        // bundled inline scripts so they satisfy a strict `script-src 'self'`
+        // policy (e.g. the default security headers applied by AWS Amplify
+        // Hosting) without needing 'unsafe-inline'.
+        //
+        // Astro only auto-hashes inline scripts/styles that pass through its
+        // own build pipeline. A few pieces of inline content bypass that
+        // pipeline by design and are therefore never auto-hashed, so their
+        // hashes are listed explicitly below:
+        //   - Starlight's `<script is:inline>` tags (ThemeProvider,
+        //     SidebarPersister, Search) are intentionally left untouched by
+        //     Astro to avoid a flash of unstyled/wrong-theme content.
+        //   - The `<style>` block injected by rehype-mathjax for SVG math
+        //     rendering is raw HTML emitted by the markdown pipeline, not an
+        //     Astro-owned `<style>` tag.
+        //
+        // NOTE: if `@astrojs/starlight` or `rehype-mathjax` are upgraded and
+        // change the exact content of these scripts/styles, these hashes will
+        // no longer match and the CSP will block them again. Recompute them
+        // (e.g. `openssl dgst -sha256 -binary <<< '<script content>' | openssl base64`)
+        // if console CSP errors reappear after a dependency upgrade.
+        csp: {
+            scriptDirective: {
+                hashes: [
+                    // @astrojs/starlight/components/ThemeProvider.astro
+                    "sha256-VWo5Wp4aqSj6nSgMpeAp9cKieaoIfwFUAunAVugI5gA=",
+                    // @astrojs/starlight/components/Search.astro
+                    "sha256-f/zAUE74ucc3JYp4r4QQvkJofoQdkOIhHYK+jeZ6eko=",
+                    // @astrojs/starlight/components/SidebarPersister.astro (x2)
+                    "sha256-wX2yOADeV+NMngflD5uYi3vl50SHC4sfM1EmylVjlX4=",
+                    "sha256-7eCV4jtsr4t4knb3c4FCRPeu7GGZeOUGE3XvWix0XOQ=",
+                ],
+            },
+            styleDirective: {
+                hashes: [
+                    // rehype-mathjax SVG output styles
+                    "sha256-kuk5TvxZ/Kwuobo4g6uasb1xRQwr1+nfa1A3YGePO7U=",
+                ],
+            },
+        },
+    },
     vite: {
         resolve: {
             alias: {
-                '@': new URL('./src', import.meta.url).pathname
-            }
-        }
+                "@": new URL("./src", import.meta.url).pathname,
+            },
+        },
     },
     markdown: {
         remarkPlugins: [remarkMath],
@@ -36,6 +78,10 @@ export default defineConfig({
                 },
             ],
             sidebar: [
+                {
+                    label: "Intro",
+                    link: "/",
+                },
                 {
                     label: "Concepts",
                     autogenerate: {

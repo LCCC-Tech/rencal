@@ -1,0 +1,109 @@
+---
+title: Bucketing Strategy
+description: How RenCal uses seasonality-aware date buckets to sample historical weather periods into future simulation horizons.
+---
+
+# Bucketing Strategy
+
+RenCal's bucketing strategy controls **which historical periods are eligible** when simulating future hourly weather-driven load factors.
+
+The goal is to preserve broad seasonal behavior (for example winter vs summer wind regimes) while still producing stochastic variation.
+
+## Why bucketing is needed
+
+If we sampled historical dates completely at random, future traces would lose important calendar structure.
+
+Bucketing constrains random sampling so future periods are drawn from historically comparable parts of the year.
+
+In practical terms, this helps retain macro-patterns such as:
+
+- winter peaks and summer slumps,
+- realistic week-scale persistence,
+- cross-stream coherence when the same sampled periods are reused across streams.
+
+## Core concepts
+
+### Draw period
+
+Sampling is performed in fixed-size day blocks (`draw_period`, default `7`).
+
+Instead of choosing each hour independently, RenCal samples consecutive historical blocks and stitches them together. This preserves short-range temporal structure.
+
+### Buckets
+
+A bucket is a calendar interval defined by ordered `ShortDate` boundaries.
+
+For intermittent weather sampling, the default is `MONTHLY_BUCKET_DEFINITION`, so each month acts as a bucket.
+
+### Categories
+
+The base `Bucketer` supports category partitioning in addition to buckets.
+`IntermittentBucketer` currently uses a single category (`0`) and only seasonal buckets.
+
+## How the algorithm works
+
+At construction time, `Bucketer`:
+
+1. validates bucket definition ordering and minimum interval size relative to `draw_period`,
+2. iterates through historical dates,
+3. assigns each eligible draw-start date to `(category, bucket)`,
+4. populates:
+   - `bucket_structure[category][bucket]` with eligible historical draw starts,
+   - `lookup_structure[date]` with memoized per-date metadata via `tabulate_date_info(...)`.
+
+It then extends `lookup_structure` with tabulated future dates (currently up to ~6 years ahead) so runtime bucket/category lookups stay fast.
+
+At runtime (`random_sample`):
+
+1. walk through future horizon in `draw_period` day increments,
+2. compute bucket/category for each future block start,
+3. randomly select a historical draw-start date from matching bucket/category,
+4. return sampled historical start dates to drive array slicing.
+
+`random_sample(...)` only draws full `draw_period` chunks. In the full weather pipeline, any right-edge remainder is handled by horizon adjustment/trimming logic in `BucketedData.adjust_forecasted_horizon(...)`.
+
+## Border handling and seasonality continuity
+
+`bucket_of()` applies a midpoint offset (`draw_period / 2`) before bucket assignment.
+This improves behavior for blocks near month boundaries and helps avoid brittle edge effects where a 7-day block straddles two seasonal regimes.
+
+The bucket definition is treated as cyclic across year-end: dates that fall before the first boundary or after the last boundary are assigned to the final (wrap-around) bucket.
+
+## What `Bucketer` does vs what `BucketedData` does
+
+These two layers are complementary:
+
+- **`Bucketer`** decides *which historical day-block starts to draw*.
+- **`BucketedData`** provides histogram/distribution utilities used *after* draws are stitched (for example optimized distribution transforms and versioned output columns).
+
+In particular, average overrides are implemented through `BucketedData.compute_optimized_distributions(...)` and applied in `append_resampled_columns(...)`, not in `Bucketer` itself.
+
+## Relationship to `WeatherData`
+
+`WeatherData.random_sample()` uses `IntermittentBucketer` to produce sampled historical block starts, then:
+
+- slices historical NPY arrays for each sampled block,
+- concatenates blocks into one horizon-length sample,
+- optionally appends transformed stream versions via inverse-CDF adjustments for desired-average overrides,
+- returns a `VersionedColumnsNDArray` wrapper so canonical and transformed versions can be accessed consistently.
+
+So the bucketer controls **when we draw from**, and `WeatherData` + `BucketedData` control **what happens to sampled values after drawing**.
+
+## Tuning guidance
+
+- **Increase `draw_period`** for smoother, more persistent blocks.
+- **Decrease `draw_period`** for more frequent regime switching.
+- **Change bucket definition** (via `ShortDate` boundaries) when monthly granularity is too coarse/fine for the technology or use case.
+
+Any bucket definition must remain strictly ordered and each interval must be at least `draw_period` days wide.
+
+## Related pages
+
+- [Weather Data Sampling](./weather_data_sampling/)
+- [Data and Simulation Pipeline](../data_and_simulation_pipeline/)
+- [Data Loader Architecture](../Core/data_loader_architecture/)
+- [Bucketer Reference](/reference/RenCal/Core/rencal.core.bucketer/)
+- [Bucketed Data Reference](/reference/RenCal/Core/rencal.core.bucketed_data/)
+- [Intermittent Bucketer Reference](/reference/RenCal/Simulation/rencal.simulation.intermittent_bucketer/)
+- [ShortDate Reference](/reference/RenCal/Core/rencal.core.short_date/)
+- [Weather Data Reference](/reference/RenCal/Simulation/rencal.simulation.weather_data/)
