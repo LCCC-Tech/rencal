@@ -4,6 +4,7 @@ import starlight from "@astrojs/starlight";
 import tailwind from "@astrojs/tailwind";
 import remarkMath from "remark-math";
 import rehypeMathjax from "rehype-mathjax";
+import cspInlineStyleHashes from "./integrations/csp-inline-style-hashes.mjs";
 
 // https://astro.build/config
 export default defineConfig({
@@ -118,5 +119,9 @@ export default defineConfig({
             },
         }),
         tailwind({ applyBaseStyles: false }),
+        // Must run after all other integrations so it patches the final,
+        // fully-rendered HTML output. See integrations/csp-inline-style-hashes.mjs
+        // for why this is needed alongside experimental.csp above.
+        cspInlineStyleHashes(),
     ],
 });
