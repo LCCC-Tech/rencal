@@ -6,6 +6,31 @@ calibration and forecasting.
 
 Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
+## Contributor Licence Agreement
+
+By submitting a pull request, commit, issue attachment, or any other
+contribution to RenCal, you represent and warrant that:
+
+1. You are legally entitled to submit the contribution, either as its original
+   author or as someone authorised to submit it on behalf of the copyright
+   holder.
+2. The contribution is your original work or is otherwise available under terms
+   that permit its inclusion in this project.
+3. To the best of your knowledge, the contribution does not knowingly infringe
+   any third-party intellectual property rights.
+4. You grant Low Carbon Contracts Company Ltd and all recipients of the project
+   a perpetual, worldwide, non-exclusive, irrevocable, royalty-free licence to
+   use, reproduce, modify, publish, distribute, sublicense, and commercialise
+   the contribution as part of RenCal and any derivative work.
+5. You agree that the contribution may be redistributed under the licence
+   applicable to this repository, including any future version of that licence
+   adopted by the project.
+
+By submitting a contribution, you acknowledge and agree to these terms. This
+section does not transfer ownership of your contribution; it grants the project
+the rights needed to use, maintain, and redistribute it.
+
+
 ## Before you start
 
 1. Search existing [issues](https://github.com/LCCC-Tech/rencal/issues) before
@@ -101,30 +126,6 @@ Pull requests should:
 Open the pull request against `main`. Maintainers review and approve pull
 requests; direct commits to `main` are not permitted. All required CI checks
 and branch-protection rules must pass before merge.
-
-## Contributor Licence Agreement
-
-By submitting a pull request, commit, issue attachment, or any other
-contribution to RenCal, you represent and warrant that:
-
-1. You are legally entitled to submit the contribution, either as its original
-   author or as someone authorised to submit it on behalf of the copyright
-   holder.
-2. The contribution is your original work or is otherwise available under terms
-   that permit its inclusion in this project.
-3. To the best of your knowledge, the contribution does not knowingly infringe
-   any third-party intellectual property rights.
-4. You grant Low Carbon Contracts Company Ltd and all recipients of the project
-   a perpetual, worldwide, non-exclusive, irrevocable, royalty-free licence to
-   use, reproduce, modify, publish, distribute, sublicense, and commercialise
-   the contribution as part of RenCal and any derivative work.
-5. You agree that the contribution may be redistributed under the licence
-   applicable to this repository, including any future version of that licence
-   adopted by the project.
-
-By submitting a contribution, you acknowledge and agree to these terms. This
-section does not transfer ownership of your contribution; it grants the project
-the rights needed to use, maintain, and redistribute it.
 
 ## Commit messages and releases
 
