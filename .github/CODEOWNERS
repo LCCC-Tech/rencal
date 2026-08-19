@@ -6,10 +6,14 @@
 # are included via the parent @LCCC-Tech/analytics team.
 
 # CI / GitHub Actions workflows
-/.github/workflows/                 @LCCC-Tech/analytics
+/.github/workflows/                 @LCCC-Tech/senior-quants
+
+# Release automation configuration
+/release-please-config.json        @LCCC-Tech/senior-quants
+/.release-please-manifest.json     @LCCC-Tech/senior-quants
 
 # Copilot / AI agent configuration (incl. docs.agent.md)
-/.github/agents/                    @LCCC-Tech/analytics
+/.github/agents/                    @LCCC-Tech/senior-quants
 
 # The CODEOWNERS file itself
-/.github/CODEOWNERS                 @LCCC-Tech/analytics
+/.github/CODEOWNERS                 @LCCC-Tech/senior-quants

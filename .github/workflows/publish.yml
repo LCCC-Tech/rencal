@@ -1,214 +1,149 @@
-name: Publish to PyPI
+name: Publish package
+
+env:
+    UV_VERSION: "0.10.8"
 
 on:
-    workflow_run:
-        workflows: ["Run checks"]
-        types: [completed]
+    release:
+        types: [published]
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch }}
+    group: publish-${{ github.event.release.tag_name }}
     cancel-in-progress: false
 
+permissions: {}
+
 jobs:
-    # ── Release pipeline ───────────────────────────────────────────────
-    tag:
-        name: Create release tag
-        if: >
-            false &&
-            github.event.workflow_run.conclusion == 'success' &&
-            github.event.workflow_run.head_branch == 'main'
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
-        outputs:
-            tag: ${{ steps.version.outputs.tag }}
-            version: ${{ steps.version.outputs.version }}
-
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@v5
-              with:
-                  ref: ${{ github.event.workflow_run.head_sha }}
-                  fetch-depth: 0
-
-            - name: Determine next version
-              id: version
-              shell: bash
-              run: |
-                  python3 - <<'PY'
-                  import os, re, subprocess
-
-                  semver = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
-
-                  def parse(tag: str):
-                      m = semver.match(tag)
-                      return tuple(map(int, m.groups()))
-
-                  # 1) If HEAD already has a release tag, reuse the highest one
-                  head_tags = subprocess.check_output(
-                      ["git", "tag", "--points-at", "HEAD"], text=True,
-                  ).splitlines()
-
-                  head_release_tags = sorted(
-                      [t for t in head_tags if semver.match(t)], key=parse,
-                  )
-
-                  if head_release_tags:
-                      tag = head_release_tags[-1]
-                      version = tag[1:]
-                  else:
-                      # 2) Find the latest release tag in the repo and bump patch
-                      all_tags = subprocess.check_output(
-                          ["git", "tag", "--list", "v*"], text=True,
-                      ).splitlines()
-
-                      release_tags = [t for t in all_tags if semver.match(t)]
-
-                      if release_tags:
-                          major, minor, patch = parse(sorted(release_tags, key=parse)[-1])
-                          version = f"{major}.{minor}.{patch + 1}"
-                      else:
-                          version = "0.0.1"
-
-                      tag = f"v{version}"
-
-                  with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
-                      fh.write(f"tag={tag}\n")
-                      fh.write(f"version={version}\n")
-                  PY
-
-            - name: Create and push tag (if needed)
-              env:
-                  TAG: ${{ steps.version.outputs.tag }}
-              run: |
-                  if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-                    echo "Tag ${TAG} already exists on origin — skipping."
-                    exit 0
-                  fi
-                  git config user.name  "github-actions[bot]"
-                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                  git tag -a "${TAG}" -m "Release ${TAG}"
-                  git push origin "refs/tags/${TAG}"
-
-    build-main:
-        name: Build distributions
-        if: >
-            false &&
-            github.event.workflow_run.conclusion == 'success' &&
-            github.event.workflow_run.head_branch == 'main'
-        needs: tag
+    build:
+        name: Validate release artifacts
         runs-on: ubuntu-latest
         permissions:
             contents: read
-
         steps:
-            - name: Check out repository
-              uses: actions/checkout@v5
+            - name: Validate release tag
+              env:
+                  RELEASE_TAG: ${{ github.event.release.tag_name }}
+              run: |
+                  if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                    echo "::error::Release tag must use vX.Y.Z format."
+                    exit 1
+                  fi
+
+            - name: Check out released source
+              uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
               with:
-                  ref: ${{ github.event.workflow_run.head_sha }}
+                  ref: refs/tags/${{ github.event.release.tag_name }}
                   fetch-depth: 0
-                  fetch-tags: true
+                  persist-credentials: false
+
+            - name: Verify release is on main
+              env:
+                  RELEASE_TAG: ${{ github.event.release.tag_name }}
+              run: |
+                  git fetch origin main
+                  git merge-base --is-ancestor "$RELEASE_TAG" origin/main
 
             - name: Install uv
-              uses: astral-sh/setup-uv@v3
+              uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
               with:
-                  version: "latest"
+                  # Pin the uv CLI so release builds remain reproducible.
+                  version: ${{ env.UV_VERSION }}
 
             - name: Set up Python
               run: uv python install 3.12
 
-            - name: Inject release version into pyproject.toml
-              env:
-                  VERSION: ${{ needs.tag.outputs.version }}
-              run: |
-                  sed -i "s/^version = .*/version = \"${VERSION}\"/" pyproject.toml
-                  echo "Building version ${VERSION}"
-                  grep '^version' pyproject.toml
+            - name: Install development dependencies
+              run: uv sync --locked --group dev
 
-            - name: Build wheel and sdist
-              run: uv build
+            - name: Verify release version
+              env:
+                  RELEASE_TAG: ${{ github.event.release.tag_name }}
+              run: test "$(uv version --short)" = "${RELEASE_TAG#v}"
+
+            - name: Build distributions
+              run: uv build --no-sources
+
+            - name: Check distribution contents
+              env:
+                  RELEASE_TAG: ${{ github.event.release.tag_name }}
+              run: uv run python scripts/check_distributions.py --version "${RELEASE_TAG#v}"
 
             - name: Upload distributions
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
               with:
                   name: python-package-distributions
                   path: dist/
 
-    publish-to-testpypi:
+    publish-testpypi:
         name: Publish to TestPyPI
-        if: >
-            false &&
-            github.event.workflow_run.conclusion == 'success' &&
-            github.event.workflow_run.head_branch == 'main'
-        needs: [build-main]
+        needs: build
         runs-on: ubuntu-latest
         environment:
-            name: testpypi
-            url: https://test.pypi.org/project/rencal/
+            name: test-release
+            url: https://test.pypi.org/p/rencal
         permissions:
             id-token: write
-
         steps:
-            - name: Download distributions
-              uses: actions/download-artifact@v4
+            - name: Download validated distributions
+              uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
               with:
                   name: python-package-distributions
                   path: dist/
 
-            - name: Publish to TestPyPI
-              uses: pypa/gh-action-pypi-publish@release/v1
+            - name: Publish distributions to TestPyPI
+              uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
               with:
                   repository-url: https://test.pypi.org/legacy/
                   skip-existing: true
 
-    smoke-test-testpypi:
-        name: Smoke test TestPyPI install
-        if: >
-            false &&
-            github.event.workflow_run.conclusion == 'success' &&
-            github.event.workflow_run.head_branch == 'main'
-        needs: [tag, publish-to-testpypi]
+    test-install:
+        name: Smoke-test TestPyPI installation
+        needs: publish-testpypi
         runs-on: ubuntu-latest
-
+        permissions: {}
         steps:
-            - name: Set up Python
-              uses: actions/setup-python@v6
+            - name: Install uv
+              uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
               with:
-                  python-version: "3.12"
+                  # Keep the release validation toolchain aligned with build.
+                  version: ${{ env.UV_VERSION }}
 
-            - name: Install release from TestPyPI
+            - name: Set up Python
+              run: uv python install 3.12
+
+            - name: Install package from TestPyPI
               env:
-                  VERSION: ${{ needs.tag.outputs.version }}
+                  RELEASE_TAG: ${{ github.event.release.tag_name }}
               run: |
-                  python -m pip install --upgrade pip
-                  python -m pip install \
+                  uv venv /tmp/rencal-testpypi-venv --python 3.12
+                  uv pip install \
+                    --python /tmp/rencal-testpypi-venv/bin/python \
                     --index-url https://test.pypi.org/simple/ \
                     --extra-index-url https://pypi.org/simple/ \
-                    "rencal==${VERSION}"
+                    "rencal==${RELEASE_TAG#v}"
 
-            - name: Verify package imports
-              run: python -c "import rencal; print('Installed rencal successfully')"
+            - name: Exercise installed package
+              run: |
+                  /tmp/rencal-testpypi-venv/bin/python -c \
+                    "import importlib.metadata, rencal; assert importlib.metadata.version('rencal') == rencal.__version__"
 
-    publish-to-pypi:
+    publish-pypi:
         name: Publish to PyPI
-        if: >
-            false &&
-            github.event.workflow_run.conclusion == 'success' &&
-            github.event.workflow_run.head_branch == 'main'
-        needs: [smoke-test-testpypi]
+        needs: [build, test-install]
         runs-on: ubuntu-latest
         environment:
-            name: pypi
-            url: https://pypi.org/project/rencal/
+            name: release
+            url: https://pypi.org/p/rencal
         permissions:
             id-token: write
-
         steps:
-            - name: Download distributions
-              uses: actions/download-artifact@v4
+            - name: Download validated distributions
+              uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
               with:
                   name: python-package-distributions
                   path: dist/
 
-            - name: Publish to PyPI
-              uses: pypa/gh-action-pypi-publish@release/v1
+            - name: Publish distributions to PyPI
+              uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+              with:
+                  skip-existing: true
