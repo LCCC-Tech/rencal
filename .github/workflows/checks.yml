@@ -1,5 +1,8 @@
 name: Run checks
 
+env:
+    UV_VERSION: "0.10.8"
+
 permissions:
     contents: read
 
@@ -31,7 +34,7 @@ jobs:
               uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
               with:
                   # Keep CI aligned with the pinned release toolchain.
-                  version: "0.10.8"
+                  version: ${{ env.UV_VERSION }}
 
             - name: Set up Python
               run: uv python install ${{ matrix.python-version }}

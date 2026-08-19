@@ -1,5 +1,8 @@
 name: Publish package
 
+env:
+    UV_VERSION: "0.10.8"
+
 on:
     release:
         types: [published]
@@ -44,7 +47,7 @@ jobs:
               uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
               with:
                   # Pin the uv CLI so release builds remain reproducible.
-                  version: "0.10.8"
+                  version: ${{ env.UV_VERSION }}
 
             - name: Set up Python
               run: uv python install 3.12
@@ -103,7 +106,7 @@ jobs:
               uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
               with:
                   # Keep the release validation toolchain aligned with build.
-                  version: "0.10.8"
+                  version: ${{ env.UV_VERSION }}
 
             - name: Set up Python
               run: uv python install 3.12
