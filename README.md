@@ -16,19 +16,118 @@ production suitability or a substitute for independent validation.
 
 ## Installation
 
-The first public release will be installed from PyPI with:
+RenCal is available on [PyPI](https://pypi.org/project/rencal/). Install it
+with your preferred Python package manager:
+
+### uv
+
+```bash
+uv add rencal
+```
+
+### pip
 
 ```bash
 python -m pip install rencal
 ```
 
-Until that release is published, clone the repository and follow the
-[development setup](CONTRIBUTING.md#development-setup) instead.
+### From source (contributors)
+
+```bash
+git clone https://github.com/LCCC-Tech/rencal.git
+cd rencal
+uv sync --group dev
+```
+
+See the [development setup](CONTRIBUTING.md#development-setup) for the full
+contributor workflow.
 
 ## Quick start
 
-The primary workflow uses data supplied by the user. RenCal does not distribute
-operational ERA5, generation, or plant datasets.
+### Download sample inputs automatically
+
+The following example downloads the inputs, calibrates wind streams, and
+generates a random sample using RenCal's default data directory. Downloads use
+the Copernicus Climate Data Store (CDS), so you need your own CDS credentials,
+network access, and permission to access the requested data.
+
+Set the API key in your environment before running the script:
+
+```bash
+export CDS_API_KEY="your-cds-api-key"
+```
+
+Alternatively, pass the key directly to `DownloadManager`. Never commit API
+keys to source control.
+
+```python
+import datetime
+import random
+
+import numpy as np
+
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
+from rencal.core.data_loader import LocalDataLoader
+from rencal.core.data_downloader import DownloadManager
+from rencal.simulation.weather_data import HistoricalMetadata, WeatherData
+
+
+def main():
+    # Uses CDS_API_KEY from the environment. Alternatively:
+    # downloader = DownloadManager(cds_api_key="your-cds-api-key")
+    downloader = DownloadManager()
+    downloader.download_all()
+
+    loader = LocalDataLoader()
+    plants = loader.load_plant_data()
+    generation = loader.load_generation_data()
+
+    print(f"Loaded {len(plants.data)} plants")
+    print(f"Loaded {len(generation.data)} generation records")
+
+    calibrator = WindCalibrator(
+        output_path="wind-calibration",
+        visual_output=True,
+        stream_npy_output=True,
+    )
+    calibrator.calibrate()
+
+    manifest = loader.check_historical_weather()
+    metadata = HistoricalMetadata.from_manifest(
+        manifest,
+        loader.path_resolver_weather_data,
+    )
+    wind_sampler = WeatherData(
+        metadata=metadata,
+        prefix_histograms=loader.get_prefix_histograms(),
+        historical_data=loader.get_historical_weather(),
+    )
+    sample = wind_sampler.random_sample(
+        datetime.datetime(2027, 1, 1),
+        datetime.datetime(2027, 1, 7),
+        python_rng=random.Random(4),
+        numpy_rng=np.random.default_rng(32),
+    )
+    print(sample)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+`download_all()` downloads the CfD, generation, and ERA5 inputs. If you already
+have the plant and generation data, use `download_era5()` to download only the
+weather data:
+
+```python
+downloader = DownloadManager()  # Uses CDS_API_KEY from the environment
+downloader.download_era5()
+```
+
+### Use your own data
+
+The primary modelling workflow can instead use data supplied by you. RenCal
+does not distribute operational ERA5, generation, or plant datasets.
 
 ```python
 from pathlib import Path
