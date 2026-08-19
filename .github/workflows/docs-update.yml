@@ -53,7 +53,7 @@ jobs:
                   BASE_REF: ${{ github.base_ref }}
                   HEAD_SHA: ${{ github.event.pull_request.head.sha }}
               run: |
-                  git fetch origin "$BASE_REF" --depth=1
+                  git fetch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$BASE_REF" --depth=1
                   changed_files=$(git diff --name-status "origin/${BASE_REF}...${HEAD_SHA}" \
                     | awk '$1 ~ /^R/ || $1 ~ /^C/ {print $3} $1 !~ /^R/ && $1 !~ /^C/ {print $2}')
 
