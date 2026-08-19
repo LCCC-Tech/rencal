@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "rencal"
-version = "0.1.0"
+version = "0.1.1"
 description = "Weather-to-power calibration and Monte Carlo load factor simulation for renewable energy applications"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
