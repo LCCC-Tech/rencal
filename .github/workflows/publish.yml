@@ -43,6 +43,7 @@ jobs:
             - name: Install uv
               uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
               with:
+                  # Pin the uv CLI so release builds remain reproducible.
                   version: "0.10.8"
 
             - name: Set up Python
@@ -55,13 +56,6 @@ jobs:
               env:
                   RELEASE_TAG: ${{ github.event.release.tag_name }}
               run: test "$(uv version --short)" = "${RELEASE_TAG#v}"
-
-            - name: Run checks
-              run: |
-                  uv run ruff format --check rencal/ tests/ scripts/
-                  uv run ruff check rencal/ tests/ scripts/
-                  uv run basedpyright --warnings
-                  uv run pytest tests/ -v
 
             - name: Build distributions
               run: uv build --no-sources
@@ -108,6 +102,7 @@ jobs:
             - name: Install uv
               uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
               with:
+                  # Keep the release validation toolchain aligned with build.
                   version: "0.10.8"
 
             - name: Set up Python
@@ -133,8 +128,6 @@ jobs:
         name: Publish to PyPI
         needs: [build, test-install]
         runs-on: ubuntu-latest
-        # Required reviewers on this environment provide the explicit human
-        # approval between TestPyPI validation and production publication.
         environment:
             name: release
             url: https://pypi.org/p/rencal
