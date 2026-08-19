@@ -85,7 +85,6 @@ notebook = [
 
 [project.urls]
 Homepage = "https://github.com/LCCC-Tech/rencal"
-Documentation = "https://docs.lowcarboncontracts.uk"
 Repository = "https://github.com/LCCC-Tech/rencal.git"
 "Bug Tracker" = "https://github.com/LCCC-Tech/rencal/issues"
 Changelog = "https://github.com/LCCC-Tech/rencal/blob/main/CHANGELOG.md"
