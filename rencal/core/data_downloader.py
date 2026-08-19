@@ -807,6 +807,13 @@ class DownloadManager:
 
         Initiates download of ERA5 weather data from the Copernicus
         Climate Data Store for the calibration period.
+
+        Example:
+            >>> downloader = DownloadManager(cds_api_key="your-cds-api-key")
+            >>> downloader.download_era5()
+
+        The CDS API key can also be provided through the ``CDS_API_KEY``
+        environment variable. Do not commit credentials to source control.
         """
         self.era5.download()
 
@@ -814,6 +821,13 @@ class DownloadManager:
         """Download all data sources in sequence.
 
         This method ensures proper dependency handling between data sources.
+
+        Example:
+            >>> downloader = DownloadManager()  # Uses CDS_API_KEY
+            >>> downloader.download_all()
+
+        Pass ``cds_api_key`` to ``DownloadManager`` instead when an explicit
+        credential is preferred. Do not commit credentials to source control.
         """
         self.download_cfd()
         self.download_generation_data()
