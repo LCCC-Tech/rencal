@@ -56,6 +56,70 @@ The ERA5 loader expects suitable NetCDF weather data. Users are responsible for
 obtaining data, checking its provenance and licence, and preparing it for the
 documented schema.
 
+### Calibrate wind power curves
+
+With the plant, generation, and ERA5 inputs in place, run the wind calibration
+workflow and write its outputs to a separate directory:
+
+```python
+from pathlib import Path
+
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
+
+calibrator = WindCalibrator(
+    data_path="data",
+    output_path=Path("outputs/wind-calibration"),
+    visual_output=True,
+    stream_npy_output=True,
+)
+calibrator.calibrate()
+```
+
+The workflow writes the calibration summary, Weibull parameters, extracted wind
+speeds, calibrated wind streams, and optional power-curve plots to the output
+directory. With `stream_npy_output=True`, the generated `Wind Streams.npy` can
+also be used by the weather sampler after its manifest and optional histogram
+artefacts have been prepared.
+
+### Sample calibrated wind streams
+
+`WeatherData` samples future hourly paths from calibrated historical streams
+while preserving the configured time-bucket structure. The local loader expects
+the calibrated NPY file and its manifest under `data/calibrated/`.
+
+```python
+import datetime
+import random
+
+import numpy as np
+
+from rencal.core.data_loader import LocalDataLoader
+from rencal.simulation.weather_data import HistoricalMetadata, WeatherData
+
+loader = LocalDataLoader(data_path="data")
+manifest = loader.check_historical_weather()
+metadata = HistoricalMetadata.from_manifest(
+    manifest,
+    loader.path_resolver_weather_data,
+)
+
+wind_sampler = WeatherData(
+    metadata=metadata,
+    prefix_histograms=loader.get_prefix_histograms(),
+    historical_data=loader.get_historical_weather(),
+)
+
+sample = wind_sampler.random_sample(
+    datetime.datetime(2027, 1, 1),
+    datetime.datetime(2027, 1, 7),
+    python_rng=random.Random(4),
+    numpy_rng=np.random.default_rng(32),
+)
+```
+
+Pass `desired_averages` to `WeatherData` when inverse-distribution resampling is
+required; this also requires historical data or precomputed prefix histograms.
+
 ## Main capabilities
 
 - Wind and solar power-curve calibration foundations
