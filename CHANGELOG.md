@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.1](https://github.com/LCCC-Tech/rencal/compare/v0.1.0...v0.1.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* authenticate documentation workflow fetch ([50f4a33](https://github.com/LCCC-Tech/rencal/commit/50f4a3316e233579bf59436a3eee2c54b33c89e1))
+* authenticate release ancestry fetch ([0561bd0](https://github.com/LCCC-Tech/rencal/commit/0561bd0634ed3743347ee48847ef9d2f8f737994))
+* authenticate release ancestry fetch ([#61](https://github.com/LCCC-Tech/rencal/issues/61)) ([6139625](https://github.com/LCCC-Tech/rencal/commit/613962519c85b3bf3668c63b9bd2e809353a629a))
+
 ## 0.1.0 (2026-08-19)
 
 
