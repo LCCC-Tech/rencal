@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/LCCC-Tech/rencal/compare/v0.1.1...v0.1.2) (2026-08-19)
+
+
+### Documentation
+
+* update PyPI installation quick start ([622f099](https://github.com/LCCC-Tech/rencal/commit/622f099c6878973541ebf7e69efab70cfaf42eeb))
+
 ## [0.1.1](https://github.com/LCCC-Tech/rencal/compare/v0.1.0...v0.1.1) (2026-08-19)
 
 
