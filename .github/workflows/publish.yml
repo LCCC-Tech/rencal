@@ -39,8 +39,9 @@ jobs:
             - name: Verify release is on main
               env:
                   RELEASE_TAG: ${{ github.event.release.tag_name }}
+                  GITHUB_TOKEN: ${{ github.token }}
               run: |
-                  git fetch origin main
+                  git fetch "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" main
                   git merge-base --is-ancestor "$RELEASE_TAG" origin/main
 
             - name: Install uv
