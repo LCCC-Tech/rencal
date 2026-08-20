@@ -85,7 +85,8 @@ https://tailwindcss.com/docs/adding-custom-styles#using-css-and-layer
     --sl-color-text: var(--sl-color-gray-2);
     --color-text: var(--sl-color-text);
     --color-text-secondary: hsla(var(--hue), var(--sat), 87%, 60%);
-    --color-text-dimmed: hsla(var(--hue), var(--sat), 87%, 38%);
+    /* Keep secondary right-sidebar text readable against the dark surface. */
+    --color-text-dimmed: hsla(var(--hue), var(--sat), 87%, 0.85);
 
     --color-text-highlight: var(--sl-color-accent-high);
 
@@ -137,7 +138,9 @@ https://tailwindcss.com/docs/adding-custom-styles#using-css-and-layer
     --sl-color-text: var(--sl-color-gray-2);
     --color-text: var(--sl-color-text);
     --color-text-secondary: hsla(var(--hue), var(--sat), 14%, 60%);
-    --color-text-dimmed: hsla(var(--hue), var(--sat), 14%, 38%);
+    /* The default Starlight dimmed color does not meet the audit's contrast
+       requirement for the table-of-contents links and heading. */
+    --color-text-dimmed: hsla(var(--hue), var(--sat), 24%, 1);
 
     --color-text-highlight: var(--sl-color-accent);
 
@@ -395,7 +398,7 @@ nav.sidebar a[aria-current="page"]:focus {
     /* Margin to align with main sidebar */
     margin-top: 0.625rem;
     font-weight: 600;
-    color: var(--color-text-dimmed);
+    color: var(--color-text-dimmed) !important;
     text-transform: uppercase;
     font-family: var(--__sl-font-mono);
     font-size: var(--sl-text-code-sm);
@@ -407,7 +410,7 @@ nav.sidebar a[aria-current="page"]:focus {
     --pad-inline: 0px;
 }
 .right-sidebar-panel a {
-    color: var(--color-text-dimmed);
+    color: var(--color-text-dimmed) !important;
 }
 .right-sidebar-panel a:hover {
     color: var(--sl-color-text);
@@ -418,6 +421,18 @@ nav.sidebar a[aria-current="page"]:focus {
     background-color: transparent;
     color: var(--sl-color-text);
     font-weight: normal;
+}
+
+/* Keep keyboard focus visible on the documentation navigation and controls. */
+:where(a, button, summary):focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+}
+
+nav.sidebar a:focus-visible,
+nav.sidebar summary:focus-visible,
+.right-sidebar-panel a:focus-visible {
+    outline-offset: 3px;
 }
 /* Mobile nav */
 mobile-starlight-toc nav {
