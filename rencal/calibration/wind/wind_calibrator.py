@@ -12,6 +12,7 @@ from scipy.integrate import quad
 from scipy.optimize import curve_fit
 from scipy.stats import weibull_min
 
+from ...core.data_loader import DataLoader
 from ...utils.constants import (
     DEFAULT_LOGISTIC_FN_ASYMMETRY,
     DEFAULT_LOGISTIC_FN_STEEPNESS,
@@ -48,6 +49,7 @@ class WindCalibrator(Calibrator):
         output_path: str | Path = Path.cwd(),
         visual_output: bool = False,
         stream_npy_output: bool = False,
+        loader: DataLoader | None = None,
     ) -> None:
         """
         Constructor for the WindCalibrator class.
@@ -58,11 +60,16 @@ class WindCalibrator(Calibrator):
             output_path (str | Path): Location to write the output files to.
             visual_output (bool): If True, each calibrated plant's power curve is plotted to the output folder.
             stream_npy_output (bool): If True, wind streams are written in NPY format alongside PARQUET.
+            loader (DataLoader | None): Optional pre-configured data loader used instead of the
+                default ``LocalDataLoader`` (e.g. a cloud loader reading inputs directly from
+                their original Blob locations). When provided it overrides ``data_path``.
 
         """
         super_args = {}
         if data_path:
             super_args["data_path"] = data_path
+        if loader is not None:
+            super_args["loader"] = loader
         if plant_id_col:
             super_args["plant_id_col"] = plant_id_col
             logger.debug("Runtime-specified plant id column: %s", plant_id_col)

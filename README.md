@@ -1,67 +1,248 @@
-# RenCal Ren(ewable)Cal(ibration)
+# RenCal
 
-An Python library calibrating power curves for renewable energy plants and probablistic forecasting of load factor time series for plants using ERA5 weather data, historical generation, and plant characteristic data.
+RenCal (Renewable Calibration) is a Python library for calibrating renewable
+energy power curves and generating probabilistic load-factor time series for
+wind and solar plants.
 
-## Overview
-
-This project provides Monte Carlo-based load factor forecasting for wind and solar plants to support financial modelling and grid planning. It uses statistical sampling of historical weather patterns with geographical correlation preservation.
+It supports Monte Carlo-based forecasting using weather, generation, and plant
+characteristic data. RenCal is intended for energy analysts, researchers, and
+developers working on renewable-energy modelling.
 
 ## Status
 
-**Pre-release / Internal Integration Testing**: The core package is stable and currently being validated through end-to-end integration testing via TestPyPI distribution. Development is now focused primarily on infrastructure, packaging, and operational readiness, with incremental improvements still ongoing in the codebase.
-
-## Key Components
-
-- **Wind/Solar Models**: Monte Carlo paths for energy generators using bucketing and optional inverse distribution sampling (`WeatherData`)
-- **Calibration Scripts**: The Low Carbon Contracts Company workflow scripts for wind/solar parameter calibration
-- **Data Loading**: Stub implementation for ERA5 NetCDF data
-- **Statistical Framework**: Time-bucketed sampling with correlation preservation
+RenCal is an experimental pre-1.0 public package. The API and modelling
+approach may change as the project develops. It is not currently a guarantee of
+production suitability or a substitute for independent validation.
 
 ## Installation
 
-```bash
-# Install the package in development mode
-uv sync
+RenCal is available on [PyPI](https://pypi.org/project/rencal/). Install it
+with your preferred Python package manager:
 
-# Or install specific dependency groups
-uv sync --group dev          # Development dependencies
-uv sync --group docs         # Documentation dependencies
-uv sync --group azure        # Azure integration dependencies
-uv sync --group notebook     # Jupyter notebook dependencies
+### uv
+
+```bash
+uv add rencal
 ```
 
-## Quick Start
+### pip
+
+```bash
+python -m pip install rencal
+```
+
+### From source (contributors)
+
+```bash
+git clone https://github.com/LCCC-Tech/rencal.git
+cd rencal
+uv sync --group dev
+```
+
+See the [development setup](CONTRIBUTING.md#development-setup) for the full
+contributor workflow.
+
+## Quick start
+
+### Download sample inputs automatically
+
+The following example downloads the inputs, calibrates wind streams, and
+generates a random sample using RenCal's default data directory. Downloads use
+the Copernicus Climate Data Store (CDS), so you need your own CDS credentials,
+network access, and permission to access the requested data.
+
+Set the API key in your environment before running the script:
+
+```bash
+export CDS_API_KEY="your-cds-api-key"
+```
+
+Alternatively, pass the key directly to `DownloadManager`. Never commit API
+keys to source control.
 
 ```python
-from rencal.simulation.weather_data import WeatherData, HistoricalMetadata
+import datetime
+import random
+
+import numpy as np
+
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
 from rencal.core.data_loader import LocalDataLoader
+from rencal.core.data_downloader import DownloadManager
+from rencal.simulation.weather_data import HistoricalMetadata, WeatherData
 
-loader = LocalDataLoader()
 
-manifest_wind = loader.check_historical_weather()
-metadata_wind = HistoricalMetadata.from_manifest(
-    manifest_wind,
-    loader.path_resolver_weather_data
-)
+def main():
+    # Uses CDS_API_KEY from the environment. Alternatively:
+    # downloader = DownloadManager(cds_api_key="your-cds-api-key")
+    downloader = DownloadManager()
+    downloader.download_all()
 
-wind_sampler = WeatherData(metadata = metadata_wind)
+    loader = LocalDataLoader()
+    plants = loader.load_plant_data()
+    generation = loader.load_generation_data()
 
-one_path = wind_sampler.random_sample(future_start_date,
-    future_end_date)
+    print(f"Loaded {len(plants.data)} plants")
+    print(f"Loaded {len(generation.data)} generation records")
+
+    calibrator = WindCalibrator(
+        output_path="wind-calibration",
+        visual_output=True,
+        stream_npy_output=True,
+    )
+    calibrator.calibrate()
+
+    manifest = loader.check_historical_weather()
+    metadata = HistoricalMetadata.from_manifest(
+        manifest,
+        loader.path_resolver_weather_data,
+    )
+    wind_sampler = WeatherData(
+        metadata=metadata,
+        prefix_histograms=loader.get_prefix_histograms(),
+        historical_data=loader.get_historical_weather(),
+    )
+    sample = wind_sampler.random_sample(
+        datetime.datetime(2027, 1, 1),
+        datetime.datetime(2027, 1, 7),
+        python_rng=random.Random(4),
+        numpy_rng=np.random.default_rng(32),
+    )
+    print(sample)
+
+
+if __name__ == "__main__":
+    main()
 ```
 
-**Note**: ERA5 data loading must be implemented by users. See `rencal.core.data_loader.ERA5DataLoader` stub.
+`download_all()` downloads the CfD, generation, and ERA5 inputs. If you already
+have the plant and generation data, use `download_era5()` to download only the
+weather data:
 
-## Development
+```python
+downloader = DownloadManager()  # Uses CDS_API_KEY from the environment
+downloader.download_era5()
+```
 
-```bash
-# Run tests
-uv run pytest
+### Use your own data
 
-# Run tests with coverage
-uv run pytest --cov=rencal --cov-report=html
+The primary modelling workflow can instead use data supplied by you. RenCal
+does not distribute operational ERA5, generation, or plant datasets.
 
-# Code formatting and linting
-uv run ruff format rencal/     # Format code
-uv run ruff check rencal/      # Lint code
-uv run basedpyright rencal/    # Type checking
+```python
+from pathlib import Path
+
+from rencal.core.data_loader import LocalDataLoader
+
+loader = LocalDataLoader(data_path=Path("data"))
+plants = loader.load_plant_data()
+generation = loader.load_generation_data()
+
+print(f"Loaded {len(plants.data)} plants")
+print(f"Loaded {len(generation.data)} generation records")
+```
+
+For the full wind-calibration workflow, provide the expected input structure:
+
+```text
+data/
+├── plant/plant_data.csv
+├── generation/generation_data.parquet
+└── era5/*.nc
+```
+
+The ERA5 loader expects suitable NetCDF weather data. Users are responsible for
+obtaining data, checking its provenance and licence, and preparing it for the
+documented schema.
+
+### Calibrate wind power curves
+
+With the plant, generation, and ERA5 inputs in place, run the wind calibration
+workflow and write its outputs to a separate directory:
+
+```python
+from pathlib import Path
+
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
+
+calibrator = WindCalibrator(
+    data_path="data",
+    output_path=Path("outputs/wind-calibration"),
+    visual_output=True,
+    stream_npy_output=True,
+)
+calibrator.calibrate()
+```
+
+The workflow writes the calibration summary, Weibull parameters, extracted wind
+speeds, calibrated wind streams, and optional power-curve plots to the output
+directory. With `stream_npy_output=True`, the generated `Wind Streams.npy` can
+also be used by the weather sampler after its manifest and optional histogram
+artefacts have been prepared.
+
+### Sample calibrated wind streams
+
+`WeatherData` samples future hourly paths from calibrated historical streams
+while preserving the configured time-bucket structure. The local loader expects
+the calibrated NPY file and its manifest under `data/calibrated/`.
+
+```python
+import datetime
+import random
+
+import numpy as np
+
+from rencal.core.data_loader import LocalDataLoader
+from rencal.simulation.weather_data import HistoricalMetadata, WeatherData
+
+loader = LocalDataLoader(data_path="data")
+manifest = loader.check_historical_weather()
+metadata = HistoricalMetadata.from_manifest(
+    manifest,
+    loader.path_resolver_weather_data,
+)
+
+wind_sampler = WeatherData(
+    metadata=metadata,
+    prefix_histograms=loader.get_prefix_histograms(),
+    historical_data=loader.get_historical_weather(),
+)
+
+sample = wind_sampler.random_sample(
+    datetime.datetime(2027, 1, 1),
+    datetime.datetime(2027, 1, 7),
+    python_rng=random.Random(4),
+    numpy_rng=np.random.default_rng(32),
+)
+```
+
+Pass `desired_averages` to `WeatherData` when inverse-distribution resampling is
+required; this also requires historical data or precomputed prefix histograms.
+
+## Main capabilities
+
+- Wind and solar power-curve calibration foundations
+- Probabilistic load-factor forecasting
+- Weather and generation data loading and validation
+- Time-bucketed sampling with geographical correlation support
+- Extensible interfaces for local and external data sources
+
+## Documentation
+
+- [Wind calibration tutorial](docs/tutorials/wind_calibration_tutorial.ipynb)
+- [Contributing](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Issue tracker](https://github.com/LCCC-Tech/rencal/issues)
+
+Hosted documentation and versioned examples will be linked here once the public
+documentation site is verified.
+
+## Support
+
+Use [GitHub Issues](https://github.com/LCCC-Tech/rencal/issues) for public,
+reproducible bugs and feature requests. Please do not include credentials,
+internal data, or confidential information in issues.
+
+## Licence
+
+RenCal is released under the [MIT Licence](LICENSE).

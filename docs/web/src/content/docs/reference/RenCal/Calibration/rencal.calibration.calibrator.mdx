@@ -1,0 +1,246 @@
+---
+title: rencal.calibration.calibrator
+description: Reference documentation for rencal.calibration.calibrator.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.calibration.calibrator` defines the abstract calibration interface used by intermittent technology-specific calibrators.
+
+[`Calibrator`](/reference/RenCal/Calibration/rencalcalibrationcalibrator/#calibrator) is responsible for loading plant, generation, and ERA5 resource datasets required by a concrete calibrator implementation, then exposing the required workflow steps as abstract methods.
+
+Because this class inherits from `ABC`, instantiate a concrete subclass such as [`WindCalibrator`](/reference/RenCal/Calibration/rencalcalibrationwindwind_calibrator/#windcalibrator) rather than [`Calibrator`](/reference/RenCal/Calibration/rencalcalibrationcalibrator/#calibrator) directly.
+
+#### Example
+
+```python
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
+
+calibrator = WindCalibrator(
+    data_path="data",
+    plant_id_col="plant_id",
+    output_path="outputs",
+)
+calibrator.calibrate()
+```
+</Section>
+
+## Constructor
+
+### Calibrator
+
+<Segment>
+<Section type="signature">
+```python
+class Calibrator(
+    data_path: str = None,
+    plant_id_col: str = None,
+    loader: DataLoader | None = None,
+): Calibrator
+```
+</Section>
+
+Initializes a local loader ([`LocalDataLoader`](/reference/RenCal/Core/rencalcoredata_loader/#localdataloader)) and materializes plant, generation, and resource datasets.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">data_path</code> <code class="primitive">str</code></p>
+  Path to input data directory.
+
+- <p><code class="key">plant_id_col</code> <code class="primitive">str</code></p>
+  Name of the ID column designating a power plant in the input.
+
+- <p><code class="key">loader</code> <code class="primitive">DataLoader | None</code></p>
+  Optional pre-configured data loader. When supplied it is used as-is (overriding `data_path`), allowing inputs to be read from non-default locations or sources (e.g. a cloud loader reading directly from Blob storage) instead of the default `LocalDataLoader` layout.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">Calibrator</code>](#Calibrator)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### Calibrator.calibrate
+
+<Segment>
+<Section type="signature">
+```python
+calibrate() -> None
+```
+</Section>
+
+Triggers calibration workflow.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.extract_resource_timeseries_for_plants
+
+<Segment>
+<Section type="signature">
+```python
+extract_resource_timeseries_for_plants() -> None
+```
+</Section>
+
+Extracts resource time series for plants.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.calculate_historical_load_factors
+
+<Segment>
+<Section type="signature">
+```python
+calculate_historical_load_factors() -> None
+```
+</Section>
+
+Calculates historical load factors.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.fit_historical_load_factor_distribution
+
+<Segment>
+<Section type="signature">
+```python
+fit_historical_load_factor_distribution() -> None
+```
+</Section>
+
+Fits a distribution to historical load factors.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.estimate_load_factors_for_resource
+
+<Segment>
+<Section type="signature">
+```python
+estimate_load_factors_for_resource() -> None
+```
+</Section>
+
+Estimates load factors from historical distribution and full resource history.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.generate_resource_streams
+
+<Segment>
+<Section type="signature">
+```python
+generate_resource_streams() -> None
+```
+</Section>
+
+Generates resource/load-factor streams for downstream simulation.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.output_historical_load_factor_distribution_parameters
+
+<Segment>
+<Section type="signature">
+```python
+output_historical_load_factor_distribution_parameters() -> None
+```
+</Section>
+
+Writes historical distribution parameters.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.output_resource_per_plant
+
+<Segment>
+<Section type="signature">
+```python
+output_resource_per_plant() -> None
+```
+</Section>
+
+Writes plant-wise resource time series output.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.output_resource_streams
+
+<Segment>
+<Section type="signature">
+```python
+output_resource_streams() -> None
+```
+</Section>
+
+Writes resource streams output.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.output_estimated_load_factors_tabular
+
+<Segment>
+<Section type="signature">
+```python
+output_estimated_load_factors_tabular() -> None
+```
+</Section>
+
+Writes tabular estimated load-factor output.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.output_estimated_load_factors_visual
+
+<Segment>
+<Section type="signature">
+```python
+output_estimated_load_factors_visual() -> None
+```
+</Section>
+
+Writes visual estimated load-factor and fitted-curve outputs.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+</div>

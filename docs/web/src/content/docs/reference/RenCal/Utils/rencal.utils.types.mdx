@@ -1,0 +1,63 @@
+---
+title: rencal.utils.types
+description: Reference documentation for rencal.utils.types.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.utils.types` provides typed wrappers for common utility values.
+</Section>
+
+## Constructor
+
+### ParsedURL
+
+<Segment>
+<Section type="signature">
+```python
+class ParsedURL(raw_url: str): ParsedURL
+```
+</Section>
+
+Simple wrapper around `urllib.parse.urlparse`.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">raw_url</code> <code class="primitive">str</code></p>
+  URL string to parse.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">ParsedURL</code>](#ParsedURL)
+</InlineSection>
+</Segment>
+
+## Properties
+
+### ParsedURL.url
+
+<Segment>
+Full URL string.
+
+<InlineSection>
+**Type** <code class="primitive">str</code>
+</InlineSection>
+</Segment>
+
+### ParsedURL.domain
+
+<Segment>
+Domain as `scheme://netloc`.
+
+<InlineSection>
+**Type** <code class="primitive">str</code>
+</InlineSection>
+</Segment>
+
+</div>

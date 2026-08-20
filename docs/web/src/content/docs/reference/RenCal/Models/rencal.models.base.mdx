@@ -1,0 +1,202 @@
+---
+title: rencal.models.base
+description: Reference documentation for rencal.models.base.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.models.base` defines abstract and concrete base classes for pandas/xarray-backed dataset models and schema validation.
+
+These Pydantic-backed models are the primary typed data contract returned by [`LocalDataLoader`](/reference/RenCal/Core/rencalcoredata_loader/#localdataloader).
+</Section>
+
+## Constructor
+
+### DatasetModel
+
+<Segment>
+<Section type="signature">
+```python
+class DatasetModel(BaseModel, ABC): DatasetModel
+```
+</Section>
+
+Abstract base model for shared metadata and conversion/validation contracts.
+
+<InlineSection>
+**Returns** [<code class="type">DatasetModel</code>](#DatasetModel)
+</InlineSection>
+</Segment>
+
+### PandasDatasetModel
+
+<Segment>
+<Section type="signature">
+```python
+class PandasDatasetModel(DatasetModel): PandasDatasetModel
+```
+</Section>
+
+Concrete validation mixin for pandas DataFrame-backed models.
+
+<InlineSection>
+**Returns** [<code class="type">PandasDatasetModel</code>](#PandasDatasetModel)
+</InlineSection>
+</Segment>
+
+### XArrayDatasetModel
+
+<Segment>
+<Section type="signature">
+```python
+class XArrayDatasetModel(DatasetModel): XArrayDatasetModel
+```
+</Section>
+
+Concrete validation mixin for xarray Dataset-backed models.
+
+<InlineSection>
+**Returns** [<code class="type">XArrayDatasetModel</code>](#XArrayDatasetModel)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### DatasetModel._validate_required_columns
+
+<Segment>
+<Section type="signature">
+```python
+_validate_required_columns(data: Any) -> Any
+```
+</Section>
+
+Abstract required-columns/variables validation contract.
+</Segment>
+
+### DatasetModel._validate_datatypes
+
+<Segment>
+<Section type="signature">
+```python
+_validate_datatypes(data: Any) -> Any
+```
+</Section>
+
+Abstract datatype validation contract.
+</Segment>
+
+### DatasetModel._validate_time_column
+
+<Segment>
+<Section type="signature">
+```python
+_validate_time_column(data: Any) -> Any
+```
+</Section>
+
+Abstract time column/dimension validation contract.
+</Segment>
+
+### DatasetModel.to_pandas
+
+<Segment>
+<Section type="signature">
+```python
+to_pandas() -> pd.DataFrame
+```
+</Section>
+
+Abstract conversion contract to pandas DataFrame.
+</Segment>
+
+### DatasetModel.to_xarray
+
+<Segment>
+<Section type="signature">
+```python
+to_xarray() -> xr.Dataset
+```
+</Section>
+
+Abstract conversion contract to xarray Dataset.
+</Segment>
+
+### PandasDatasetModel._validate_required_columns
+
+<Segment>
+<Section type="signature">
+```python
+_validate_required_columns(data: pd.DataFrame) -> pd.DataFrame
+```
+</Section>
+
+Checks configured required columns exist in DataFrame.
+</Segment>
+
+### PandasDatasetModel._validate_datatypes
+
+<Segment>
+<Section type="signature">
+```python
+_validate_datatypes(data: pd.DataFrame) -> pd.DataFrame
+```
+</Section>
+
+Checks configured dtype expectations for DataFrame columns.
+</Segment>
+
+### PandasDatasetModel._validate_time_column
+
+<Segment>
+<Section type="signature">
+```python
+_validate_time_column(data: pd.DataFrame) -> pd.DataFrame
+```
+</Section>
+
+Validates configured time column existence/type/null/emptiness checks.
+</Segment>
+
+### XArrayDatasetModel._validate_required_columns
+
+<Segment>
+<Section type="signature">
+```python
+_validate_required_columns(data: xr.Dataset) -> xr.Dataset
+```
+</Section>
+
+Checks configured required variables in xarray dataset.
+</Segment>
+
+### XArrayDatasetModel._validate_datatypes
+
+<Segment>
+<Section type="signature">
+```python
+_validate_datatypes(data: xr.Dataset) -> xr.Dataset
+```
+</Section>
+
+Validates configured variable dtypes in xarray dataset.
+</Segment>
+
+### XArrayDatasetModel._validate_time_column
+
+<Segment>
+<Section type="signature">
+```python
+_validate_time_column(data: xr.Dataset) -> xr.Dataset
+```
+</Section>
+
+Validates time dimension/coordinate presence, datetime type, duplicates, and sort order.
+</Segment>
+
+</div>

@@ -119,6 +119,7 @@ __pypackages__/
 .env
 .envrc
 .venv
+rencal-local/
 env/
 venv/
 ENV/
@@ -197,3 +198,9 @@ models/saved/
 config/secrets.yaml
 .env.local
 .env.production
+
+# Local GitHub CLI account configuration
+.gh-cli/
+
+# Local issue drafts (promote to GitHub when ready)
+.scratch/

@@ -38,7 +38,7 @@ Three input datasets are required:
 Use `DownloadManager` to fetch all inputs at once:
 
 ```python
-from weather.core.data_downloader import DownloadManager
+from rencal.core.data_downloader import DownloadManager
 
 dm = DownloadManager()
 dm.download_all()
@@ -57,7 +57,7 @@ dm.download_era5()
 
 ```python
 from pathlib import Path
-from weather.calibration.wind.wind_calibrator import WindCalibrator
+from rencal.calibration.wind.wind_calibrator import WindCalibrator
 
 wc = WindCalibrator(
     data_path="data",

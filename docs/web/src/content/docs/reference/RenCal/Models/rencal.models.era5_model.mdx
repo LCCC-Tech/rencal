@@ -1,0 +1,194 @@
+---
+title: rencal.models.era5_model
+description: Reference documentation for rencal.models.era5_model.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.models.era5_model` defines the validated xarray dataset model for ERA5 weather data.
+</Section>
+
+## Constructor
+
+### ERA5DatasetModel
+
+<Segment>
+<Section type="signature">
+```python
+class ERA5DatasetModel(XArrayDatasetModel): ERA5DatasetModel
+```
+</Section>
+
+Dataset model for ERA5 variables and time-indexed data.
+
+<InlineSection>
+**Required Variables** <code class="primitive">u100</code>, <code class="primitive">v100</code>
+</InlineSection>
+
+<InlineSection>
+**Returns** [<code class="type">ERA5DatasetModel</code>](#ERA5DatasetModel)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### ERA5DatasetModel.validate_data
+
+<Segment>
+<Section type="signature">
+```python
+validate_data(data: xr.Dataset) -> xr.Dataset
+```
+</Section>
+
+Validates required variables, dtypes, and time dimension integrity.
+
+<InlineSection>
+**Returns** <code class="primitive">xr.Dataset</code>
+</InlineSection>
+</Segment>
+
+### ERA5DatasetModel.get_wind_components
+
+<Segment>
+<Section type="signature">
+```python
+get_wind_components() -> xr.Dataset
+```
+</Section>
+
+Returns `u100` and `v100` variables.
+
+<InlineSection>
+**Returns** <code class="primitive">xr.Dataset</code>
+</InlineSection>
+</Segment>
+
+### ERA5DatasetModel.get_solar_variables
+
+<Segment>
+<Section type="signature">
+```python
+get_solar_variables() -> xr.Dataset
+```
+</Section>
+
+Returns `ssrd` and `t2m` variables.
+
+<InlineSection>
+**Returns** <code class="primitive">xr.Dataset</code>
+</InlineSection>
+</Segment>
+
+### ERA5DatasetModel.get_spatial_bounds
+
+<Segment>
+<Section type="signature">
+```python
+get_spatial_bounds() -> dict[str, float] | None
+```
+</Section>
+
+Returns lat/lon min/max bounds if coordinates exist.
+
+<InlineSection>
+**Returns** <code class="primitive">dict[str, float] | None</code>
+</InlineSection>
+</Segment>
+
+### ERA5DatasetModel.get_time_range
+
+<Segment>
+<Section type="signature">
+```python
+get_time_range() -> dict[str, Any] | None
+```
+</Section>
+
+Returns start/end/period summary for time axis.
+
+<InlineSection>
+**Returns** <code class="primitive">dict[str, Any] | None</code>
+</InlineSection>
+</Segment>
+
+### ERA5DatasetModel.select_variables
+
+<Segment>
+<Section type="signature">
+```python
+select_variables(variables: list[str]) -> ERA5DatasetModel
+```
+</Section>
+
+Returns new model containing selected variables.
+
+<InlineSection>
+**Returns** [<code class="type">ERA5DatasetModel</code>](#ERA5DatasetModel)
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">ValueError</code>: If requested variables are missing.
+</InlineSection>
+</Segment>
+
+### ERA5DatasetModel.filter_by_date_range
+
+<Segment>
+<Section type="signature">
+```python
+filter_by_date_range(start_date: str, end_date: str, date_col: str | None = None) -> ERA5DatasetModel
+```
+</Section>
+
+Returns new model sliced by date range.
+
+<InlineSection>
+**Returns** [<code class="type">ERA5DatasetModel</code>](#ERA5DatasetModel)
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">ValueError</code>: If no time dimension is available.
+</InlineSection>
+</Segment>
+
+### ERA5DatasetModel.to_pandas
+
+<Segment>
+<Section type="signature">
+```python
+to_pandas() -> pd.DataFrame
+```
+</Section>
+
+Converts xarray dataset to DataFrame.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### ERA5DatasetModel.to_xarray
+
+<Segment>
+<Section type="signature">
+```python
+to_xarray() -> xr.Dataset
+```
+</Section>
+
+Returns copy of xarray dataset.
+
+<InlineSection>
+**Returns** <code class="primitive">xr.Dataset</code>
+</InlineSection>
+</Segment>
+
+</div>

@@ -1,0 +1,56 @@
+---
+title: rencal.utils.logger
+description: Reference documentation for rencal.utils.logger.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.utils.logger` provides project-standard logger construction and a default package logger.
+</Section>
+
+## Functions
+
+### get_logger
+
+<Segment>
+<Section type="signature">
+```python
+get_logger(name: str | None = None, level: int = logging.DEBUG) -> logging.Logger
+```
+</Section>
+
+Returns configured logger with consistent formatting and mode-based level behavior.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">name</code> <code class="primitive">str</code> | <code class="primitive">None</code></p>
+  Logger name. If omitted, calling module name is inferred.
+
+- <p><code class="key">level</code> <code class="primitive">int</code></p>
+  Fallback logger level before QUIET/VERBOSE overrides.
+</Section>
+
+<InlineSection>
+**Returns** <code class="primitive">logging.Logger</code>
+</InlineSection>
+</Segment>
+
+## Variables
+
+### default_logger
+
+<Segment>
+Default package logger instance with name `"rencal"`.
+
+<InlineSection>
+**Type** <code class="primitive">logging.Logger</code>
+</InlineSection>
+</Segment>
+
+</div>
