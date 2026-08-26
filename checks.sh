@@ -2,11 +2,11 @@
 
 # Format and linting
 echo "Running formatter..."
-uv run ruff format rencal/ tests/
+uv run ruff format --check rencal/ tests/ scripts/
 echo ""
 
 echo "Running linter with auto fix..."
-uv run ruff check --fix rencal/ tests/
+uv run ruff check rencal/ tests/ scripts/
 echo ""
 
 # Type checking
