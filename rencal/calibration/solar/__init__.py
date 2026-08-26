@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 def __init__(self, config):
     self.config = config
     self.output_path = Path(config["output_path"])

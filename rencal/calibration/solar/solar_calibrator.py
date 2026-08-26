@@ -8,40 +8,39 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from matplotlib import pyplot as plt
-from scipy.integrate import quad
 from scipy.optimize import curve_fit
 
 from ...utils.constants import (
-    DEFAULT_SOLAR_CURVE_NOCT,
-    SOLAR_IRRADIANCE_LBOUND,
-    SOLAR_IRRADIANCE_HBOUND,
     DEFAULT_SOLAR_CURVE_GAMMA,
-    SOLAR_CURVE_GAMMA_LBOUND,
-    SOLAR_CURVE_GAMMA_HBOUND,
-    SOLAR_CURVE_NOCT_LBOUND,
-    SOLAR_CURVE_NOCT_HBOUND,
+    DEFAULT_SOLAR_CURVE_NOCT,
     ERA5_VARIABLE_MAPPING,
     INTERNAL_PLANT_ID,
     PLANT_ID_COLUMN,
     PLANT_ID_OUTPUT,
+    SOLAR_CURVE_GAMMA_HBOUND,
+    SOLAR_CURVE_GAMMA_LBOUND,
+    SOLAR_CURVE_NOCT_HBOUND,
+    SOLAR_CURVE_NOCT_LBOUND,
+    SOLAR_IRRADIANCE_HBOUND,
+    SOLAR_IRRADIANCE_LBOUND,
     SOLAR_TECHNOLOGY_TYPES,
 )
-
 from ...utils.logger import get_logger
 from ..calibrator import Calibrator
 
 logger = get_logger(__name__)
 
+
 class SolarCalibrator(Calibrator):
     """Calibrates solar power curves for a set of timestamps and CFD IDs."""
 
     def __init__(
-            self,
-            data_path: str = None,
-            plant_id_col: str = None,
-            output_path: str | Path = Path.cwd(),
-            visual_output: bool = False,
-            stream_npy_output: bool = False,
+        self,
+        data_path: str = None,
+        plant_id_col: str = None,
+        output_path: str | Path = Path.cwd(),
+        visual_output: bool = False,
+        stream_npy_output: bool = False,
     ) -> None:
         """
         Constructor for the SolarCalibrator class.
@@ -76,11 +75,10 @@ class SolarCalibrator(Calibrator):
         self.historical_load_factor_distributions: pd.DataFrame
 
     def solar_regression_model(x_data, gamma, noct):
-        T = x_data[:, 0]          # temperature
-        G = x_data[:, 1]          # irradiance
+        T = x_data[:, 0]  # temperature
+        G = x_data[:, 1]  # irradiance
         T_cell = T + (noct - 20) * G / 800
         return (1 - gamma * (T_cell - 25)) * G / 1000
-    
 
     def calibrate(self) -> None:
         """Triggers calibration workflow."""
@@ -110,12 +108,10 @@ class SolarCalibrator(Calibrator):
             self.resource.data = self.resource.data.set(expver=1).combine_first(
                 self.resource.data.sel(expver=5)
             )
-        
+
         # Convert SSRD from J/m to W/m
         ssrd_var = ERA5_VARIABLE_MAPPING["surface_solar_radiation_downwards"]
-        self.resource.data["irradiance"] = (
-            self.resource.data[ssrd_var] / 3600
-        )
+        self.resource.data["irradiance"] = self.resource.data[ssrd_var] / 3600
 
         if "2m_temperature" in ERA5_VARIABLE_MAPPING:
             t2m_var = ERA5_VARIABLE_MAPPING["2m_temperature"]
@@ -166,7 +162,7 @@ class SolarCalibrator(Calibrator):
             .agg(hourly_start="min", hourly_end="max")
             .reset_index()
         )
-    
+
     def _clip_generation_to_plant_capacity(self) -> pd.DataFrame:
         """Clips maximum generation to the capacity of the plant."""
         gen_with_capacity = self.generation.data.merge(
@@ -196,14 +192,14 @@ class SolarCalibrator(Calibrator):
                 {"quantity": "sum"}
             ),
         )
-    
+
     def calculate_historical_load_factors(self) -> pd.DataFrame:
         """Calculates historical load factors based on irradiance and generation data for each plant."""
         logger.info("Calculating historical load factors...")
 
-        self.plant_irradiance[INTERNAL_PLANT_ID] = self.plant_irradiance[
-        INTERNAL_PLANT_ID
-        ].astype(str)
+        self.plant_irradiance[INTERNAL_PLANT_ID] = self.plant_irradiance[INTERNAL_PLANT_ID].astype(
+            str
+        )
         self.generation.data[INTERNAL_PLANT_ID] = self.generation.data[INTERNAL_PLANT_ID].astype(
             str
         )
@@ -230,16 +226,18 @@ class SolarCalibrator(Calibrator):
         solar_irradiance_generation_merged["load_factor"] = (
             solar_irradiance_generation_merged["quantity"].fillna(0)
             / solar_irradiance_generation_merged["capacity"]
-        )    
+        )
         numeric_cols = solar_irradiance_generation_merged.select_dtypes(include=["number"]).columns
         solar_irradiance_generation_merged[numeric_cols] = solar_irradiance_generation_merged[
             numeric_cols
         ].round(2)
 
-        solar_irradiance_generation_merged = self._drop_invalid_rows(solar_irradiance_generation_merged)
+        solar_irradiance_generation_merged = self._drop_invalid_rows(
+            solar_irradiance_generation_merged
+        )
 
         return solar_irradiance_generation_merged
-        
+
     @staticmethod
     def _fit_irradiance_histogram_to_plant(
         item: tuple[str, np.ndarray],
@@ -253,12 +251,12 @@ class SolarCalibrator(Calibrator):
         Returns:
             tuple[str, np.ndarray, np.ndarray]:
             plant_id, histogram probabilities, bin edges"""
-        
+
         plant_id, irradiance = item
 
         if len(irradiance) < 3:
             return plant_id, np.array([]), np.array([])
-        
+
         hist, bin_edges = np.histogram(
             irradiance,
             bins=bins,
@@ -267,41 +265,35 @@ class SolarCalibrator(Calibrator):
         )
 
         return plant_id, hist, bin_edges
-    
+
     def fit_historical_load_factor_distribution(self) -> pd.DataFrame:
         """Fits an empirical irradiance histogram for each plant."""
 
         logger.info("Fitting irradiance histograms for historical load factors...")
 
-        irradiance_groups = self.historical_load_factors.groupby(
-            INTERNAL_PLANT_ID, sort=False
-        )["irradiance"]
+        irradiance_groups = self.historical_load_factors.groupby(INTERNAL_PLANT_ID, sort=False)[
+            "irradiance"
+        ]
 
         irradiance_statistics = irradiance_groups.agg(
-            irradiance_mean="mean",
-            irradiance_stdev="std"
+            irradiance_mean="mean", irradiance_stdev="std"
         )
         irradiance_arrays = [
-            (plant_id, irr.dropna().to_numpy())
-            for plant_id, irr in irradiance_groups
+            (plant_id, irr.dropna().to_numpy()) for plant_id, irr in irradiance_groups
         ]
         with ThreadPoolExecutor(max_workers=8) as ex:
             fits = list(
                 ex.map(
-                    lambda item: self._fit_irradiance_histogram_to_plant(item),
-                    irradiance_arrays
+                    lambda item: self._fit_irradiance_histogram_to_plant(item), irradiance_arrays
                 )
             )
-        hist_df = pd.DataFrame(
-            fits,
-            columns=[INTERNAL_PLANT_ID, "hisogram", "bin_edges"]
-        )
+        hist_df = pd.DataFrame(fits, columns=[INTERNAL_PLANT_ID, "hisogram", "bin_edges"])
         result = irradiance_statistics.reset_index().merge(
             hist_df, on=INTERNAL_PLANT_ID, sort=False
         )
 
         return result
-    
+
     def estimate_load_factors_for_resource(self) -> pd.DataFrame:
         """Estimates long term load factors for plants using the NOCT-based solar model."""
 
@@ -312,7 +304,6 @@ class SolarCalibrator(Calibrator):
         )
 
         for plant_id in self.calibration_plant_ids:
-
             lf_data = self.historical_load_factors.loc[
                 self.historical_load_factors[INTERNAL_PLANT_ID] == plant_id
             ]
@@ -321,10 +312,7 @@ class SolarCalibrator(Calibrator):
                 logger.warning("Skipping %s (no valid irradiance data).", plant_id)
                 continue
 
-            x_data = np.vstack([
-                lf_data["temperature"].values,
-                lf_data["irradiance"].values
-            ])
+            x_data = np.vstack([lf_data["temperature"].values, lf_data["irradiance"].values])
 
             try:
                 (gamma, noct), _ = curve_fit(
@@ -336,19 +324,16 @@ class SolarCalibrator(Calibrator):
                         [SOLAR_CURVE_GAMMA_LBOUND, SOLAR_CURVE_NOCT_LBOUND],
                         [SOLAR_CURVE_GAMMA_HBOUND, SOLAR_CURVE_NOCT_HBOUND],
                     ),
-                    maxfev=2000
+                    maxfev=2000,
                 )
             except Exception as e:
                 logger.warning("Skipping %s (solar curve fit failed: %s)", plant_id, e)
                 continue
 
-            estimated_lf = float(np.mean(
-                self.solar_regression_model(x_data, gamma, noct)
-            ))
+            estimated_lf = float(np.mean(self.solar_regression_model(x_data, gamma, noct)))
 
             self.output_estimated_load_factors_visual(
-                pv_params=np.array([gamma, noct]),
-                load_factors=lf_data
+                pv_params=np.array([gamma, noct]), load_factors=lf_data
             )
 
             summary.loc[len(summary)] = [
@@ -360,7 +345,6 @@ class SolarCalibrator(Calibrator):
 
         return summary
 
-    
     def _create_generic_solar_curve(self) -> None:
         """Generates a generic solar curve using median fitted parameters."""
 
@@ -373,19 +357,19 @@ class SolarCalibrator(Calibrator):
             median_noct,
         ]
 
-    def generate_solar_resource_streams(self) -> pd.DataFrame: 
+    def generate_solar_resource_streams(self) -> pd.DataFrame:
         logger.info("Generating solar streams for plants...")
 
         plant_solar_irradiance_and_params = self.plant_irradiance.merge(
             self.summary[[PLANT_ID_OUTPUT, "gamma", "NOCT"]],
             left_on=INTERNAL_PLANT_ID,
             right_on=PLANT_ID_OUTPUT,
-            how="left"
+            how="left",
         ).drop(columns=PLANT_ID_OUTPUT)
 
         missing_mask = (
-            plant_solar_irradiance_and_params["gamma"].isna() |
-            plant_solar_irradiance_and_params["NOCT"].isna()
+            plant_solar_irradiance_and_params["gamma"].isna()
+            | plant_solar_irradiance_and_params["NOCT"].isna()
         )
         if missing_mask.any():
             generic = self.summary[self.summary[PLANT_ID_OUTPUT] == "Generic Solar"].iloc[0]
@@ -399,9 +383,7 @@ class SolarCalibrator(Calibrator):
 
         T_cell = T + (noct - 20) * G / 800
 
-        plant_solar_irradiance_and_params["load_factor"] = (
-            (1 - gamma * (T_cell - 25)) * G / 1000
-        )
+        plant_solar_irradiance_and_params["load_factor"] = (1 - gamma * (T_cell - 25)) * G / 1000
         plant_solar_irradiance_and_params = (
             plant_solar_irradiance_and_params[["time", INTERNAL_PLANT_ID, "load_factor"]]
             .pivot(index="time", columns=INTERNAL_PLANT_ID, values="load_factor")
@@ -412,7 +394,6 @@ class SolarCalibrator(Calibrator):
 
         return plant_solar_irradiance_and_params
 
-    
     def _rename_output_summary_columns(self) -> None:
         """Renames solar calibration summary columns to readable output names."""
         self.summary = self.summary.rename(
@@ -430,7 +411,6 @@ class SolarCalibrator(Calibrator):
         self.historical_load_factor_distributions.to_csv(output_path, index=False)
         logger.info("Written solar irradiance distribution parameters to %s", output_path)
 
-
     def output_resource_per_plant(self) -> None:
         """Writes solar irradiance and temperature time series for each plant to a CSV file."""
         output_path = self.output_path / "Solar Resource.csv"
@@ -446,8 +426,7 @@ class SolarCalibrator(Calibrator):
         if self.stream_npy_output:
             with open(stream_path.with_suffix(".npy"), "wb") as stream_npy:
                 np.save(
-                    stream_npy,
-                    self.solar_streams.drop(columns="Times").to_numpy(dtype=np.float32)
+                    stream_npy, self.solar_streams.drop(columns="Times").to_numpy(dtype=np.float32)
                 )
             logger.info("Written solar streams to %s", stream_path.with_suffix(".npy"))
 
