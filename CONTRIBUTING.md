@@ -1,217 +1,215 @@
-# Contributing to Weather Forecasting and Modelling
+# Contributing to RenCal
 
-Thank you for your interest in contributing to The Low Carbon Contracts Company Weather Forecasting and Modelling project! This document provides guidelines and instructions for contributing.
+Thank you for contributing to RenCal. We welcome bug reports, documentation
+improvements, tests, and focused changes that improve renewable-energy
+calibration and forecasting.
 
-## Code of Conduct
+Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
-By participating in this project, you agree to abide by our Code of Conduct:
-- Be respectful and inclusive
-- Welcome newcomers and help them get started
-- Focus on constructive criticism
-- Accept responsibility and apologize when making mistakes
+## Contributor Licence Agreement
 
-## How to Contribute
+By submitting a pull request, commit, issue attachment, or any other
+contribution to RenCal, you represent and warrant that:
 
-### Reporting Issues
+1. You are legally entitled to submit the contribution, either as its original
+   author or as someone authorised to submit it on behalf of the copyright
+   holder.
+2. The contribution is your original work or is otherwise available under terms
+   that permit its inclusion in this project.
+3. To the best of your knowledge, the contribution does not knowingly infringe
+   any third-party intellectual property rights.
+4. You grant Low Carbon Contracts Company Ltd and all recipients of the project
+   a perpetual, worldwide, non-exclusive, irrevocable, royalty-free licence to
+   use, reproduce, modify, publish, distribute, sublicense, and commercialise
+   the contribution as part of RenCal and any derivative work.
+5. You agree that the contribution may be redistributed under the licence
+   applicable to this repository, including any future version of that licence
+   adopted by the project.
 
-Before creating an issue, please check if it already exists. When creating a new issue:
+By submitting a contribution, you acknowledge and agree to these terms. This
+section does not transfer ownership of your contribution; it grants the project
+the rights needed to use, maintain, and redistribute it.
 
-1. Use a clear and descriptive title
-2. Provide a detailed description of the problem
-3. Include steps to reproduce the issue
-4. Specify your environment (OS, Python version, etc.)
-5. Include relevant error messages and stack traces
 
-### Suggesting Enhancements
+## Before you start
 
-Enhancement suggestions are welcome! Please:
+1. Search existing [issues](https://github.com/LCCC-Tech/rencal/issues) before
+   opening a new one.
+2. For a substantial change, open an issue first so the proposed scope can be
+   discussed.
+3. Do not include credentials, internal data, proprietary information, or
+   generated build artefacts in an issue or pull request.
 
-1. Use a clear and descriptive title
-2. Provide a detailed description of the proposed enhancement
-3. Explain why this enhancement would be useful
-4. Include examples of how it would work
+Use GitHub Issues for public bugs and feature requests.
 
-### Pull Requests
+## Development setup
 
-1. **Fork the repository** and create your branch from `main`
-2. **Follow the coding standards** (see below)
-3. **Write tests** for your changes
-4. **Update documentation** as needed
-5. **Ensure all tests pass** before submitting
-6. **Submit a pull request** with a clear description
-
-#### Pull Request Process
-
-1. Update the README.md with details of changes if applicable
-2. Ensure any install or build dependencies are removed
-3. Increase version numbers following [Semantic Versioning](https://semver.org/)
-4. The PR will be merged after review and approval from maintainers
-
-## Development Setup
-
-### Setting up your environment
+RenCal currently supports Python 3.12 and uses `uv` for dependency and
+environment management.
 
 ```bash
-# Clone your fork
-git clone https://github.com/your-username/rencal.git
+git clone https://github.com/LCCC-Tech/rencal.git
 cd rencal
-
-# Create a virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install in development mode
-pip install -e .
-pip install -r requirements-dev.txt
-
-# Install pre-commit hooks
-pre-commit install
+uv sync --group dev
 ```
 
-### Running Tests
+Create a feature branch from `main`:
 
 ```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=rencal --cov-report=html
-
-# Run specific test file
-pytest tests/test_wind_models.py
-
-# Run with verbose output
-pytest -v
+git switch main
+git pull --ff-only
+git switch -c <short-description>
 ```
 
-## Coding Standards
+## Checks
 
-### Python Style Guide
-
-- Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/)
-- Use meaningful variable and function names
-- Add type hints where appropriate
-- Maximum line length: 100 characters
-
-### Code Formatting
-
-We use `black` for code formatting and `isort` for import sorting:
+Run the repository checks before opening a pull request:
 
 ```bash
-# Format code
-black rencal/ tests/
-
-# Sort imports
-isort rencal/ tests/
-
-# Check without modifying
-black --check rencal/ tests/
-isort --check-only rencal/ tests/
+./checks.sh
 ```
 
-### Docstrings
+The checks cover formatting, Ruff linting, BasedPyright type checking, and the
+pytest suite. You can also run individual checks with `uv run`:
 
-Use Google-style docstrings:
+```bash
+uv run ruff format --check rencal/ tests/ scripts/
+uv run ruff check rencal/ tests/ scripts/
+uv run basedpyright --warnings
+uv run pytest tests/ -v
+```
+
+Add or update tests for behavioural changes. Keep tests deterministic and do
+not commit operational or confidential datasets.
+
+Run the test suite with coverage when investigating coverage or adding a larger
+feature:
+
+```bash
+uv run pytest tests/ --cov=rencal --cov-report=html
+```
+
+## Building from source
+
+Build the wheel and source distribution locally with the same build backend
+used by the release workflow:
+
+```bash
+rm -rf dist/
+uv build --no-sources
+```
+
+The distributions are written to `dist/`. Before submitting packaging changes,
+check that both artefacts build successfully and that they do not contain
+tests, local data, credentials, or other development-only files.
+
+## Coding standards
+
+- Follow [PEP 8](https://peps.python.org/pep-0008/).
+- Use meaningful names and type hints for public interfaces.
+- Keep lines within the repository's 100-character formatting configuration.
+- Prefer small, focused changes with clear error handling.
+- Use the existing Ruff and BasedPyright configuration rather than introducing
+  alternative formatting or linting tools.
+
+## Pull requests
+
+Pull requests should:
+
+- Link to the relevant issue.
+- Explain the problem and the proposed solution.
+- Keep the change focused and reviewable.
+- Include tests for new or changed behaviour.
+- Update user or developer documentation where appropriate.
+- State which checks were run and whether any checks were skipped.
+
+Open the pull request against `main`. Maintainers review and approve pull
+requests; direct commits to `main` are not permitted. All required CI checks
+and branch-protection rules must pass before merge.
+
+## Commit messages and releases
+
+Use concise, imperative commit messages. Use
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) so
+Release Please can propose appropriate version bumps and changelog entries.
+
+The format is:
+
+```text
+<type>[optional scope]: <description>
+```
+
+Common types include:
+
+```text
+fix: handle missing ERA5 files
+feat: add solar calibration model
+docs: clarify local data setup
+test: cover invalid plant data
+refactor: separate data loading from calibration
+chore: update development tooling
+```
+
+Use `!` for a breaking change:
+
+```text
+feat!: change the calibration interface
+```
+
+Alternatively, include `BREAKING CHANGE:` in the commit footer. In general:
+
+- `fix` proposes a patch release.
+- `feat` proposes a minor release.
+- `!` or `BREAKING CHANGE` proposes a major release.
+
+Keep the subject short, use the imperative mood, and do not include unrelated
+changes in the same commit.
+
+Release Please uses Conventional Commits to prepare a release pull request.
+Maintainers review and merge that release pull request; contributors should
+not edit release tags, publish to PyPI, or change release versions as part of
+ordinary feature work.
+
+The release workflow builds the tagged source, publishes the exact artefacts to
+TestPyPI, smoke-tests the installation, and then publishes to PyPI. Release
+preparation is maintainer-owned.
+
+## Docstrings and code documentation
+
+Public modules, classes, functions, and methods should have clear docstrings.
+Use Google-style sections where relevant:
 
 ```python
-def calculate_wind_power(wind_speed: float, turbine_capacity: float) -> float:
-    """Calculate wind power output based on wind speed.
-    
+def load_generation_data(path: Path) -> GenerationDatasetModel:
+    """Load and validate generation data from a parquet file.
+
     Args:
-        wind_speed: Wind speed in m/s
-        turbine_capacity: Turbine capacity in MW
-        
+        path: Location of the generation data file.
+
     Returns:
-        Power output in MW
-        
+        The validated generation dataset.
+
     Raises:
-        ValueError: If wind_speed is negative
+        FileNotFoundError: If the data file does not exist.
+        ValueError: If the data does not match the expected schema.
     """
 ```
 
-### Commit Messages
-
-- Use present tense ("Add feature" not "Added feature")
-- Use imperative mood ("Move cursor to..." not "Moves cursor to...")
-- Limit first line to 72 characters
-- Reference issues and pull requests when relevant
-
-Example:
-```
-Add wind speed calibration module
-
-- Implement Weibull distribution fitting
-- Add validation against historical data
-- Include unit tests for edge cases
-
-Closes #123
-```
-
-## Testing Guidelines
-
-### Writing Tests
-
-- Write unit tests for all new functionality
-- Aim for >80% code coverage
-- Use descriptive test names
-- Include edge cases and error conditions
-
-### Test Structure
-
-```python
-import pytest
-from rencal.models import WindModel
-
-class TestWindModel:
-    def test_initialization(self):
-        """Test model initialization with default parameters."""
-        model = WindModel()
-        assert model.horizon == 24
-        
-    def test_invalid_input_raises_error(self):
-        """Test that invalid input raises appropriate error."""
-        model = WindModel()
-        with pytest.raises(ValueError):
-            model.predict(wind_speed=-1)
-```
+Update docstrings when behaviour, arguments, return values, or error handling
+changes. Keep examples and documentation free from internal data and
+credentials.
 
 ## Documentation
 
-### Code Documentation
+Keep the README, tutorials under `docs/tutorials/`, and the documentation site
+content accurate when behaviour changes. Public examples must use synthetic or
+redistributable data and must not expose internal systems or credentials.
 
-- All public modules, functions, classes, and methods must have docstrings
-- Update existing documentation when modifying code
-- Include examples in docstrings where helpful
+API documentation is generated from public modules and their docstrings. Add
+examples to docstrings or tutorials when they clarify a public workflow.
 
-### User Documentation
+## Questions and support
 
-- Update README.md for significant changes
-- Add tutorials for new features in docs/tutorials/
-- Update API documentation in docs/api/
-
-## Release Process
-
-1. Update version in `setup.py` and `__init__.py`
-2. Update CHANGELOG.md
-3. Create a release branch
-4. Submit PR for review
-5. After merge, tag the release
-6. Build and publish to PyPI
-
-## Getting Help
-
-If you need help:
-
-1. Check the [documentation](docs/)
-2. Search existing [issues](https://github.com/LCCC/rencal/issues)
-3. Ask in discussions
-4. Contact maintainers
-
-## Recognition
-
-Contributors will be recognized in:
-- The AUTHORS file
-- Release notes
-- Project documentation
-
-Thank you for contributing to The Low Carbon Contracts Company Weather Forecasting project!
+Use [GitHub Issues](https://github.com/LCCC-Tech/rencal/issues) for public,
+reproducible bugs and feature requests. For conduct reports, follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
