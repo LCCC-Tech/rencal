@@ -115,6 +115,7 @@ export default defineConfig({
             components: {
                 Header: "./src/components/Header.astro",
                 ThemeSelect: "./src/components/ThemeSelect.astro",
+                TwoColumnContent: "./src/components/AccessibleTwoColumnContent.astro",
             },
         }),
         tailwind({ applyBaseStyles: false }),
