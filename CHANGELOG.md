@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.2](https://github.com/LCCC-Tech/rencal/compare/v0.1.1...v0.1.2) (2026-08-26)
+
+
+### Documentation
+
+* Fix documentation site accessibility audit findings ([#68](https://github.com/LCCC-Tech/rencal/issues/68)) ([7582245](https://github.com/LCCC-Tech/rencal/commit/7582245fefc4ef70fa07c13821e25f12f5860460)), closes [#67](https://github.com/LCCC-Tech/rencal/issues/67)
+* update PyPI installation quick start ([622f099](https://github.com/LCCC-Tech/rencal/commit/622f099c6878973541ebf7e69efab70cfaf42eeb))
+
 ## [0.1.1](https://github.com/LCCC-Tech/rencal/compare/v0.1.0...v0.1.1) (2026-08-19)
 
 
