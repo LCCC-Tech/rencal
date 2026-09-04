@@ -55,9 +55,6 @@ jobs:
                       SPHINXBUILD="uv run python -m sphinx.cmd.build" 2>&1 \
                       | tee documentation-reports/documentation-build.txt
 
-            - name: Create Confluence-ready Markdown
-              run: ./scripts/documentation/post-process-confluence.sh
-
             - name: Measure docstring coverage
               run: |
                   set +e
@@ -112,9 +109,8 @@ jobs:
 
             - name: Stage generated documentation
               run: |
-                  mkdir -p documentation-reports/markdown documentation-reports/confluence
+                  mkdir -p documentation-reports/markdown
                   cp -R docs/build/markdown/. documentation-reports/markdown/
-                  cp -R docs/build/confluence/. documentation-reports/confluence/
 
             - name: Publish documentation reports
               if: ${{ !cancelled() }}
