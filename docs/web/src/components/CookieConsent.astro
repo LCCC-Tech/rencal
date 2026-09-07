@@ -1,7 +1,11 @@
 ---
-// Cookie consent popup + toast, styled to match lccc-website's cookie
-// banner using Starlight's own CSS variables so it follows the site's
-// light/dark theme automatically. Behaviour lives in /public/cookies.js
+// Cookie consent popup + toast, replicating lccc-website's cookie banner
+// exactly (app/static/scss/components/_cookies.scss +
+// app/static/scss/elements/_buttons.scss, .lcc-btn-primary/-secondary).
+// Colours/spacing below are copied 1:1 from those values (not from
+// Starlight's own theme tokens) so the banner looks identical regardless
+// of this site's light/dark theme, matching lccc-website's own banner
+// which is likewise theme-invariant. Behaviour lives in /public/cookies.js
 // (loaded as a plain external script from astro.config.mjs) since this
 // component only needs to render markup - not run any inline script,
 // which keeps it clear of Astro's CSP hashing entirely.
@@ -39,17 +43,6 @@
 </div>
 
 <style>
-  @keyframes popup-appear {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
   #cookies-popup,
   #cookies-toast {
     opacity: 0;
@@ -71,18 +64,40 @@
       transform 0.3s ease;
   }
 
+  /* Colour/spacing tokens copied from lccc-website - see file header. */
+  .cookies-popup,
+  .cookies-toast {
+    --lcc-energy-green: #5fbb46;
+    --lcc-carbon-black: #252525;
+    --lcc-contract-white: #ffffff;
+    --lcc-warm-gray: #bfbfbf;
+    --lcc-gecko-green: #00ff00;
+    --lcc-forest-green: #1b7302;
+    --lcc-feedback-bg: #2d2d2d;
+    --lcc-btn-radius: 4px;
+    --lcc-btn-shadow:
+      0px 1px 5px 0px rgba(0, 0, 0, 0.12),
+      0px 2px 2px 0px rgba(0, 0, 0, 0.14),
+      0px 3px 1px -2px rgba(0, 0, 0, 0.2);
+  }
+
   .cookies-popup {
     position: fixed;
     bottom: 20px;
     left: 20px;
     z-index: 400;
     width: 430px;
-    max-width: calc(100vw - 40px);
-    background-color: var(--sl-color-black);
-    color: var(--sl-color-white);
-    padding: 8px;
-    border-radius: var(--border-radius, 4px);
+    background-color: var(--lcc-feedback-bg);
+    color: var(--lcc-contract-white);
+    padding: 24px;
+    border-radius: var(--lcc-btn-radius);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  @media (max-width: 500px) {
+    .cookies-popup {
+      width: calc(100vw - 40px);
+    }
   }
 
   .popup-body {
@@ -91,107 +106,141 @@
 
   .popup-body h3 {
     margin: 0 0 16px;
-    font-size: 1.5rem;
+    font-size: 32px;
     font-weight: 500;
   }
 
   .popup-body p {
     margin: 0 0 8px;
-    font-size: 0.9375rem;
+    font-size: 18px;
     line-height: 140%;
+    font-weight: 500;
   }
 
   .popup-body a {
-    color: var(--sl-color-text-accent);
+    color: inherit;
+    font-weight: bold;
+    font-size: 16px;
+    text-decoration: underline;
+  }
+
+  .popup-body a:hover {
+    text-decoration: none;
   }
 
   .popup-actions {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    width: 100%;
     margin-top: 24px;
+  }
+
+  /* .popup-actions .action overrides the button's own font-size/weight,
+     matching lccc-website's _cookies.scss exactly (higher specificity than
+     .lcc-btn-primary/-secondary alone). */
+  .popup-actions .action {
+    height: 51px;
+    width: 100%;
+    font-size: 16px;
+    font-weight: 500;
   }
 
   .cookies-toast {
     position: fixed;
-    bottom: 20px;
+    bottom: 34px;
+    height: 67px;
     right: 20px;
     z-index: 400;
-    width: min(430px, calc(100vw - 40px));
-    background-color: var(--sl-color-black);
-    color: var(--sl-color-white);
-    padding: 20px;
-    border-radius: var(--border-radius, 4px);
+    width: calc(100vw - 32px);
+    background-color: var(--lcc-feedback-bg);
+    color: var(--lcc-contract-white);
+    padding: 24px;
+    border-radius: var(--lcc-btn-radius);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
   }
 
-  #cookies-toast-message {
-    font-size: 0.9375rem;
-    line-height: 140%;
+  @media (max-width: 500px) {
+    .cookies-toast {
+      flex-direction: column;
+      height: unset;
+      width: calc(100vw - 40px);
+      margin: 0 auto;
+    }
   }
 
   .cookies-toast .actions {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .cookie-btn {
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 20px;
-    border-radius: var(--border-radius, 4px);
-    font-size: 0.9375rem;
-    font-weight: 500;
-    text-decoration: none;
-    cursor: pointer;
-    border: 1px solid transparent;
-    white-space: nowrap;
-  }
-
-  .cookie-btn-primary {
-    background-color: var(--sl-color-accent);
-    color: var(--sl-color-white);
-  }
-
-  .cookie-btn-primary:hover {
-    filter: brightness(1.1);
-  }
-
-  .cookie-btn-secondary {
-    background-color: transparent;
-    color: var(--sl-color-white);
-    border-color: var(--sl-color-gray-4);
-  }
-
-  .cookie-btn-secondary:hover {
-    background-color: var(--sl-color-gray-6);
   }
 
   @media (max-width: 500px) {
-    .cookies-popup {
-      left: 20px;
-      right: 20px;
-      width: auto;
-    }
-
-    .cookies-toast {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
     .cookies-toast .actions {
       flex-direction: column;
+      width: 100%;
+      margin-top: 8px;
     }
 
     .cookies-toast .actions .cookie-btn {
       width: 100%;
+      margin: 0;
     }
+  }
+
+  .cookies-toast .actions .cookie-btn {
+    height: 44px;
+  }
+
+  /* Shared button base (.lcc-btn) */
+  .cookie-btn {
+    border-radius: var(--lcc-btn-radius);
+    border: none;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--lcc-btn-shadow);
+    cursor: pointer;
+  }
+
+  .cookie-btn:hover {
+    text-decoration: underline;
+    color: var(--lcc-contract-white);
+  }
+
+  /* .lcc-btn-primary */
+  .cookie-btn-primary {
+    background: var(--lcc-energy-green);
+    color: var(--lcc-carbon-black);
+    padding: 10px 16px 10px 18px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 24px;
+    letter-spacing: 0.46px;
+  }
+
+  .cookie-btn-primary:hover {
+    background: var(--lcc-forest-green);
+  }
+
+  /* .lcc-btn-secondary */
+  .cookie-btn-secondary {
+    border-left: 2px solid var(--lcc-energy-green);
+    background: var(--lcc-carbon-black);
+    color: var(--lcc-warm-gray);
+    padding: 6px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 18px;
+    letter-spacing: 0.46px;
+  }
+
+  .cookie-btn-secondary:hover {
+    border-left: 2px solid var(--lcc-gecko-green);
+    background: var(--lcc-forest-green);
   }
 </style>
