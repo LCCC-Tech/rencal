@@ -133,9 +133,9 @@ document.addEventListener("DOMContentLoaded", () => {
     hide(popup);
   };
 
-  // This site is deployed on a subdomain of a shared root domain (e.g.
-  // dev-docs.lccctest.co.uk), and cookies set with `domain=<root>` by other
-  // apps on that same root domain (like the main lccc-website) are visible
+  // This site is deployed on a subdomain of a shared root domain, and
+  // cookies set with `domain=<root>` by other apps on that same root
+  // domain (like the main lccc-website) are visible
   // to document.cookie here too. So this must only ever clear cookies we
   // know are non-essential and ours to manage (currently just Google
   // Analytics) - never blanket-delete every cookie the browser exposes,
