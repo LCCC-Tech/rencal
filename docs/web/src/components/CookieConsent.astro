@@ -260,4 +260,12 @@
     border-left: 2px solid var(--lcc-gecko-green);
     background: var(--lcc-forest-green);
   }
+
+  /* Dark mode keeps lccc-website's original secondary button styling
+     unchanged; in light mode the reject button gets a light gray
+     background instead of the dark one, to fit the white popup/toast. */
+  :global(html[data-theme="light"]) #reject-nonessential {
+    background: #cfcfcf;
+    color: var(--lcc-carbon-black);
+  }
 </style>
