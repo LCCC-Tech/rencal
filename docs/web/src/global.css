@@ -1,4 +1,6 @@
 @import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/atkinson-hyperlegible/400.css";
+@import "@fontsource/atkinson-hyperlegible/700.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,9 +16,9 @@ https://tailwindcss.com/docs/adding-custom-styles#using-css-and-layer
 
     --content-width: 58.75rem;
 
-    --sl-font: "Arial";
+    --sl-font: "Atkinson Hyperlegible";
     --sl-font-mono: "IBM Plex Mono";
-    --__sl-font-headings: "IBM Plex Mono";
+    --__sl-font-headings: "Atkinson Hyperlegible";
 
     --sl-line-height: 1.8;
 
