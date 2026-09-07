@@ -125,13 +125,14 @@ document.addEventListener("DOMContentLoaded", () => {
     hide(popup);
   };
 
+  // This site is deployed on a subdomain of a shared root domain (e.g.
+  // dev-docs.lccctest.co.uk), and cookies set with `domain=<root>` by other
+  // apps on that same root domain (like the main lccc-website) are visible
+  // to document.cookie here too. So this must only ever clear cookies we
+  // know are non-essential and ours to manage (currently just Google
+  // Analytics) - never blanket-delete every cookie the browser exposes,
+  // or we'd risk breaking sessions/state belonging to a different app.
   const removeNonEssentialCookies = () => {
-    document.cookie.split(";").forEach(cookie => {
-      const name = cookie.split("=")[0].trim();
-      if (name && name !== COOKIE_STORAGE_KEY) {
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-      }
-    });
     if (window.disableAnalytics) window.disableAnalytics();
   };
 
