@@ -19,3 +19,6 @@ pnpm-debug.log*
 
 # macOS-specific files
 .DS_Store
+
+# generated at build time by astro.config.mjs when Google Analytics is enabled
+public/ga-init.js
