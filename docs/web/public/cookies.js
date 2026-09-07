@@ -9,6 +9,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!popup || !toast || !acceptBtn) return;
 
+  // Starlight's main content column has `isolation: isolate` (a new
+  // stacking context), which traps `position: fixed` descendants below
+  // other fixed elements positioned outside it (e.g. the sidebar) even
+  // with a very high z-index - z-index is only ever compared within the
+  // same stacking context. Moving the popup/toast to be direct children
+  // of <body> escapes that context entirely, regardless of where the
+  // Footer override happens to render them in Starlight's DOM.
+  document.body.appendChild(popup);
+  document.body.appendChild(toast);
+
   let firstTabPressed = false;
   let forcedToastFocus = false;
   let toastAutoHideTimerId = null;
