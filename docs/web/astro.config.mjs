@@ -162,6 +162,7 @@ export default defineConfig({
                 ThemeSelect: "./src/components/ThemeSelect.astro",
                 TwoColumnContent: "./src/components/AccessibleTwoColumnContent.astro",
                 Footer: "./src/components/Footer.astro",
+                PageFrame: "./src/components/PageFrame.astro",
             },
         }),
         tailwind({ applyBaseStyles: false }),
