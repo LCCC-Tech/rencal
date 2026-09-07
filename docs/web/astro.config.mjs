@@ -4,63 +4,42 @@ import starlight from "@astrojs/starlight";
 import tailwind from "@astrojs/tailwind";
 import remarkMath from "remark-math";
 import rehypeMathjax from "rehype-mathjax";
-import { writeFileSync, unlinkSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 
-// Google Analytics is injected only when both of these are true:
+// Google Analytics is only *permitted* when both of these are true:
 //   - PUBLIC_GA_MEASUREMENT_ID is set (only populated by infra for the
 //     production Amplify app; empty/unset everywhere else)
 //   - PUBLIC_DEPLOYMENT_ENVIRONMENT is exactly "production"
 // This dual gate means a misconfiguration in either layer alone (e.g. the ID
 // accidentally being set for a non-prod environment) still won't cause
 // analytics to be sent from localhost or a lower environment.
+//
+// Even when permitted, the GA script itself is never injected at build
+// time: it's loaded client-side by /public/cookies.js, and only after the
+// visitor accepts the cookie consent banner. Here we only expose the
+// measurement ID (via a meta tag) for cookies.js to read - no script tags.
 const gaMeasurementId = process.env.PUBLIC_GA_MEASUREMENT_ID;
 const isProductionDeployment = process.env.PUBLIC_DEPLOYMENT_ENVIRONMENT === "production";
 const gaEnabled = Boolean(gaMeasurementId && isProductionDeployment);
 
-// The gtag.js init snippet must call `gtag('config', ID)` with JS, which
-// normally means an inline <script>. Astro's CSP hashing only auto-hashes
-// scripts it compiles itself (see note below) — it does NOT hash raw content
-// injected via Starlight's `head` config, and the hash would depend on the
-// exact GA ID text anyway. To avoid a fragile hand-computed hash, the init
-// code is instead written to a same-origin static file at config-eval time
-// and loaded via a normal external <script src>, which needs no CSP hash at
-// all (only `script-src 'self'`, already allowed by default).
-const gaInitScriptPath = fileURLToPath(new URL("./public/ga-init.js", import.meta.url));
-if (gaEnabled) {
-    writeFileSync(
-        gaInitScriptPath,
-        `window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag("js", new Date());
-gtag("config", "${gaMeasurementId}");
-`,
-    );
-} else {
-    // Remove any stale file from a previous local build so a leftover
-    // (unreferenced) file never lingers with an old ID.
-    try {
-        unlinkSync(gaInitScriptPath);
-    } catch {
-        // Nothing to remove.
-    }
-}
-
 const analyticsHead = gaEnabled
     ? [
           {
-              tag: "script",
-              attrs: {
-                  src: `https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`,
-                  async: true,
-              },
-          },
-          {
-              tag: "script",
-              attrs: { src: "/ga-init.js", defer: true },
+              tag: "meta",
+              attrs: { name: "ga-measurement-id", content: gaMeasurementId },
           },
       ]
     : [];
+
+// The cookie consent banner/toast (rendered by src/components/CookieConsent.astro,
+// included via the Footer override) is driven by this external, same-origin
+// script - loaded unconditionally since the banner must appear regardless of
+// whether GA is enabled at all. Being an external file, it needs no CSP hash.
+const cookieConsentHead = [
+    {
+        tag: "script",
+        attrs: { src: "/cookies.js", defer: true },
+    },
+];
 
 // https://astro.build/config
 export default defineConfig({
@@ -100,7 +79,10 @@ export default defineConfig({
                 // Astro's default script-src resources already include
                 // 'self'; since setting `resources` overrides that default
                 // entirely, 'self' must be repeated here whenever we add the
-                // Google Tag Manager host for the gtag.js loader script.
+                // Google Tag Manager host. This is still needed even though
+                // no GA <script> tag is emitted at build time: /public/cookies.js
+                // dynamically injects the gtag.js loader (from this host) once
+                // the visitor accepts the cookie consent banner.
                 ...(gaEnabled && { resources: ["'self'", "https://www.googletagmanager.com"] }),
             },
             styleDirective: {
@@ -126,7 +108,7 @@ export default defineConfig({
         starlight({
             title: "Low Carbon Contracts",
             favicon: "/favicon.ico",
-            head: analyticsHead,
+            head: [...cookieConsentHead, ...analyticsHead],
             logo: {
                 light: "./src/assets/logo-light.png",
                 dark: "./src/assets/logo-dark.png",
@@ -179,6 +161,7 @@ export default defineConfig({
                 Header: "./src/components/Header.astro",
                 ThemeSelect: "./src/components/ThemeSelect.astro",
                 TwoColumnContent: "./src/components/AccessibleTwoColumnContent.astro",
+                Footer: "./src/components/Footer.astro",
             },
         }),
         tailwind({ applyBaseStyles: false }),

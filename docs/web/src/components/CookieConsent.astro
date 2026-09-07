@@ -1,0 +1,197 @@
+---
+// Cookie consent popup + toast, styled to match lccc-website's cookie
+// banner using Starlight's own CSS variables so it follows the site's
+// light/dark theme automatically. Behaviour lives in /public/cookies.js
+// (loaded as a plain external script from astro.config.mjs) since this
+// component only needs to render markup - not run any inline script,
+// which keeps it clear of Astro's CSP hashing entirely.
+---
+
+<div id="cookies-popup" class="cookies-popup hidden">
+  <div class="popup-body">
+    <h3>Your Cookies</h3>
+    <p>We use cookies, including from our partners, to enhance your experience.</p>
+    <p>
+      You can choose to <strong>Accept all cookies</strong> or <strong>Reject Non-Essential Cookies</strong>
+      for all sites on the lowcarboncontracts domain.
+    </p>
+    <p>By Rejecting cookies some features may be affected.</p>
+    <p>
+      You can view the <a href="#" class="cookie-policy-link">privacy and cookies policy</a> for more information.
+    </p>
+    <div class="popup-actions">
+      <button id="accept-all" class="cookie-btn cookie-btn-primary action" type="button">Accept All Cookies</button>
+      <button id="reject-nonessential" class="cookie-btn cookie-btn-secondary action" type="button">
+        Reject Non-Essential
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="cookies-toast" class="cookies-toast hidden">
+  <div id="cookies-toast-message"></div>
+  <div class="actions">
+    <a id="manage-preferences-toast" class="cookie-btn cookie-btn-secondary cookie-policy-link" href="#">
+      Manage Preferences
+    </a>
+    <button id="close-cookies-toast" class="cookie-btn cookie-btn-primary" type="button">Close</button>
+  </div>
+</div>
+
+<style>
+  @keyframes popup-appear {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  #cookies-popup,
+  #cookies-toast {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+  }
+
+  #cookies-popup:not(.hidden),
+  #cookies-toast:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  :global(.cookies-animated) #cookies-popup,
+  :global(.cookies-animated) #cookies-toast {
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s ease;
+  }
+
+  .cookies-popup {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 400;
+    width: 430px;
+    max-width: calc(100vw - 40px);
+    background-color: var(--sl-color-black);
+    color: var(--sl-color-white);
+    padding: 8px;
+    border-radius: var(--border-radius, 4px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  .popup-body {
+    padding: 16px;
+  }
+
+  .popup-body h3 {
+    margin: 0 0 16px;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+
+  .popup-body p {
+    margin: 0 0 8px;
+    font-size: 0.9375rem;
+    line-height: 140%;
+  }
+
+  .popup-body a {
+    color: var(--sl-color-text-accent);
+  }
+
+  .popup-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  .cookies-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 400;
+    width: min(430px, calc(100vw - 40px));
+    background-color: var(--sl-color-black);
+    color: var(--sl-color-white);
+    padding: 20px;
+    border-radius: var(--border-radius, 4px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  #cookies-toast-message {
+    font-size: 0.9375rem;
+    line-height: 140%;
+  }
+
+  .cookies-toast .actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .cookie-btn {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    border-radius: var(--border-radius, 4px);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .cookie-btn-primary {
+    background-color: var(--sl-color-accent);
+    color: var(--sl-color-white);
+  }
+
+  .cookie-btn-primary:hover {
+    filter: brightness(1.1);
+  }
+
+  .cookie-btn-secondary {
+    background-color: transparent;
+    color: var(--sl-color-white);
+    border-color: var(--sl-color-gray-4);
+  }
+
+  .cookie-btn-secondary:hover {
+    background-color: var(--sl-color-gray-6);
+  }
+
+  @media (max-width: 500px) {
+    .cookies-popup {
+      left: 20px;
+      right: 20px;
+      width: auto;
+    }
+
+    .cookies-toast {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .cookies-toast .actions {
+      flex-direction: column;
+    }
+
+    .cookies-toast .actions .cookie-btn {
+      width: 100%;
+    }
+  }
+</style>
