@@ -150,9 +150,11 @@
     position: fixed;
     bottom: 34px;
     height: 67px;
-    right: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 400;
     width: calc(100vw - 32px);
+    max-width: 700px;
     background-color: var(--lcc-feedback-bg);
     color: var(--lcc-contract-white);
     padding: 24px;
@@ -168,7 +170,6 @@
       flex-direction: column;
       height: unset;
       width: calc(100vw - 40px);
-      margin: 0 auto;
     }
   }
 
