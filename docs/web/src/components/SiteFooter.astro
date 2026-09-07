@@ -12,7 +12,7 @@ const year = new Date().getFullYear();
 <footer class="site-footer">
   <div class="site-footer-inner">
     <div class="row row-top">
-      <p class="copyright">&copy; {year} Low Carbon Contracts Company Ltd.</p>
+      <p class="copyright">&copy; <span id="footer-year">{year}</span> Low Carbon Contracts Company Ltd.</p>
       <div class="links">
         <a class="cookie-policy-link" href="#">Privacy and Cookies</a>
         <a class="accessibility-link" href="#">Accessibility</a>
@@ -25,6 +25,21 @@ const year = new Date().getFullYear();
     </div>
   </div>
 </footer>
+
+<script>
+  // The build-time year (above) only updates on redeploy. Bump it
+  // client-side if the visitor's real year has moved on since the last
+  // build, so the footer never shows a stale year on a long-lived,
+  // unrebuilt deployment.
+  const footerYearEl = document.getElementById("footer-year");
+  if (footerYearEl) {
+    const realYear = new Date().getFullYear();
+    const buildYear = Number(footerYearEl.textContent);
+    if (realYear > buildYear) {
+      footerYearEl.textContent = String(realYear);
+    }
+  }
+</script>
 
 <style>
   .site-footer {
