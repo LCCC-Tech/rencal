@@ -2,8 +2,10 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import tailwind from "@astrojs/tailwind";
+import sitemap from "@astrojs/sitemap";
 import remarkMath from "remark-math";
 import rehypeMathjax from "rehype-mathjax";
+import cspInlineStyleHashes from "./integrations/csp-inline-style-hashes.mjs";
 
 // Google Analytics is only *permitted* when both of these are true:
 //   - PUBLIC_GA_MEASUREMENT_ID is set (only populated by infra for the
@@ -43,6 +45,7 @@ const cookieConsentHead = [
 
 // https://astro.build/config
 export default defineConfig({
+    site: "https://docs.lowcarboncontracts.uk",
     experimental: {
         // Emit per-page CSP <meta> tags with hashes for Astro/Starlight's
         // bundled inline scripts so they satisfy a strict `script-src 'self'`
@@ -166,5 +169,10 @@ export default defineConfig({
             },
         }),
         tailwind({ applyBaseStyles: false }),
+        sitemap(),
+        // Must run after all other integrations so it patches the final,
+        // fully-rendered HTML output. See integrations/csp-inline-style-hashes.mjs
+        // for why this is needed alongside experimental.csp above.
+        cspInlineStyleHashes(),
     ],
 });
