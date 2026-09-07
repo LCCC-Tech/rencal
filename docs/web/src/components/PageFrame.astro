@@ -24,6 +24,10 @@ const { hasSidebar } = Astro.locals.starlightRoute;
         <div id="starlight__sidebar" class="sidebar-pane">
           <div class="sidebar-content sl-flex">
             <slot name="sidebar" />
+            <div class="sidebar-links">
+              <a class="cookie-policy-link" href="#">Privacy and Cookies</a>
+              <a class="accessibility-link" href="#">Accessibility</a>
+            </div>
           </div>
         </div>
       </nav>
@@ -92,6 +96,29 @@ const { hasSidebar } = Astro.locals.starlightRoute;
     .main-frame {
       padding-top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height));
       padding-inline-start: var(--sl-content-inline-start);
+    }
+
+    /* Pins the Privacy/Accessibility links to the bottom of the sidebar,
+       below the nav tree, whether or not the nav content fills the pane. */
+    .sidebar-links {
+      margin-top: auto;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      border-top: 1px solid var(--sl-color-hairline-shade);
+      font-size: var(--sl-text-xs);
+    }
+
+    .sidebar-links a {
+      color: var(--sl-color-gray-3);
+      text-decoration: none;
+    }
+
+    .sidebar-links a:hover {
+      color: var(--sl-color-white);
+      text-decoration: underline;
     }
 
     @media (min-width: 50rem) {
