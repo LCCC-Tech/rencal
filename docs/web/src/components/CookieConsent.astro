@@ -94,6 +94,17 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   }
 
+  /* Starlight sets data-theme on <html> for the active colour scheme.
+     Dark mode keeps lccc-website's original dark card; light mode swaps
+     to a white card with a visible drop shadow instead. */
+  :global(html[data-theme="light"]) .cookies-popup {
+    background-color: var(--lcc-contract-white);
+    color: var(--lcc-carbon-black);
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.15),
+      0 1px 4px rgba(0, 0, 0, 0.1);
+  }
+
   @media (max-width: 500px) {
     .cookies-popup {
       width: calc(100vw - 40px);
