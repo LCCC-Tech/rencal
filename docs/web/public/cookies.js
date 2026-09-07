@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Fallback used only when a registrable domain can't be determined (e.g.
   // localhost) - the link is purely informational in that case.
   const FALLBACK_POLICY_URL = "https://www.lowcarboncontracts.uk/privacy-and-cookies";
+  const FALLBACK_ACCESSIBILITY_URL = "https://www.lowcarboncontracts.uk/accessibility";
 
   const TOAST_TEXT = {
     accepted: "You chose to <strong>Accept all</strong> cookies",
@@ -94,9 +95,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const policyUrl = registrableDomain
     ? `${window.location.protocol}//${registrableDomain}/privacy-and-cookies`
     : FALLBACK_POLICY_URL;
+  const accessibilityUrl = registrableDomain
+    ? `${window.location.protocol}//${registrableDomain}/accessibility`
+    : FALLBACK_ACCESSIBILITY_URL;
 
   document.querySelectorAll(".cookie-policy-link").forEach(link => {
     link.href = policyUrl;
+  });
+
+  document.querySelectorAll(".accessibility-link").forEach(link => {
+    link.href = accessibilityUrl;
   });
 
   /*** ────────────────
