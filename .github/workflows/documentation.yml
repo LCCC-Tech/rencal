@@ -1,0 +1,120 @@
+name: Build documentation
+
+env:
+    UV_VERSION: "0.10.8"
+
+permissions:
+    contents: read
+
+on:
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    documentation:
+        name: Build and publish documentation
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+              with:
+                  persist-credentials: false
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+              with:
+                  version: ${{ env.UV_VERSION }}
+
+            - name: Set up Python
+              run: uv python install 3.12
+
+            - name: Install development dependencies
+              run: uv sync --locked --group dev
+
+            - name: Report Ruff formatting baseline
+              continue-on-error: true
+              run: uv run ruff format .
+
+            - name: Report Ruff lint baseline
+              continue-on-error: true
+              run: uv run ruff check . --statistics
+
+            - name: Build Markdown documentation
+              run: |
+                  mkdir -p documentation-reports
+                  set -o pipefail
+                  make -C docs markdown \
+                      SPHINXBUILD="uv run python -m sphinx.cmd.build" 2>&1 \
+                      | tee documentation-reports/documentation-build.txt
+
+            - name: Measure docstring coverage
+              run: |
+                  set +e
+                  uv run interrogate rencal \
+                      --fail-under 0 \
+                      --style google \
+                      --verbose 2>&1 \
+                      | tee documentation-reports/documentation-coverage.txt
+                  interrogate_status=${PIPESTATUS[0]}
+
+                  python - \
+                      documentation-reports/documentation-coverage.txt \
+                      documentation-reports/documentation-summary.md <<'PY'
+                  import re
+                  import sys
+                  from pathlib import Path
+
+                  report_path = Path(sys.argv[1])
+                  summary_path = Path(sys.argv[2])
+                  report = report_path.read_text(encoding="utf-8")
+                  match = re.search(
+                      r"TOTAL\s+\|\s+(\d+)\s+\|\s+(\d+)\s+\|\s+(\d+)\s+\|\s+([\d.]+)%",
+                      report,
+                  )
+
+                  if match:
+                      total, missing, documented, percentage = match.groups()
+                      summary = f"""# Documentation coverage
+
+                  | Measure | Result |
+                  |---|---:|
+                  | Coverage | **{percentage}%** |
+                  | Documented items | {documented} |
+                  | Undocumented items | {missing} |
+                  | Total items | {total} |
+                  | Status | Informational |
+
+                  Coverage is reported for monitoring only and does not fail the workflow.
+                  """
+                  else:
+                      summary = """# Documentation coverage
+
+                  Coverage summary could not be extracted. The raw report is available as a workflow artifact.
+                  """
+
+                  summary_path.write_text(summary, encoding="utf-8")
+                  print(summary)
+                  PY
+
+                  cat documentation-reports/documentation-summary.md >> "$GITHUB_STEP_SUMMARY"
+                  exit 0
+
+            - name: Stage generated documentation
+              run: |
+                  mkdir -p documentation-reports/markdown
+                  cp -R docs/build/markdown/. documentation-reports/markdown/
+
+            - name: Publish documentation reports
+              if: ${{ !cancelled() }}
+              uses: actions/upload-artifact@v4
+              with:
+                  name: documentation-reports
+                  path: documentation-reports/
