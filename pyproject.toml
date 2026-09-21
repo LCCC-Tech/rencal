@@ -65,13 +65,13 @@ dev = [
     "ruff>=0.8.0",
     "basedpyright>=1.0.0",
     "pre-commit>=2.15.0",
-    "build>=1.0.0"
-]
-docs = [
-    "sphinx>=4.0",
-    "sphinx-rtd-theme>=1.0",
+    "build>=1.0.0",
+    "interrogate>=1.7.0",
+    "sphinx>=8.0",
+    "sphinx-autoapi>=3.0",
+    "sphinx-markdown-builder>=0.6.0",
+    "sphinx-rtd-theme>=3.0",
     "myst-parser>=0.15.0",
-    "sphinx-autoapi>=1.8.0"
 ]
 azure = [
     "azure-storage-blob>=12.0.0",
