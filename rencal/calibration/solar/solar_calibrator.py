@@ -113,7 +113,7 @@ class SolarCalibrator(Calibrator):
             logger.info("Resource data pre-merged by CDS; dropping expver label.")
             self.resource.data = self.resource.data.drop_vars("expver")
         
-        # Convert SSRD from J/m to W/m
+        # Convert SSRD from J/m^2 to W/m^2Fsolar
         ssrd_var = ERA5_VARIABLE_MAPPING["surface_solar_radiation_downwards"]
         self.resource.data["irradiance"] = self.resource.data[ssrd_var] / 3600
 
