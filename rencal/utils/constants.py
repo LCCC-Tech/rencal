@@ -49,6 +49,10 @@ WIND_NPY_BASEPATH: str = run_config.get("WIND_NPY_BASEPATH", "Wind Streams.npy")
 WIND_NPY_HISTOGRAMS_BASEPATH: str = run_config.get(
     "WIND_NPY_HISTOGRAMS_BASEPATH", "Wind Streams.histograms.npy"
 )
+SOLAR_NPY_BASEPATH: str = run_config.get("SOLAR_NPY_BASEPATH", "Solar Streams.npy")
+SOLAR_NPY_HISTOGRAMS_BASEPATH: str = run_config.get(
+    "SOLAR_NPY_HISTOGRAMS_BASEPATH", "Solar Streams.histograms.npy"
+)
 
 # Runtime timestamp
 RUNTIME_DATE = datetime.datetime.today()
@@ -79,6 +83,23 @@ CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?
 CFD_BMU_CSV_URL = "https://dp.lowcarboncontracts.uk/dataset/8743291b-3646-4a69-a599-364cc6ae9d6e/resource/26fc2b66-7c92-45d4-9a70-acbd1631f4c3/download/cfd_to_bm_unit_mapping.csv"
 PLANT_DATA_FILE_NAME = "plant_data.csv"
 WIND_TECHNOLOGY_TYPES = {"Onshore Wind", "Offshore Wind"}
+SOLAR_TECHNOLOGY_TYPES = {"Solar PV"}
+
+# Solar irradiance bounds
+SOLAR_IRRADIANCE_LBOUND = 0
+SOLAR_IRRADIANCE_HBOUND = 1200
+
+# Default curve_fit initial
+DEFAULT_SOLAR_CURVE_GAMMA = 0.004
+DEFAULT_SOLAR_CURVE_NOCT = 40.0
+
+# Curve_fit parameter bounds
+SOLAR_CURVE_GAMMA_LBOUND = 0.0
+SOLAR_CURVE_GAMMA_HBOUND = 1.0
+
+SOLAR_CURVE_NOCT_LBOUND = 0.0
+SOLAR_CURVE_NOCT_HBOUND = 100.0
+
 
 # Elexon API
 ELEXON_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
