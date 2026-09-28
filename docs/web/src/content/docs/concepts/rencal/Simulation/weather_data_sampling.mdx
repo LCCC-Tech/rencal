@@ -5,7 +5,7 @@ description: How RenCal samples historical weather-driven behavior for future pe
 
 # Weather Data Sampling
 
-This page explains the simulation-side weather sampling concepts implemented in `rencal.simulation.weather_data` and `rencal.simulation.intermittent_bucketer`.
+This page explains the simulation-side weather sampling concepts implemented in [`rencal.simulation.weather_data`](/reference/rencal/simulation/rencalsimulationweather_data/) and [`rencal.simulation.intermittent_bucketer`](/reference/rencal/simulation/rencalsimulationintermittent_bucketer/).
 
 ## Problem this solves
 
@@ -19,9 +19,9 @@ Rather than naive random draws, the simulation layer samples historical periods 
 
 ## Core components
 
-### `HistoricalMetadata`
+### [`HistoricalMetadata`](/reference/rencal/simulation/rencalsimulationweather_data/#historicalmetadata)
 
-`HistoricalMetadata` describes a historical NPY artifact and its temporal limits:
+[`HistoricalMetadata`](/reference/rencal/simulation/rencalsimulationweather_data/#historicalmetadata) describes a historical NPY artifact and its temporal limits:
 
 - artifact basename,
 - path resolver,
@@ -29,11 +29,11 @@ Rather than naive random draws, the simulation layer samples historical periods 
 - column list,
 - optional block size (`hours_per_block`) for histogram acceleration.
 
-This descriptor can also be built from a loader-provided manifest via `HistoricalMetadata.from_manifest(...)`, keeping simulation metadata aligned with calibrated artifact metadata.
+This descriptor can also be built from a loader-provided manifest via [`HistoricalMetadata.from_manifest(...)`](/reference/rencal/simulation/rencalsimulationweather_data/#historicalmetadatafrom_manifest), keeping simulation metadata aligned with calibrated artifact metadata.
 
-### `VersionedColumnsNDArray`
+### [`VersionedColumnsNDArray`](/reference/rencal/core/rencalcorebucketed_data/#versionedcolumnsndarray)
 
-`WeatherData.random_sample(...)` returns a `VersionedColumnsNDArray`, not a plain array.
+[`WeatherData.random_sample(...)`](/reference/rencal/simulation/rencalsimulationweather_data/#weatherdatarandom_sample) returns a [`VersionedColumnsNDArray`](/reference/rencal/core/rencalcorebucketed_data/#versionedcolumnsndarray), not a plain array.
 
 This wrapper keeps track of:
 
@@ -42,12 +42,12 @@ This wrapper keeps track of:
 
 Use:
 
-- `sample.access_col(canonical_col)` for the canonical stream,
-- `sample.access_col(canonical_col, version=1)` (or higher) for transformed variants.
+- [`sample.access_col(canonical_col)`](/reference/rencal/core/rencalcorebucketed_data/#versionedcolumnsndarrayaccess_col) for the canonical stream,
+- [`sample.access_col(canonical_col, version=1)`](/reference/rencal/core/rencalcorebucketed_data/#versionedcolumnsndarrayaccess_col) (or higher) for transformed variants.
 
-### `WeatherData`
+### [`WeatherData`](/reference/rencal/simulation/rencalsimulationweather_data/#weatherdata)
 
-`WeatherData` is the main sampler object.
+[`WeatherData`](/reference/rencal/simulation/rencalsimulationweather_data/#weatherdata) is the main sampler object.
 
 It uses metadata + optional desired-average overrides and then samples historical periods for a requested future window.
 
@@ -65,9 +65,9 @@ Key behaviors include:
 - histogram/inverse-CDF style resampling utilities,
 - version-aware output for duplicated target averages per stream.
 
-### `IntermittentBucketer`
+### [`IntermittentBucketer`](/reference/rencal/simulation/rencalsimulationintermittent_bucketer/#intermittentbucketer)
 
-`IntermittentBucketer` applies seasonality-aware bucketing with a single category.
+[`IntermittentBucketer`](/reference/rencal/simulation/rencalsimulationintermittent_bucketer/#intermittentbucketer) applies seasonality-aware bucketing with a single category.
 
 - Date windows are assigned to monthly buckets.
 - Draws are selected from historical ranges that match bucket context.
@@ -77,7 +77,7 @@ For a deeper explanation of bucket design and draw mechanics, see [Bucketing Str
 
 ## Sampling modes and zero handling
 
-`WeatherData` supports two conceptual modes:
+[`WeatherData`](/reference/rencal/simulation/rencalsimulationweather_data/#weatherdata) supports two conceptual modes:
 
 - **`ignore_zeros = False`**: all values contribute to histograms and resampling (typical wind behavior).
 - **`ignore_zeros = True`**: zero-valued hours are preserved; only non-zero values are resampled (typical solar behavior where nighttime zeros are structural).
@@ -88,23 +88,23 @@ When `ignore_zeros=True`, desired averages are internally rescaled from all-hour
 
 ## Sampling workflow (code-level)
 
-`WeatherData.random_sample(...)` works as follows:
+[`WeatherData.random_sample(...)`](/reference/rencal/simulation/rencalsimulationweather_data/#weatherdatarandom_sample) works as follows:
 
 1. load/mmap historical NPY via process-scope cache (`_HIST_CACHE`),
-2. extend right-hand horizon with `adjust_forecasted_horizon(...)` so draw-period chunking can fully cover the request,
-3. call `IntermittentBucketer.random_sample(...)` to get historical block start dates,
+2. extend right-hand horizon with [`BucketedData.adjust_forecasted_horizon(...)`](/reference/rencal/core/rencalcorebucketed_data/#bucketeddataadjust_forecasted_horizon) so draw-period chunking can fully cover the request,
+3. call the inherited [`Bucketer.random_sample(...)`](/reference/rencal/core/rencalcorebucketer/#bucketerrandom_sample) to get historical block start dates,
 4. slice historical arrays in `draw_period * 24` hour chunks and concatenate,
 5. trim to exactly requested hour count,
-6. append transformed columns (if any) via `append_resampled_columns(...)`,
-7. return `VersionedColumnsNDArray`.
+6. append transformed columns (if any) via [`BucketedData.append_resampled_columns(...)`](/reference/rencal/core/rencalcorebucketed_data/#bucketeddataappend_resampled_columns),
+7. return [`VersionedColumnsNDArray`](/reference/rencal/core/rencalcorebucketed_data/#versionedcolumnsndarray).
 
 ### Histogram path and optimization path
 
 When desired averages are present, the constructor precomputes old/new distributions:
 
-- Uses `crop_time_margins_to_full_years()` to avoid seasonal bias in training windows.
-- Uses `get_fast_histogram(...)` if prefix histograms and `hours_per_block` are available; otherwise falls back to `get_histogram(...)`.
-- Computes optimized distributions via `BucketedData.compute_optimized_distributions(...)` (exponential tilting / KL-minimizing formulation), then stores `new_cdf` for inverse-CDF mapping.
+- Uses [`BucketedData.crop_time_margins_to_full_years()`](/reference/rencal/core/rencalcorebucketed_data/#bucketeddatacrop_time_margins_to_full_years) to avoid seasonal bias in training windows.
+- Uses [`BucketedData.get_fast_histogram(...)`](/reference/rencal/core/rencalcorebucketed_data/#bucketeddataget_fast_histogram) if prefix histograms and `hours_per_block` are available; otherwise falls back to [`BucketedData.get_histogram(...)`](/reference/rencal/core/rencalcorebucketed_data/#bucketeddataget_histogram).
+- Computes optimized distributions via [`BucketedData.compute_optimized_distributions(...)`](/reference/rencal/core/rencalcorebucketed_data/#bucketeddatacompute_optimized_distributions) (exponential tilting / KL-minimizing formulation), then stores `new_cdf` for inverse-CDF mapping.
 
 ## How it connects to loader/downloader layers
 

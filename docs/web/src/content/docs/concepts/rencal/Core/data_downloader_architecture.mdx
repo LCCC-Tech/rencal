@@ -5,7 +5,7 @@ description: How RenCal orchestrates external data acquisition for ERA5 weather,
 
 # Data Downloader Architecture
 
-The `rencal.core.data_downloader` module is responsible for acquiring source datasets used by RenCal calibration and simulation workflows.
+The [`rencal.core.data_downloader` module](/reference/rencal/core/rencalcoredata_downloader/) is responsible for acquiring source datasets used by RenCal calibration and simulation workflows.
 
 Where the [Data Loader Architecture](/concepts/rencal/core/data_loader_architecture/) focuses on reading local artifacts into validated models, the downloader layer is responsible for creating those local artifacts in the first place.
 
@@ -19,19 +19,19 @@ RenCal depends on multiple external data providers with different protocols and 
 
 `data_downloader.py` centralises this acquisition logic behind shared abstractions so ingestion remains reproducible and easier to operate.
 
-## Core abstraction: `DataDownloader`
+## Core abstraction: [`DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#datadownloader)
 
-`DataDownloader` is an abstract base class that provides:
+[`DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#datadownloader) is an abstract base class that provides:
 
 - a shared output root (`DOWNLOAD_DATA_DIR`),
-- `_update_output_directory(...)` for source-specific subfolders,
-- a required `download()` method for concrete implementations.
+- `_update_output_directory(...)` for source-specific subfolders (see [`DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#datadownloader)),
+- a required [`download()`](/reference/rencal/core/rencalcoredata_downloader/#datadownloaderdownload) method for concrete implementations.
 
 This creates a consistent contract across all external data download flows.
 
 ## Concrete downloaders
 
-### `ERA5DataDownloader`
+### [`ERA5DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#era5datadownloader)
 
 Responsibilities:
 
@@ -44,10 +44,10 @@ Responsibilities:
 Notable reliability mechanisms:
 
 - lazy CDS client initialization with explicit error messages for missing API key,
-- per-year verification via `_verify_and_update_metadata(...)`,
+- per-year verification via `_verify_and_update_metadata(...)` on [`ERA5DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#era5datadownloader),
 - progress visibility via `tqdm`.
 
-### `CfDDataDownloader`
+### [`CfDDataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#cfddatadownloader)
 
 Responsibilities:
 
@@ -58,7 +58,7 @@ Responsibilities:
 
 This dataset is a dependency for generation downloads and for plant-level model ingestion.
 
-### `GenerationDataDownloader`
+### [`GenerationDataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#generationdatadownloader)
 
 Responsibilities:
 
@@ -71,16 +71,16 @@ Responsibilities:
 
 This stage converts operational market settlement records into model-ready time series.
 
-## Orchestration: `DownloadManager`
+## Orchestration: [`DownloadManager`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanager)
 
-`DownloadManager` composes the three concrete downloaders and exposes:
+[`DownloadManager`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanager) composes the three concrete downloaders and exposes:
 
-- `download_cfd()`
-- `download_generation_data()`
-- `download_era5()`
-- `download_all()`
+- [`download_cfd()`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanagerdownload_cfd)
+- [`download_generation_data()`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanagerdownload_generation_data)
+- [`download_era5()`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanagerdownload_era5)
+- [`download_all()`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanagerdownload_all)
 
-`download_all()` enforces dependency order:
+[`download_all()`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanagerdownload_all) enforces dependency order:
 
 1. CfD register + BMU mapping,
 2. generation data (depends on BMUs from CfD data),
@@ -90,8 +90,8 @@ This stage converts operational market settlement records into model-ready time 
 
 The two modules are complementary:
 
-- **Downloader layer** (`data_downloader.py`): fetches and writes raw/normalized artifacts.
-- **Loader layer** (`data_loader.py`): reads those artifacts and returns validated dataset models.
+- **Downloader layer** ([`rencal.core.data_downloader`](/reference/rencal/core/rencalcoredata_downloader/)): fetches and writes raw/normalized artifacts.
+- **Loader layer** ([`rencal.core.data_loader`](/reference/rencal/core/rencalcoredata_loader/)): reads those artifacts and returns validated dataset models.
 
 ```text
 External APIs/files -> DataDownloader -> local artifacts -> DataLoader -> DatasetModel objects
@@ -101,9 +101,9 @@ External APIs/files -> DataDownloader -> local artifacts -> DataLoader -> Datase
 
 The downloader does not directly instantiate model classes, but it produces the files consumed by the loader methods that return:
 
-- `PlantDatasetModel`
-- `GenerationDatasetModel`
-- `ERA5DatasetModel`
+- [`PlantDatasetModel`](/reference/rencal/models/rencalmodelsplant_model/#plantdatasetmodel)
+- [`GenerationDatasetModel`](/reference/rencal/models/rencalmodelsgeneration_model/#generationdatasetmodel)
+- [`ERA5DatasetModel`](/reference/rencal/models/rencalmodelsera5_model/#era5datasetmodel)
 
 For model-layer details and validation behavior, see [Dataset Models](/concepts/rencal/models/dataset_models/).
 
