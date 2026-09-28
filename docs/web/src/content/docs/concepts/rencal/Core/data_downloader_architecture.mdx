@@ -7,7 +7,7 @@ description: How RenCal orchestrates external data acquisition for ERA5 weather,
 
 The `rencal.core.data_downloader` module is responsible for acquiring source datasets used by RenCal calibration and simulation workflows.
 
-Where the [Data Loader Architecture](./data_loader_architecture/) focuses on reading local artifacts into validated models, the downloader layer is responsible for creating those local artifacts in the first place.
+Where the [Data Loader Architecture](/concepts/rencal/core/data_loader_architecture/) focuses on reading local artifacts into validated models, the downloader layer is responsible for creating those local artifacts in the first place.
 
 ## Why this module exists
 
@@ -105,7 +105,7 @@ The downloader does not directly instantiate model classes, but it produces the 
 - `GenerationDatasetModel`
 - `ERA5DatasetModel`
 
-For model-layer details and validation behavior, see [Dataset Models](../Models/dataset_models/).
+For model-layer details and validation behavior, see [Dataset Models](/concepts/rencal/models/dataset_models/).
 
 ## Operational notes
 
@@ -115,12 +115,12 @@ For model-layer details and validation behavior, see [Dataset Models](../Models/
 
 ## Related pages
 
-- [Data and Simulation Pipeline](../data_and_simulation_pipeline/)
-- [Data Loader Architecture](./data_loader_architecture/)
-- [Dataset Models](../Models/dataset_models/)
-- [Weather Data Sampling](../Simulation/weather_data_sampling/)
-- [Data Downloader Reference](/reference/RenCal/Core/rencal.core.data_downloader/)
-- [Data Loader Reference](/reference/RenCal/Core/rencal.core.data_loader/)
-- [PlantDatasetModel Reference](/reference/RenCal/Models/rencal.models.plant_model/)
-- [GenerationDatasetModel Reference](/reference/RenCal/Models/rencal.models.generation_model/)
-- [ERA5DatasetModel Reference](/reference/RenCal/Models/rencal.models.era5_model/)
+- [Data and Simulation Pipeline](/concepts/rencal/data_and_simulation_pipeline/)
+- [Data Loader Architecture](/concepts/rencal/core/data_loader_architecture/)
+- [Dataset Models](/concepts/rencal/models/dataset_models/)
+- [Weather Data Sampling](/concepts/rencal/simulation/weather_data_sampling/)
+- [Data Downloader Reference](/reference/rencal/core/rencalcoredata_downloader/)
+- [Data Loader Reference](/reference/rencal/core/rencalcoredata_loader/)
+- [PlantDatasetModel Reference](/reference/rencal/models/rencalmodelsplant_model/)
+- [GenerationDatasetModel Reference](/reference/rencal/models/rencalmodelsgeneration_model/)
+- [ERA5DatasetModel Reference](/reference/rencal/models/rencalmodelsera5_model/)

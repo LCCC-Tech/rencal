@@ -14,8 +14,8 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 
 The module exposes:
 
-- [`BucketedData`](/reference/RenCal/Core/rencalcorebucketed_data/#bucketeddata): utility base class with histogram and distribution optimization helpers.
-- [`VersionedColumnsNDArray`](/reference/RenCal/Core/rencalcorebucketed_data/#versionedcolumnsndarray): array wrapper that tracks canonical columns and transformed variants produced during resampling.
+- [`BucketedData`](/reference/rencal/core/rencalcorebucketed_data/#bucketeddata): utility base class with histogram and distribution optimization helpers.
+- [`VersionedColumnsNDArray`](/reference/rencal/core/rencalcorebucketed_data/#versionedcolumnsndarray): array wrapper that tracks canonical columns and transformed variants produced during resampling.
 
 #### Example
 
@@ -52,7 +52,7 @@ Tracks canonical and transformed column mappings for sampled output arrays.
 </Section>
 
 <InlineSection>
-**Returns** [<code class="type">VersionedColumnsNDArray</code>](#VersionedColumnsNDArray)
+**Returns** [<code class="type">VersionedColumnsNDArray</code>](#versionedcolumnsndarray)
 </InlineSection>
 </Segment>
 
@@ -68,7 +68,7 @@ class BucketedData(): BucketedData
 Base utility class for shared bucketer/sampling operations.
 
 <InlineSection>
-**Returns** [<code class="type">BucketedData</code>](#BucketedData)
+**Returns** [<code class="type">BucketedData</code>](#bucketeddata)
 </InlineSection>
 </Segment>
 
@@ -102,7 +102,7 @@ attach_data(data: NDArray[np.floating]) -> VersionedColumnsNDArray
 Attaches final output matrix to wrapper.
 
 <InlineSection>
-**Returns** [<code class="type">VersionedColumnsNDArray</code>](#VersionedColumnsNDArray)
+**Returns** [<code class="type">VersionedColumnsNDArray</code>](#versionedcolumnsndarray)
 </InlineSection>
 
 <InlineSection>
@@ -245,7 +245,7 @@ append_resampled_columns(
 Appends transformed streams and returns version-aware output wrapper.
 
 <InlineSection>
-**Returns** [<code class="type">VersionedColumnsNDArray</code>](#VersionedColumnsNDArray)
+**Returns** [<code class="type">VersionedColumnsNDArray</code>](#versionedcolumnsndarray)
 </InlineSection>
 </Segment>
 
