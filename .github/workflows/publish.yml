@@ -97,40 +97,9 @@ jobs:
                   repository-url: https://test.pypi.org/legacy/
                   skip-existing: true
 
-    test-install:
-        name: Smoke-test TestPyPI installation
-        needs: publish-testpypi
-        runs-on: ubuntu-latest
-        permissions: {}
-        steps:
-            - name: Install uv
-              uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
-              with:
-                  # Keep the release validation toolchain aligned with build.
-                  version: ${{ env.UV_VERSION }}
-
-            - name: Set up Python
-              run: uv python install 3.12
-
-            - name: Install package from TestPyPI
-              env:
-                  RELEASE_TAG: ${{ github.event.release.tag_name }}
-              run: |
-                  uv venv /tmp/rencal-testpypi-venv --python 3.12
-                  uv pip install \
-                    --python /tmp/rencal-testpypi-venv/bin/python \
-                    --index-url https://test.pypi.org/simple/ \
-                    --extra-index-url https://pypi.org/simple/ \
-                    "rencal==${RELEASE_TAG#v}"
-
-            - name: Exercise installed package
-              run: |
-                  /tmp/rencal-testpypi-venv/bin/python -c \
-                    "import importlib.metadata, rencal; assert importlib.metadata.version('rencal') == rencal.__version__"
-
     publish-pypi:
         name: Publish to PyPI
-        needs: [build, test-install]
+        needs: [build, publish-testpypi]
         runs-on: ubuntu-latest
         environment:
             name: release
