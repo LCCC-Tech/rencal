@@ -31,25 +31,96 @@ on:
 permissions: {}
 
 jobs:
+    snapshot:
+        name: Snapshot commits for documentation request
+
+        if: >
+            github.event.action == 'labeled' &&
+            github.event.label.name == 'generate docs'
+
+        runs-on: ubuntu-latest
+
+        permissions: {}
+
+        outputs:
+            automation_sha: ${{ steps.statewrite.outputs.automation_sha }} # W: exact reviewed workflow/automation revision
+            pr_number: ${{ steps.statewrite.outputs.pr_number }}
+            pr_head_sha: ${{ steps.statewrite.outputs.pr_head_sha }} # H: exact PR revision being documented
+            pr_base_sha: ${{ steps.statewrite.outputs.pr_base_sha }} # B: exact main tip associated with this PR event
+            pr_head_ref: ${{ steps.statewrite.outputs.pr_head_ref }}
+            pr_head_repository: ${{ steps.statewrite.outputs.pr_head_repository }}
+            pr_head_repository_id: ${{ steps.statewrite.outputs.pr_head_repository_id }}
+
+        steps:
+            - name: Record immutable request-time repository state to GITHUB_OUTPUT
+              id: statewrite
+              shell: bash
+              env:
+                  AUTOMATION_SHA: ${{ github.workflow_sha }} # W: exact reviewed workflow/automation revision
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }} # H: exact PR revision being documented
+                  PR_BASE_SHA: ${{ github.event.pull_request.base.sha }} # B: exact main tip associated with this PR event
+                  PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+                  PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+                  PR_HEAD_REPOSITORY_ID: ${{ github.event.pull_request.head.repo.id }}
+              run: |
+                  set -euo pipefail
+
+                  printf 'automation_sha=%s\n' "$AUTOMATION_SHA" >> "$GITHUB_OUTPUT"
+                  printf 'pr_number=%s\n' "$PR_NUMBER" >> "$GITHUB_OUTPUT"
+                  printf 'pr_head_sha=%s\n' "$PR_HEAD_SHA" >> "$GITHUB_OUTPUT"
+                  printf 'pr_base_sha=%s\n' "$PR_BASE_SHA" >> "$GITHUB_OUTPUT"
+                  printf 'pr_head_ref=%s\n' "$PR_HEAD_REF" >> "$GITHUB_OUTPUT"
+                  printf 'pr_head_repository=%s\n' "$PR_HEAD_REPOSITORY" >> "$GITHUB_OUTPUT"
+                  printf 'pr_head_repository_id=%s\n' "$PR_HEAD_REPOSITORY_ID" >> "$GITHUB_OUTPUT"
+    
     # ── Generation ────────────────────────────────────────────────────
     # Processes untrusted PR content with the Copilot agent. Read-only:
     # holds the Copilot credential but NO repository write permission.
     generate:
-        if: github.event.label.name == 'generate docs'
+        needs: snapshot
+
         runs-on: ubuntu-latest
         environment: copilot
         timeout-minutes: 20
+
         permissions:
             contents: read
             pull-requests: read
 
+        env:
+            AUTOMATION_SHA: ${{ needs.snapshot.outputs.automation_sha }} # W: exact reviewed workflow/automation revision
+            PR_NUMBER: ${{ needs.snapshot.outputs.pr_number }}
+            PR_HEAD_SHA: ${{ needs.snapshot.outputs.pr_head_sha }} # H: exact PR revision being documented
+            PR_BASE_SHA: ${{ needs.snapshot.outputs.pr_base_sha }} # B: exact main tip associated with this PR event
+            PR_HEAD_REF: ${{ needs.snapshot.outputs.pr_head_ref }}
+            PR_HEAD_REPOSITORY: ${{ needs.snapshot.outputs.pr_head_repository }}
+            PR_HEAD_REPOSITORY_ID: ${{ needs.snapshot.outputs.pr_head_repository_id }}
+            runs-on: ubuntu-latest
+            environment: copilot
+            timeout-minutes: 20
+
         steps:
-            - name: Checkout repository
-              uses: actions/checkout@v5
+            - name: Checkout trusted automation at W(ORKFLOW)
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
-                  fetch-depth: 0
-                  # Do not leave a credential on disk for the agent to use.
+                  ref: ${{ env.AUTOMATION_SHA }} # W: exact reviewed workflow/automation revision
+                  path: automation
+                  fetch-depth: 1
                   persist-credentials: false
+
+            - name: Checkout exact PR snapshot at H(EAD) as untrusted data
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: ${{ env.PR_HEAD_REPOSITORY }}
+                  ref: ${{ env.PR_HEAD_SHA }} # H: exact PR revision being documented
+                  path: pr-source
+                  fetch-depth: 0
+                  persist-credentials: false
+
+                  # Required by checkout v7 because this is deliberately checking
+                  # PR-controlled code from pull_request_target.
+                  allow-unsafe-pr-checkout: true
 
             - name: Setup Node.js
               uses: actions/setup-node@v5
