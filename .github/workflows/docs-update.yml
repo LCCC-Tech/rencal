@@ -1,7 +1,22 @@
-name: Update Documentation AI
+# SECURITY BOUNDARY
+#
+# This workflow intentionally uses pull_request_target.
+#
+# GitHub therefore loads this workflow from the protected default branch,
+# not from the pull request being processed.
+#
+# PR content is untrusted input only. Do not build, import, source, execute,
+# or otherwise run PR-controlled code in a job with repository secrets or
+# a privileged GITHUB_TOKEN.
+#
+# The use of pull_request_target is explicitly permitted by the repository's
+# GitHub Actions event policy.
+
+name: Use AI Agent to Update Documentation
 
 on:
-    pull_request:
+    pull_request_target:
+        branches: [main]
         types: [labeled]
 
 # NOTE: This workflow intentionally does NOT use `pull_request_target`.
@@ -11,9 +26,6 @@ on:
 # processes untrusted PR content (generate) never holds a write credential,
 # and the job that writes to the repo (apply) never sees untrusted content
 # or the Copilot secret.
-#
-# Alternative evaluated: GitHub "Agentic Workflows" (Copilot-in-Actions).
-# See the PR description for the recorded decision.
 
 # Default to no permissions; each job requests only what it needs.
 permissions: {}
