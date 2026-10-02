@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.2.1](https://github.com/LCCC-Tech/rencal/compare/v0.2.0...v0.2.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* **ci:** publish to TestPyPI before PyPI ([3a7cc39](https://github.com/LCCC-Tech/rencal/commit/3a7cc39e3ff0765ed18dfd8e708eb95394337203))
+* **ci:** publish to TestPyPI before PyPI ([#83](https://github.com/LCCC-Tech/rencal/issues/83)) ([2eef335](https://github.com/LCCC-Tech/rencal/commit/2eef33522dfaf7b617882d2b0a9c1dafd95f7c56)), closes [#82](https://github.com/LCCC-Tech/rencal/issues/82)
+* **docs:** Fixes broken internal documentation site links ([#85](https://github.com/LCCC-Tech/rencal/issues/85)) ([bb31245](https://github.com/LCCC-Tech/rencal/commit/bb3124518a975d09c4a7b71ebc176db46fc7a8d7)), closes [#84](https://github.com/LCCC-Tech/rencal/issues/84)
+* preserve release version marker in uv lock ([c7b28a4](https://github.com/LCCC-Tech/rencal/commit/c7b28a42134cae821b3e0f6b342e9b92c02c21a5))
+* preserve release version marker in uv lock ([#91](https://github.com/LCCC-Tech/rencal/issues/91)) ([66940b0](https://github.com/LCCC-Tech/rencal/commit/66940b04b4bee974dd91784780a0cf3db107a304))
+* validate documentation links ([#84](https://github.com/LCCC-Tech/rencal/issues/84)) ([c3e50bf](https://github.com/LCCC-Tech/rencal/commit/c3e50bf34671f8b7bef553549d9ac325df67f5f3))
+
+
+### Documentation
+
+* link API mentions to reference pages ([61e0efa](https://github.com/LCCC-Tech/rencal/commit/61e0efaf4200fb46ff630bdf25f17121aef42f6b))
+* link conceptual API mentions ([2caca92](https://github.com/LCCC-Tech/rencal/commit/2caca925fa4d377aefd2a1271937c362693b81eb))
+* link tutorial APIs and render lambda math ([dd58c1d](https://github.com/LCCC-Tech/rencal/commit/dd58c1d43397b31a52a2e2b130964a6a31313485))
+* render Weibull scale parameter as math ([95893be](https://github.com/LCCC-Tech/rencal/commit/95893be0359a08c8d21f908c3de0b141824db337))
+
 ## [0.2.0](https://github.com/LCCC-Tech/rencal/compare/v0.1.1...v0.2.0) (2026-09-21)
 
 
