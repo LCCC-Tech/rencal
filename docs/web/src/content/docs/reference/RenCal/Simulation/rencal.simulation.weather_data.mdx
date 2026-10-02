@@ -12,7 +12,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <Section type="about">
 `rencal.simulation.weather_data` defines metadata descriptors and the intermittent weather sampler used to create future hourly load-factor streams from historical artifacts.
 
-[`WeatherData`](/reference/RenCal/Simulation/rencalsimulationweather_data/#weatherdata) uses a JSON-parsed [`HistoricalMetadata`](/reference/RenCal/Simulation/rencalsimulationweather_data/#historicalmetadata) descriptor plus a process-scope cache keyed by historical NPY basename to enable safe lazy loading. It supports two sampling modes via `ignore_zeros`:
+[`WeatherData`](/reference/rencal/simulation/rencalsimulationweather_data/#weatherdata) uses a JSON-parsed [`HistoricalMetadata`](/reference/rencal/simulation/rencalsimulationweather_data/#historicalmetadata) descriptor plus a process-scope cache keyed by historical NPY basename to enable safe lazy loading. It supports two sampling modes via `ignore_zeros`:
 
 - **ignore_zeros = False (wind):** all loadfactor values participate in histogram building and resampling.
 - **ignore_zeros = True (solar):** zero-valued hours (nighttime) are preserved; histograms and inverse-CDF resampling operate only on non-zero values.
@@ -81,7 +81,7 @@ Descriptor and path resolver for NPY-backed historical weather data.
 </Section>
 
 <InlineSection>
-**Returns** [<code class="type">HistoricalMetadata</code>](#HistoricalMetadata)
+**Returns** [<code class="type">HistoricalMetadata</code>](#historicalmetadata)
 </InlineSection>
 </Segment>
 
@@ -107,7 +107,7 @@ Intermittent weather sampler supporting raw bucketed sampling and optional inver
 <Section type="parameters">
 #### Parameters
 
-- <p><code class="key">metadata</code> [<code class="type">HistoricalMetadata</code>](#HistoricalMetadata)</p>
+- <p><code class="key">metadata</code> [<code class="type">HistoricalMetadata</code>](#historicalmetadata)</p>
   Manifest-backed metadata descriptor.
 
 - <p><code class="key">historical_start_date</code> <code class="primitive">DateTimeLike</code></p>
@@ -130,7 +130,7 @@ Intermittent weather sampler supporting raw bucketed sampling and optional inver
 </Section>
 
 <InlineSection>
-**Returns** [<code class="type">WeatherData</code>](#WeatherData)
+**Returns** [<code class="type">WeatherData</code>](#weatherdata)
 </InlineSection>
 
 <InlineSection>
@@ -160,7 +160,7 @@ Builds metadata from manifest payload and runtime path resolver.
 </Section>
 
 <InlineSection>
-**Returns** [<code class="type">HistoricalMetadata</code>](#HistoricalMetadata)
+**Returns** [<code class="type">HistoricalMetadata</code>](#historicalmetadata)
 </InlineSection>
 </Segment>
 

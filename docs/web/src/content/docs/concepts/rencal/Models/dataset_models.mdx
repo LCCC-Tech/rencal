@@ -5,7 +5,7 @@ description: How RenCal standardises plant, generation, and ERA5 weather dataset
 
 # Dataset Models
 
-RenCal uses typed dataset models in `rencal.models` to create a consistent boundary between raw inputs and downstream calibration/simulation logic.
+RenCal uses typed dataset models in [`rencal.models.base`](/reference/rencal/models/rencalmodelsbase/) and the concrete model modules to create a consistent boundary between raw inputs and downstream calibration/simulation logic.
 
 Instead of passing around unvalidated DataFrames or xarray objects, RenCal wraps each dataset in a model with:
 
@@ -38,7 +38,7 @@ We lean on a few core Pydantic features:
 When a loader returns a model, validation executes immediately during model construction:
 
 1. Pydantic creates the model instance and calls field validators.
-2. The model's `validate_data()` method runs class-level checks (`required_columns`, `required_datatypes`, `date_column`).
+2. The model's validation methods (documented under [`DatasetModel`](/reference/rencal/models/rencalmodelsbase/#datasetmodel)) run class-level checks (`required_columns`, `required_datatypes`, `date_column`).
 3. If validation passes, downstream code gets a trusted model object.
 4. If validation fails, an exception is raised early, close to ingestion.
 
@@ -59,9 +59,9 @@ DatasetModel (abstract, Pydantic)
 
 ## Base abstractions
 
-### `DatasetModel`
+### [`DatasetModel`](/reference/rencal/models/rencalmodelsbase/#datasetmodel)
 
-`DatasetModel` in `rencal.models.base` defines shared abstract behavior and class-level schema fields:
+[`DatasetModel`](/reference/rencal/models/rencalmodelsbase/#datasetmodel) in [`rencal.models.base`](/reference/rencal/models/rencalmodelsbase/) defines shared abstract behavior and class-level schema fields:
 
 - `required_columns`
 - `required_datatypes`
@@ -72,9 +72,9 @@ It also defines required methods for:
 - required-field validation,
 - datatype validation,
 - temporal validation,
-- conversion APIs (`to_pandas()`, `to_xarray()`).
+- conversion APIs ([`to_pandas()`](/reference/rencal/models/rencalmodelsbase/#datasetmodelto_pandas), [`to_xarray()`](/reference/rencal/models/rencalmodelsbase/#datasetmodelto_xarray)).
 
-### `PandasDatasetModel`
+### [`PandasDatasetModel`](/reference/rencal/models/rencalmodelsbase/#pandasdatasetmodel)
 
 Adds generic DataFrame validation logic:
 
@@ -82,7 +82,7 @@ Adds generic DataFrame validation logic:
 - numeric/object dtype checks,
 - datetime validation for configured `date_column`.
 
-### `XArrayDatasetModel`
+### [`XArrayDatasetModel`](/reference/rencal/models/rencalmodelsbase/#xarraydatasetmodel)
 
 Adds xarray-specific checks:
 
@@ -93,17 +93,17 @@ Adds xarray-specific checks:
 
 ## Concrete dataset models
 
-### `PlantDatasetModel`
+### [`PlantDatasetModel`](/reference/rencal/models/rencalmodelsplant_model/#plantdatasetmodel)
 
 Represents plant/facility metadata (location, technology, capacity).
 
 Notable features:
 
 - required columns such as `plant_id`, `latitude`, `longitude`, `technology`, `capacity`,
-- technology filtering (`filter_by_technology()`, `get_wind_plants()`),
+- technology filtering ([`filter_by_technology()`](/reference/rencal/models/rencalmodelsplant_model/#plantdatasetmodelfilter_by_technology), [`get_wind_plants()`](/reference/rencal/models/rencalmodelsplant_model/#plantdatasetmodelget_wind_plants)),
 - geographic bounds and summary representation helpers.
 
-### `GenerationDatasetModel`
+### [`GenerationDatasetModel`](/reference/rencal/models/rencalmodelsgeneration_model/#generationdatasetmodel)
 
 Represents generation/settlement time-series data.
 
@@ -113,7 +113,7 @@ Notable features:
 - time column enforcement and filtering by date,
 - filtering by individual plant IDs and compact summaries.
 
-### `ERA5DatasetModel`
+### [`ERA5DatasetModel`](/reference/rencal/models/rencalmodelsera5_model/#era5datasetmodel)
 
 Represents weather data as an `xarray.Dataset`.
 
@@ -121,7 +121,7 @@ Notable features:
 
 - required variables (`u100`, `v100`) and dtype constraints,
 - time dimension validation,
-- helpers for wind/solar variable access, spatial bounds, date filtering, and variable sub-selection.
+- helpers for wind/solar variable access, spatial bounds, [`filter_by_date_range()`](/reference/rencal/models/rencalmodelsera5_model/#era5datasetmodelfilter_by_date_range), and variable sub-selection.
 
 ## Relationship with the Data Loader layer
 
@@ -129,21 +129,21 @@ The data loader contract returns these model types directly:
 
 | Loader method | Returns |
 | :-- | :-- |
-| `load_plant_data()` | `PlantDatasetModel` |
-| `load_generation_data()` | `GenerationDatasetModel` |
-| `load_era5_data()` | `ERA5DatasetModel` |
+| [`load_plant_data()`](/reference/rencal/core/rencalcoredata_loader/#dataloaderload_plant_data) | [`PlantDatasetModel`](/reference/rencal/models/rencalmodelsplant_model/#plantdatasetmodel) |
+| [`load_generation_data()`](/reference/rencal/core/rencalcoredata_loader/#dataloaderload_generation_data) | [`GenerationDatasetModel`](/reference/rencal/models/rencalmodelsgeneration_model/#generationdatasetmodel) |
+| [`load_era5_data()`](/reference/rencal/core/rencalcoredata_loader/#dataloaderload_era5_data) | [`ERA5DatasetModel`](/reference/rencal/models/rencalmodelsera5_model/#era5datasetmodel) |
 
 This means ingestion backends can change while preserving the same typed interface for the rest of RenCal.
 
 ## Related pages
 
-- [Data and Simulation Pipeline](../data_and_simulation_pipeline/)
-- [Data Loader Architecture](../Core/data_loader_architecture/)
-- [Data Downloader Architecture](../Core/data_downloader_architecture/)
-- [Weather Data Sampling](../Simulation/weather_data_sampling/)
-- [Data Loader Reference](/reference/RenCal/Core/rencal.core.data_loader/)
-- [Data Downloader Reference](/reference/RenCal/Core/rencal.core.data_downloader/)
-- [DatasetModel Base Reference](/reference/RenCal/Models/rencal.models.base/)
-- [PlantDatasetModel Reference](/reference/RenCal/Models/rencal.models.plant_model/)
-- [GenerationDatasetModel Reference](/reference/RenCal/Models/rencal.models.generation_model/)
-- [ERA5DatasetModel Reference](/reference/RenCal/Models/rencal.models.era5_model/)
+- [Data and Simulation Pipeline](/concepts/rencal/data_and_simulation_pipeline/)
+- [Data Loader Architecture](/concepts/rencal/core/data_loader_architecture/)
+- [Data Downloader Architecture](/concepts/rencal/core/data_downloader_architecture/)
+- [Weather Data Sampling](/concepts/rencal/simulation/weather_data_sampling/)
+- [Data Loader Reference](/reference/rencal/core/rencalcoredata_loader/)
+- [Data Downloader Reference](/reference/rencal/core/rencalcoredata_downloader/)
+- [DatasetModel Base Reference](/reference/rencal/models/rencalmodelsbase/)
+- [PlantDatasetModel Reference](/reference/rencal/models/rencalmodelsplant_model/)
+- [GenerationDatasetModel Reference](/reference/rencal/models/rencalmodelsgeneration_model/)
+- [ERA5DatasetModel Reference](/reference/rencal/models/rencalmodelsera5_model/)
