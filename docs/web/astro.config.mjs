@@ -191,12 +191,17 @@ export default defineConfig({
                 ],
                 // Astro's default script-src resources already include
                 // 'self'; since setting `resources` overrides that default
-                // entirely, 'self' must be repeated here whenever we add the
-                // Google Tag Manager host. This is still needed even though
-                // no GA <script> tag is emitted at build time: /public/cookies.js
-                // dynamically injects the gtag.js loader (from this host) once
-                // the visitor accepts the cookie consent banner.
-                ...(gaEnabled && { resources: ["'self'", "https://www.googletagmanager.com"] }),
+                // entirely, 'self' must be repeated here whenever we add
+                // other resources. 'wasm-unsafe-eval' is required by
+                // Starlight's Pagefind search integration, which compiles a
+                // WebAssembly module client-side - 'unsafe-eval' is NOT
+                // needed/granted, this keyword only lifts the CSP block on
+                // WASM compilation/instantiation, not arbitrary eval().
+                resources: [
+                    "'self'",
+                    "'wasm-unsafe-eval'",
+                    ...(gaEnabled ? ["https://www.googletagmanager.com"] : []),
+                ],
             },
             styleDirective: {
                 hashes: [
