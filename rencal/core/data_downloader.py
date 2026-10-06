@@ -22,7 +22,8 @@ from rencal.utils.constants import (
     DEFAULT_SOLAR_VARIABLES,
     DEFAULT_WIND_VARIABLES,
     DOWNLOAD_DATA_DIR,
-    ELEXON_API_URL,
+    ELEXON_GENERATION_API_URL,
+    ELEXON_BOV_API_URL,
     ERA5_DATASET,
     ERA5_PRODUCT_TYPE,
     GENERATION_DATA_FILE_NAME,
@@ -30,6 +31,7 @@ from rencal.utils.constants import (
     NORMAL_DAY_MINUTES,
     OCTOBER_BACK_MINUTES,
     PLANT_DATA_FILE_NAME,
+    BOV_DATA_FILE_NAME,
 )
 from rencal.utils.logger import get_logger
 from rencal.utils.types import ParsedURL
@@ -478,29 +480,23 @@ class CfDDataDownloader(DataDownloader):
             )
 
 
-class GenerationDataDownloader(DataDownloader):
-    """Downloader for electricity generation data from Elexon API.
+class ElexonDataDownloader(DataDownloader):
+    """Base class for Elexon data downloaders.
 
-    Downloads settled generation data from the Elexon Balancing Mechanism
-    Reporting Service (BMRS) for BMU units associated with CfD contracts.
-    The data covers the calibration period and provides actual generation
-    volumes for model validation.
-
-    Attributes:
-        _api (ParsedURL): Parsed URL for Elexon API endpoint.
+    Provides common functionality for downloading data from the Elexon API.
     """
 
-    def __init__(self):
-        """Initialize generation data downloader with Elexon API configuration."""
+    def __init__(self, api_url: str):
+        """Initialize Elexon data downloader with API configuration."""
         super().__init__()
-        self._api = ParsedURL(ELEXON_API_URL)
+        self._api = ParsedURL(api_url)
 
     def _get_cfd_plants(self) -> pd.DataFrame:
         """Load CfD plant data with BMU mapping from local CSV file.
 
         Reads the previously downloaded CfD dataset containing plant
         information and BMU identifiers. This data is used to identify
-        which BMU units to download generation data for.
+        which BMU units to download Elexon data for.
 
         Returns:
             DataFrame containing CfD plant data with BMU mapping.
@@ -519,81 +515,38 @@ class GenerationDataDownloader(DataDownloader):
 
         return cfd_df
 
-    def _download_generation_data(self) -> pd.DataFrame:
-        """Download generation data from Elexon API for specified BMU units.
+    def _get_day_type_from_dates(self, df: pd.DataFrame) -> pd.Series:
+        """Determine day type by deriving expected settlement periods per date
+           from the Europe/London timezone.
 
-        Retrieves settled generation data for all provided BMU IDs within
-        the calibration date range. The API returns settlement periods and
-        generation quantities for each BMU unit.
-
-        Args:
-            bmu_ids: List of BMU ID strings to download data for.
-
-        Returns:
-            DataFrame with columns: settlementDate, settlementPeriod,
-            bmUnit, quantity.
-
-        Raises:
-            Exception: If API request fails or returns invalid data.
-        """
-        self.logger.info("Downloading generation data for CfD-associated BMUs...")
-        try:
-            self.logger.info("Fetching settled Elexon generation data from %s...", self._api.url)
-
-            params = {
-                "from": CALIBRATION_START_DATE,
-                "to": CALIBRATION_END_DATE,
-                "bmUnit": self.bmu_ids,
-                "format": "json",
-            }
-
-            res = requests.get(self._api.url, params=params, timeout=60)
-            if res.status_code != 200:
-                raise Exception(f"Failed to fetch data: {res.status_code}: {res.text}")
-
-            data = res.json()
-            data = data if isinstance(data, list) else data.get("data", [])
-            df = pd.DataFrame(data).loc[
-                :, ["settlementDate", "settlementPeriod", "bmUnit", "quantity"]
-            ]
-            self.logger.info("Loaded %s records into dataframe memory.", len(df))
-            return df
-
-        except Exception as e:
-            self.logger.error("Error downloading generation data: %s", e)
-            raise
-
-    def _get_day_type_from_period_counts(self, generation_df: pd.DataFrame) -> pd.Series:
-        """Determine day type by counting settlement periods per date.
-
-        - 48 periods = Normal day ('n')
-        - 46 periods = Short day/March forward ('s')
-        - 50 periods = Long day/October back ('l')
+        - 48 (24hrs) periods = Normal day ('n')
+        - 46 (23hrs) periods = Short day/March forward ('s')
+        - 50 (25hrs) periods = Long day/October back ('l')
 
         Returns 'n', 's', or 'l' for each row.
         """
-        period_counts = generation_df.groupby("settlement_date")["settlement_period"].nunique()
+        dates = pd.to_datetime(df["settlement_date"]).dt.normalize()
 
-        # Create day type lookup per date using explicit mapping
-        date_to_day_type = pd.Series(index=period_counts.index, dtype=str)
-        date_to_day_type[period_counts == 48] = "n"
-        date_to_day_type[period_counts == 46] = "s"
-        date_to_day_type[period_counts == 50] = "l"
+        def get_day_type(date):
+            start = date.tz_localize("Europe/London")
+            end = (date + pd.Timedelta(days=1)).tz_localize("Europe/London")
 
-        # We shouldn't have any other counts, log unexpected cases
-        unexpected_mask = date_to_day_type.isna()
-        if unexpected_mask.any():
-            unexpected_counts = period_counts[unexpected_mask]
-            self.logger.warning("Unexpected settlement period counts: %s", dict(unexpected_counts))
-            date_to_day_type = date_to_day_type.fillna("n")
+            hours = (end.tz_convert("UTC") - start.tz_convert("UTC")).total_seconds() / 3600
 
-        day_type_series = generation_df["settlement_date"].map(
-            lambda x: date_to_day_type.get(x, "n")
-        )
+            if hours == 23:
+                return "s"
+            elif hours == 25:
+                return "l"
+            return "n"
 
-        return pd.Series(day_type_series, index=generation_df.index, dtype="category")
+        mapping = {
+            date: get_day_type(date)
+            for date in dates.unique()
+        }
 
-    def _create_hourly_utc_datetime(self, generation_df: pd.DataFrame) -> pd.Series:
+        return dates.map(mapping)
+
+    def _create_hourly_utc_datetime(self, input_df: pd.DataFrame) -> pd.Series:
         """Create hourly UTC datetimes from UK settlement periods using Elexon rules.
 
         Converts UK settlement periods to UTC using official Elexon settlement period
@@ -608,15 +561,15 @@ class GenerationDataDownloader(DataDownloader):
         - 50 periods ('l'): → 25 UTC hours (periods 3&4 duplicated)
 
         Args:
-            generation_df: DataFrame with settlement_date and settlement_period columns.
+            input_df: DataFrame with settlement_date and settlement_period columns.
 
         Returns:
             Series of UTC datetime objects floored to hour boundaries.
         """
 
         # Create working copy with day type from period counts
-        df = generation_df.copy()
-        df["day_type"] = self._get_day_type_from_period_counts(df)
+        df = input_df.copy()
+        df["day_type"] = self._get_day_type_from_dates(df)
 
         # Log day type distribution for debugging
         day_type_counts = df["day_type"].value_counts()
@@ -661,42 +614,43 @@ class GenerationDataDownloader(DataDownloader):
         return utc_datetime.dt.floor("h")
 
     @staticmethod
-    def _divide_shared_bmu_generation(generation_df: pd.DataFrame) -> pd.DataFrame:
-        "Divides generation for shared BMUs by the number of plants sharing it."
+    def _divide_shared_bmu_quantity(df: pd.DataFrame, quantity_column: str) -> pd.DataFrame:
+        "Divides quantity column for shared BMUs by the number of plants sharing it."
         bmu_cfd_groups = (
-            generation_df.groupby(["bmu_id", "settlement_date", "settlement_period"])
+            df.groupby(["bmu_id", "settlement_date", "settlement_period"])
             .agg({"cfd_id": "count", "capacity": "sum"})
             .reset_index()
             .rename(columns={"cfd_id": "cfd_count", "capacity": "capacity_sum"})
         )
-        generation_df = generation_df.merge(
+        df = df.merge(
             bmu_cfd_groups, on=["bmu_id", "settlement_date", "settlement_period"]
         )
-        generation_df["quantity"] = generation_df["quantity"].where(
-            generation_df["cfd_count"] == 1,
-            generation_df["quantity"] * (generation_df["capacity"] / generation_df["capacity_sum"]),
+        df[quantity_column] = df[quantity_column].where(
+            df["cfd_count"] == 1,
+            df[quantity_column] * (df["capacity"] / df["capacity_sum"]),
         )
-        generation_df = generation_df.drop(columns=["capacity_sum", "cfd_count", "capacity"])
-        return generation_df
+        df = df.drop(columns=["capacity_sum", "cfd_count", "capacity"])
+        return df
 
-    def _aggregate_bmu_generation_to_cfd(
-        self, cfd_df: pd.DataFrame, generation_df: pd.DataFrame
+    def _aggregate_bmu_quantity_to_cfd(
+        self, cfd_df: pd.DataFrame, df: pd.DataFrame, quantity_column: str
     ) -> pd.DataFrame:
-        """Process and aggregate generation data by CFD ID.
+        """Process and aggregate specified data by CFD ID.
 
-        Merges the CFD plant data with the raw generation data on BMU ID,
-        then aggregates the generation quantities by CFD ID and hourly UTC datetime.
+        Merges the CFD plant data with raw data on BMU ID,
+        then aggregates the specified quantities by CFD ID and hourly UTC datetime.
         This accounts for cases where multiple BMUs are associated with a single
         CFD contract.
 
         Args:
             cfd_df: DataFrame containing CFD plant data with BMU mapping.
-            generation_df: DataFrame containing raw generation data from Elexon.
+            df: DataFrame containing raw data from Elexon.
+            quantity_column: Name of the column containing the quantity to aggregate.
         Returns:
-            DataFrame with aggregated generation data by CFD ID and hourly UTC datetime.
+            DataFrame with aggregated data by CFD ID and hourly UTC datetime.
         """
-        generation_df = generation_df.copy()
-        generation_df = generation_df.rename(
+        df = df.copy()
+        df = df.rename(
             columns={
                 "bmUnit": "bmu_id",
                 "settlementDate": "settlement_date",
@@ -705,19 +659,19 @@ class GenerationDataDownloader(DataDownloader):
         )
 
         # Merge with CFD data first
-        generation_df = generation_df.merge(
+        df = df.merge(
             cfd_df[["cfd_id", "bmu_id", "capacity"]], on="bmu_id", how="left"
         ).copy()
 
-        # Divide generation of shared bmus between plants
-        generation_df = self._divide_shared_bmu_generation(generation_df)
+        # Divide quantity of shared bmus between plants
+        df = self._divide_shared_bmu_quantity(df, quantity_column)
 
         # Aggregate BMU data by CFD and settlement period first
         aggregated_df = (
-            generation_df.groupby(
+            df.groupby(
                 ["cfd_id", "settlement_date", "settlement_period"], as_index=False
             )
-            .agg({"quantity": "sum"})
+            .agg({quantity_column: "sum"})
             .round(2)
         )
 
@@ -727,11 +681,186 @@ class GenerationDataDownloader(DataDownloader):
         # Final aggregation to hourly by summing periods within each UTC hour
         result = (
             aggregated_df.groupby(["cfd_id", "time"], as_index=False)
-            .agg({"quantity": "sum"})
-            .round(2)
+            .agg({quantity_column: "sum"})
+            .round({quantity_column: 2})
         )
 
         return result  # type: ignore[return-value]
+
+    def _download_data(self, params: dict, columns: list, date_period: tuple[str, int] = None) -> pd.DataFrame:
+        """Download data from Elexon API for specified parameters.
+
+        The parameters should be provided in the `params` dictionary, which will be
+        passed directly to the Elexon API request.
+
+        Args:
+            params: Dictionary of parameters to pass to the Elexon API request.
+            columns: List of column names to extract from the API response.
+            date_period: Optional tuple containing the start and end dates to append to the API URL for bid-specific data.
+
+        Returns:
+            DataFrame containing the requested data with columns: settlementDate,
+            settlementPeriod, bmUnit, quantity.
+
+        Raises:
+            Exception: If the API request fails or returns invalid data.
+        """
+
+        res = requests.get(self._api.url if date_period is None else f"{self._api.url}/{date_period[0]}/{date_period[1]}", params=params, timeout=60)
+        if res.status_code != 200:
+            raise Exception(f"Failed to fetch data: {res.status_code}: {res.text}")
+
+        data = res.json()
+        data = data if isinstance(data, list) else data.get("data", [])
+
+        if not data:
+            return pd.DataFrame(columns=columns)
+
+        df = pd.DataFrame(data).loc[:, columns]
+        return df
+
+
+class BOVDataDownloader(ElexonDataDownloader):
+    """Downloader for Bid Offer Volume (BOV) data from Elexon API.
+    
+    Downloads settlement bid-offer stacks from the Elexon Balancing Mechanism 
+    Reporting Service (BMRS) for BMU units associated with CfD contracts.
+    The data covers the calibration period and provides actual curtailment
+    volumes to be added onto the metered generation data for model validation.
+
+    Attributes:
+        _api (ParsedURL): Parsed URL for Elexon API endpoint.
+    """
+
+    def __init__(self):
+        """Initialize bov data downloader with Elexon API configuration."""
+        super().__init__(ELEXON_BOV_API_URL)
+
+    def _download_bov_data(self) -> pd.DataFrame:
+        """Download BOV data from Elexon API for specified BMU units.
+
+        Retrieves settled bid-offer acceptance volumes for all provided BMU IDs within
+        the calibration date range. The API returns settlement periods and
+        acceptance volumes for each BMU unit.
+
+        Args:
+            bmu_ids: List of BMU ID strings to download data for.
+
+        Returns:
+            DataFrame with columns: settlementDate, settlementPeriod,
+            bmUnit, volume.
+
+        Raises:
+            Exception: If API request fails or returns invalid data.
+        """
+
+        self.logger.info("Downloading bov data for CfD-associated BMUs...")
+
+        try:
+            self.logger.info("Fetching settled Elexon BOV data from %s...", self._api.url)
+
+            dates = pd.date_range(start=CALIBRATION_START_DATE, end=CALIBRATION_END_DATE).strftime("%Y-%m-%d").tolist()
+
+            dfs = []
+
+            for date in dates:
+                for period in range(1, 51):
+                    params = {
+                        "format": "json"
+                    }
+
+                    df = self._download_data(params=params, columns=["settlementDate", "settlementPeriod", "id", "volume"], date_period = (date, period))
+                    
+                    if not df.empty:
+                        df = df[df["id"].isin(self.bmu_ids)]
+                        dfs.append(df)
+
+            result = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+
+            result = result.rename(columns={"id": "bmUnit"})
+
+            self.logger.info("Loaded %s records into dataframe memory.", len(result))
+
+            return result
+
+        except Exception as e:
+            self.logger.error("Error downloading bov data: %s", e)
+            raise
+
+    def download(self) -> None:
+        """Download BOV data for all CfD-associated BMU units.
+
+        Downloads BOV data from Elexon for all BMU units
+        found in the CfD dataset. The data is saved as a CSV file in the
+        bov subdirectory. If the file already exists, download
+        is skipped.
+        """
+        cfd_df = self._get_cfd_plants()
+
+        self._update_output_directory(stem="bov")
+        output_file = self.output_dir / BOV_DATA_FILE_NAME
+        if output_file.exists():
+            self.logger.debug("BOV data already exists, skipping download...")
+            return
+
+        bmu_bov_df = self._download_bov_data()
+        bov_df = self._aggregate_bmu_quantity_to_cfd(cfd_df, bmu_bov_df, quantity_column="volume")
+        bov_df.to_parquet(output_file, index=False)
+        self.logger.info("BOV data saved to %s", output_file)
+
+
+class GenerationDataDownloader(ElexonDataDownloader):
+    """Downloader for electricity generation data from Elexon API.
+
+    Downloads settled generation data from the Elexon Balancing Mechanism
+    Reporting Service (BMRS) for BMU units associated with CfD contracts.
+    The data covers the calibration period and provides actual generation
+    volumes for model validation.
+
+    Attributes:
+        _api (ParsedURL): Parsed URL for Elexon API endpoint.
+    """
+
+    def __init__(self):
+        """Initialize generation data downloader with Elexon API configuration."""
+        super().__init__(ELEXON_GENERATION_API_URL)
+
+    def _download_generation_data(self) -> pd.DataFrame:
+        """Download generation data from Elexon API for specified BMU units.
+
+        Retrieves settled generation data for all provided BMU IDs within
+        the calibration date range. The API returns settlement periods and
+        generation quantities for each BMU unit.
+
+        Args:
+            bmu_ids: List of BMU ID strings to download data for.
+
+        Returns:
+            DataFrame with columns: settlementDate, settlementPeriod,
+            bmUnit, quantity.
+
+        Raises:
+            Exception: If API request fails or returns invalid data.
+        """
+        self.logger.info("Downloading generation data for CfD-associated BMUs...")
+        try:
+            self.logger.info("Fetching settled Elexon generation data from %s...", self._api.url)
+
+            params = {
+                "from": CALIBRATION_START_DATE,
+                "to": CALIBRATION_END_DATE,
+                "bmUnit": self.bmu_ids,
+                "format": "json",
+            }
+
+            df = self._download_data(params=params, columns=["settlementDate", "settlementPeriod", "bmUnit", "quantity"])
+            self.logger.info("Loaded %s records into dataframe memory.", len(df))
+
+            return df
+        
+        except Exception as e:
+            self.logger.error("Error downloading generation data: %s", e)
+            raise
 
     def download(self) -> None:
         """Download generation data for all CfD-associated BMU units.
@@ -750,7 +879,7 @@ class GenerationDataDownloader(DataDownloader):
             return
 
         bmu_generation_df = self._download_generation_data()
-        generation_df = self._aggregate_bmu_generation_to_cfd(cfd_df, bmu_generation_df)
+        generation_df = self._aggregate_bmu_quantity_to_cfd(cfd_df, bmu_generation_df, quantity_column="quantity")
         generation_df.to_parquet(output_file, index=False)
         self.logger.info("Generation data saved to %s", output_file)
 
@@ -784,6 +913,7 @@ class DownloadManager:
         """
         self.cfd = CfDDataDownloader()
         self.generation = GenerationDataDownloader()
+        self.bov = BOVDataDownloader()
         self.era5 = ERA5DataDownloader(api_key=cds_api_key, api_url=cds_api_url)
 
     def download_cfd(self) -> None:
@@ -801,6 +931,14 @@ class DownloadManager:
         BMU units from the Elexon BMRS API.
         """
         self.generation.download()
+
+    def download_bov_data(self) -> None:
+        """Download bov data.
+
+        Initiates download of bov data for CfD-associated BMU units
+        from the Elexon BMRS API.
+        """
+        self.bov.download()
 
     def download_era5(self) -> None:
         """Download ERA5 weather reanalysis data.
@@ -831,4 +969,5 @@ class DownloadManager:
         """
         self.download_cfd()
         self.download_generation_data()
+        self.download_bov_data()
         self.download_era5()
