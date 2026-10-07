@@ -9,6 +9,7 @@ from rencal.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 class BOVDatasetModel(PandasDatasetModel):
     """Dataset for bov/settlement time series data"""
 

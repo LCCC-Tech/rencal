@@ -13,7 +13,7 @@ class Calibrator(ABC):
         data_path: str = None,
         plant_id_col: str = None,
         loader: DataLoader | None = None,
-    ):  
+    ):
         """
         Initialise a calibrator instance.
 

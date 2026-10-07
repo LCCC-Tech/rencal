@@ -13,8 +13,8 @@ import xarray as xr
 from tqdm import tqdm
 
 from rencal.utils.constants import (
-    INCLUDE_BOV_DATA,
     AREA_BOUNDING_BOX_COORDINATES,
+    BOV_DATA_FILE_NAME,
     CALIBRATION_END_DATE,
     CALIBRATION_START_DATE,
     CDS_API_URL,
@@ -23,16 +23,16 @@ from rencal.utils.constants import (
     DEFAULT_SOLAR_VARIABLES,
     DEFAULT_WIND_VARIABLES,
     DOWNLOAD_DATA_DIR,
-    ELEXON_GENERATION_API_URL,
     ELEXON_BOV_API_URL,
+    ELEXON_GENERATION_API_URL,
     ERA5_DATASET,
     ERA5_PRODUCT_TYPE,
     GENERATION_DATA_FILE_NAME,
+    INCLUDE_BOV_DATA,
     MARCH_FORWARD_MINUTES,
     NORMAL_DAY_MINUTES,
     OCTOBER_BACK_MINUTES,
     PLANT_DATA_FILE_NAME,
-    BOV_DATA_FILE_NAME,
 )
 from rencal.utils.logger import get_logger
 from rencal.utils.types import ParsedURL
@@ -540,10 +540,7 @@ class ElexonDataDownloader(DataDownloader):
                 return "l"
             return "n"
 
-        mapping = {
-            date: get_day_type(date)
-            for date in dates.unique()
-        }
+        mapping = {date: get_day_type(date) for date in dates.unique()}
 
         return dates.map(mapping)
 
@@ -623,9 +620,7 @@ class ElexonDataDownloader(DataDownloader):
             .reset_index()
             .rename(columns={"cfd_id": "cfd_count", "capacity": "capacity_sum"})
         )
-        df = df.merge(
-            bmu_cfd_groups, on=["bmu_id", "settlement_date", "settlement_period"]
-        )
+        df = df.merge(bmu_cfd_groups, on=["bmu_id", "settlement_date", "settlement_period"])
         df[quantity_column] = df[quantity_column].where(
             df["cfd_count"] == 1,
             df[quantity_column] * (df["capacity"] / df["capacity_sum"]),
@@ -660,18 +655,14 @@ class ElexonDataDownloader(DataDownloader):
         )
 
         # Merge with CFD data first
-        df = df.merge(
-            cfd_df[["cfd_id", "bmu_id", "capacity"]], on="bmu_id", how="left"
-        ).copy()
+        df = df.merge(cfd_df[["cfd_id", "bmu_id", "capacity"]], on="bmu_id", how="left").copy()
 
         # Divide quantity of shared bmus between plants
         df = self._divide_shared_bmu_quantity(df, quantity_column)
 
         # Aggregate BMU data by CFD and settlement period first
         aggregated_df = (
-            df.groupby(
-                ["cfd_id", "settlement_date", "settlement_period"], as_index=False
-            )
+            df.groupby(["cfd_id", "settlement_date", "settlement_period"], as_index=False)
             .agg({quantity_column: "sum"})
             .round(2)
         )
@@ -707,7 +698,9 @@ class ElexonDataDownloader(DataDownloader):
             Exception: If the API request fails or returns invalid data.
         """
 
-        res = requests.get(self._api.url if override_url is None else override_url, params=params, timeout=60)
+        res = requests.get(
+            self._api.url if override_url is None else override_url, params=params, timeout=60
+        )
         if res.status_code != 200:
             raise Exception(f"Failed to fetch data: {res.status_code}: {res.text}")
 
@@ -760,20 +753,26 @@ class BOVDataDownloader(ElexonDataDownloader):
         try:
             self.logger.info("Fetching settled Elexon BOV data from %s...", self._api.url)
 
-            dates = pd.date_range(start=CALIBRATION_START_DATE, end=CALIBRATION_END_DATE).strftime("%Y-%m-%d").tolist()
+            dates = (
+                pd.date_range(start=CALIBRATION_START_DATE, end=CALIBRATION_END_DATE)
+                .strftime("%Y-%m-%d")
+                .tolist()
+            )
 
             dfs = []
 
-            for bid_offer in ['bid','offer']:
+            for bid_offer in ["bid", "offer"]:
                 for date in dates:
                     for period in range(1, 51):
-                        params = {
-                            "format": "json"
-                        }
+                        params = {"format": "json"}
 
                         url = f"{self._api.url}/{bid_offer}/{date}/{period}"
 
-                        df = self._download_data(params=params, columns=["settlementDate", "settlementPeriod", "id", "volume"], override_url=url)
+                        df = self._download_data(
+                            params=params,
+                            columns=["settlementDate", "settlementPeriod", "id", "volume"],
+                            override_url=url,
+                        )
 
                         if not df.empty:
                             df = df[df["id"].isin(self.bmu_ids)]
@@ -783,7 +782,9 @@ class BOVDataDownloader(ElexonDataDownloader):
 
             result = result.rename(columns={"id": "bmUnit"})
 
-            result = result.groupby(["settlementDate","settlementPeriod", "bmUnit"], as_index=False).agg({"volume": "sum"})
+            result = result.groupby(
+                ["settlementDate", "settlementPeriod", "bmUnit"], as_index=False
+            ).agg({"volume": "sum"})
 
             self.logger.info("Loaded %s records into dataframe memory.", len(result))
 
@@ -811,7 +812,7 @@ class BOVDataDownloader(ElexonDataDownloader):
 
         bmu_bov_df = self._download_bov_data()
         bov_df = self._aggregate_bmu_quantity_to_cfd(cfd_df, bmu_bov_df, quantity_column="volume")
-        bov_df = bov_df[bov_df["volume"] <= 0 ]
+        bov_df = bov_df[bov_df["volume"] <= 0]
         bov_df.to_parquet(output_file, index=False)
         self.logger.info("BOV data saved to %s", output_file)
 
@@ -860,11 +861,13 @@ class GenerationDataDownloader(ElexonDataDownloader):
                 "format": "json",
             }
 
-            df = self._download_data(params=params, columns=["settlementDate", "settlementPeriod", "bmUnit", "quantity"])
+            df = self._download_data(
+                params=params, columns=["settlementDate", "settlementPeriod", "bmUnit", "quantity"]
+            )
             self.logger.info("Loaded %s records into dataframe memory.", len(df))
 
             return df
-        
+
         except Exception as e:
             self.logger.error("Error downloading generation data: %s", e)
             raise
@@ -886,7 +889,9 @@ class GenerationDataDownloader(ElexonDataDownloader):
             return
 
         bmu_generation_df = self._download_generation_data()
-        generation_df = self._aggregate_bmu_quantity_to_cfd(cfd_df, bmu_generation_df, quantity_column="quantity")
+        generation_df = self._aggregate_bmu_quantity_to_cfd(
+            cfd_df, bmu_generation_df, quantity_column="quantity"
+        )
         generation_df.to_parquet(output_file, index=False)
         self.logger.info("Generation data saved to %s", output_file)
 

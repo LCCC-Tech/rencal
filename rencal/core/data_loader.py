@@ -9,7 +9,13 @@ import pandas as pd
 import xarray as xr
 from numpy import float32, float64
 from numpy.typing import NDArray
-from rencal.models import ERA5DatasetModel, GenerationDatasetModel, BOVDatasetModel, PlantDatasetModel
+
+from rencal.models import (
+    BOVDatasetModel,
+    ERA5DatasetModel,
+    GenerationDatasetModel,
+    PlantDatasetModel,
+)
 from rencal.utils.constants import (
     BOV_DATA_FILE_NAME,
     DEFAULT_SOLAR_VARIABLES,
@@ -109,7 +115,7 @@ class LocalDataLoader(DataLoader):
                 "aggregated": True,
             },
         )
-    
+
     def load_bov_data(self, id_column: str = PLANT_ID_COLUMN) -> BOVDatasetModel:
         """Load BOV time series from CSV file
 
@@ -138,7 +144,7 @@ class LocalDataLoader(DataLoader):
                 "aggregated": True,
             },
         )
-    
+
     def path_resolver_weather_data(self, basename: str) -> str | Path:
         return self._base_path / "calibrated" / basename
 
