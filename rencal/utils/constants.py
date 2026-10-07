@@ -130,5 +130,5 @@ INTERNAL_PLANT_ID = "plant_id"  # for easier maintenance of internal calculation
 
 PLANT_ID_OUTPUT = run_config.get("PLANT_ID_OUTPUT", "CFD ID")
 
-# Flag to Adjust generation data with bov data
+# Flag to backfill generation data with bov data
 INCLUDE_BOV_DATA: bool = run_config.get("INCLUDE_BOV_DATA", True)

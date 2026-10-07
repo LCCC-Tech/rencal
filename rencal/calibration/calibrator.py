@@ -50,7 +50,7 @@ class Calibrator(ABC):
                 else self.loader.load_bov_data()
             )
 
-            self.generation = self.adjust_generation_with_bov()
+            self.generation = self.backfill_generation_with_bov()
 
         self.resource = self.loader.load_era5_data()
 
@@ -109,8 +109,8 @@ class Calibrator(ABC):
         """Outputs a series of plots of estimated load factors and calibrated curves."""
         pass
 
-    def adjust_generation_with_bov(self) -> GenerationDatasetModel:
-        """Adjusts generation data by subtracting accepted bov volumes."""
+    def backfill_generation_with_bov(self) -> GenerationDatasetModel:
+        """Backfills generation data by subtracting accepted bov volumes."""
         merged = self.generation.data.merge(
             self.bov.data[["plant_id", "time", "volume"]],
             on=["plant_id", "time"],
