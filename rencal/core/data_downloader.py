@@ -17,7 +17,11 @@ from rencal.utils.constants import (
     CALIBRATION_END_DATE,
     CALIBRATION_START_DATE,
     CDS_API_URL,
-    CFD_BMU_CSV_URL,
+    CFD_BMU_DATASET_NAME,
+    CFD_BMU_RESOURCE_FILE_NAME,
+    CFD_BMU_RESOURCE_FORMAT,
+    CFD_DATA_PORTAL_API_URL,
+    CFD_DATA_PORTAL_TIMEOUT,
     CFD_REGISTER_API_URL,
     DEFAULT_SOLAR_VARIABLES,
     DEFAULT_WIND_VARIABLES,
@@ -371,42 +375,120 @@ class CfDDataDownloader(DataDownloader):
 
     Attributes:
         _cfd_register_api (ParsedURL): Parsed URL for CfD register API.
-        _cfd_to_bmu_api (ParsedURL): Parsed URL for CfD to BMU CSV mapping.
+        _data_portal_api (ParsedURL): Parsed URL for the LCCC data portal action API,
+            used to resolve the current CfD to BMU mapping CSV resource.
     """
 
     def __init__(self):
         """Initialize CfD data downloader with API endpoints."""
         super().__init__()
         self._cfd_register_api = ParsedURL(CFD_REGISTER_API_URL)
-        self._cfd_to_bmu_api = ParsedURL(CFD_BMU_CSV_URL)
+        self._data_portal_api = ParsedURL(CFD_DATA_PORTAL_API_URL)
 
         self._update_output_directory(stem="plant")
+
+    def _resolve_cfd_bmu_csv_url(self) -> str:
+        """Resolve the current download URL of the CfD to BMU mapping CSV.
+
+        The LCCC data portal is a CKAN instance. Its direct download links embed
+        dataset and resource IDs that change whenever the dataset is republished,
+        so the download URL cannot be hard-coded. Instead the dataset is looked up
+        by its stable name through the ``package_show`` action and the CSV
+        resource's current URL is taken from the response.
+
+        Returns:
+            The download URL of the CfD to BMU mapping CSV resource.
+
+        Raises:
+            Exception: If the API request fails, the dataset cannot be found,
+                or no CSV resource is published for the dataset.
+        """
+        package_show_url = f"{self._data_portal_api.url}/package_show"
+        self.logger.info(
+            "Resolving dataset '%s' from %s...", CFD_BMU_DATASET_NAME, self._data_portal_api.domain
+        )
+        res = requests.get(
+            package_show_url,
+            params={"id": CFD_BMU_DATASET_NAME},
+            timeout=CFD_DATA_PORTAL_TIMEOUT,
+        )
+        if res.status_code != 200:
+            raise Exception(
+                f"Failed to resolve dataset '{CFD_BMU_DATASET_NAME}': {res.status_code}: {res.text}"
+            )
+
+        payload = res.json()
+        if not payload.get("success"):
+            raise Exception(
+                f"Data portal API error for dataset '{CFD_BMU_DATASET_NAME}': "
+                f"{payload.get('error')}"
+            )
+
+        resources: list[dict[str, Any]] = payload.get("result", {}).get("resources", [])
+        csv_resources = [
+            resource
+            for resource in resources
+            if str(resource.get("format", "")).strip().upper() == CFD_BMU_RESOURCE_FORMAT
+            and resource.get("url")
+        ]
+        if not csv_resources:
+            raise Exception(
+                f"No {CFD_BMU_RESOURCE_FORMAT} resource found for dataset '{CFD_BMU_DATASET_NAME}'"
+            )
+
+        # A dataset may publish several CSVs (e.g. the mapping and its data type
+        # definitions), so prefer the resource whose file name is the mapping itself.
+        matching = [
+            resource
+            for resource in csv_resources
+            if str(resource["url"]).rstrip("/").rsplit("/", 1)[-1] == CFD_BMU_RESOURCE_FILE_NAME
+        ]
+        if matching:
+            resource = matching[0]
+        else:
+            resource = csv_resources[0]
+            self.logger.warning(
+                "No %s resource named '%s' found for dataset '%s'; using '%s' instead.",
+                CFD_BMU_RESOURCE_FORMAT,
+                CFD_BMU_RESOURCE_FILE_NAME,
+                CFD_BMU_DATASET_NAME,
+                resource.get("name"),
+            )
+
+        resource_url = str(resource["url"])
+        self.logger.debug(
+            "Resolved resource '%s' (id=%s) to %s",
+            resource.get("name"),
+            resource.get("id"),
+            resource_url,
+        )
+        return resource_url
 
     def _download_cfd_bmu_csv(self) -> pd.DataFrame:
         """Download the CfD to BMU mapping CSV from the LCCC data portal.
 
-        Downloads a CSV file containing the mapping between CfD contract IDs
-        and BMU (Balancing Mechanism Unit) identifiers. This mapping is
-        essential for linking CfD contracts to their operational units.
+        Resolves the current CSV resource for the mapping dataset through the
+        data portal API and downloads it. The CSV contains the mapping between
+        CfD contract IDs and BMU (Balancing Mechanism Unit) identifiers, which
+        is essential for linking CfD contracts to their operational units.
 
         Returns:
-            DataFrame containing CFD_Id and BMU_Id columns.
+            DataFrame containing cfd_id and bmu_id columns.
 
         Raises:
-            Exception: If CSV download or parsing fails.
+            Exception: If resource resolution, CSV download or parsing fails.
         """
         try:
-            self.logger.info(
-                "Reading CfD to BMU mapping CSV from %s...", self._cfd_to_bmu_api.domain
-            )
-            bmu_mapping = pd.read_csv(self._cfd_to_bmu_api.url)
+            csv_url = self._resolve_cfd_bmu_csv_url()
+            self.logger.info("Reading CfD to BMU mapping CSV from %s...", csv_url)
+            bmu_mapping = pd.read_csv(csv_url)
             bmu_mapping.rename(columns={"CFD_Id": "cfd_id", "BMU_Id": "bmu_id"}, inplace=True)
             bmu_mapping = bmu_mapping.filter(["cfd_id", "bmu_id"])
             self.logger.info("Loaded CSV into dataframe memory.")
             return bmu_mapping
         except Exception as e:
             self.logger.error(
-                "Error downloading CfD to BMU CSV from %s: %s", self._cfd_to_bmu_api.domain, e
+                "Error downloading CfD to BMU CSV from %s: %s", self._data_portal_api.domain, e
             )
             raise
 
