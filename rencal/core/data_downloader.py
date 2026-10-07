@@ -13,6 +13,7 @@ import xarray as xr
 from tqdm import tqdm
 
 from rencal.utils.constants import (
+    INCLUDE_BOV_DATA,
     AREA_BOUNDING_BOX_COORDINATES,
     CALIBRATION_END_DATE,
     CALIBRATION_START_DATE,
@@ -975,5 +976,6 @@ class DownloadManager:
         """
         self.download_cfd()
         self.download_generation_data()
-        self.download_bov_data()
+        if INCLUDE_BOV_DATA:
+            self.download_bov_data()
         self.download_era5()
