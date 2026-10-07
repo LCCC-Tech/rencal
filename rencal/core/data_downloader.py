@@ -618,7 +618,7 @@ class ElexonDataDownloader(DataDownloader):
         "Divides quantity column for shared BMUs by the number of plants sharing it."
         bmu_cfd_groups = (
             df.groupby(["bmu_id", "settlement_date", "settlement_period"])
-            .agg({"cfd_id": "count", "capacity": "sum"})
+            .agg({"cfd_id": "nunique", "capacity": "sum"})
             .reset_index()
             .rename(columns={"cfd_id": "cfd_count", "capacity": "capacity_sum"})
         )
@@ -687,7 +687,7 @@ class ElexonDataDownloader(DataDownloader):
 
         return result  # type: ignore[return-value]
 
-    def _download_data(self, params: dict, columns: list, date_period: tuple[str, int] = None) -> pd.DataFrame:
+    def _download_data(self, params: dict, columns: list, override_url: str = None) -> pd.DataFrame:
         """Download data from Elexon API for specified parameters.
 
         The parameters should be provided in the `params` dictionary, which will be
@@ -706,7 +706,7 @@ class ElexonDataDownloader(DataDownloader):
             Exception: If the API request fails or returns invalid data.
         """
 
-        res = requests.get(self._api.url if date_period is None else f"{self._api.url}/{date_period[0]}/{date_period[1]}", params=params, timeout=60)
+        res = requests.get(self._api.url if override_url is None else override_url, params=params, timeout=60)
         if res.status_code != 200:
             raise Exception(f"Failed to fetch data: {res.status_code}: {res.text}")
 
@@ -722,8 +722,8 @@ class ElexonDataDownloader(DataDownloader):
 
 class BOVDataDownloader(ElexonDataDownloader):
     """Downloader for Bid Offer Volume (BOV) data from Elexon API.
-    
-    Downloads settlement bid-offer stacks from the Elexon Balancing Mechanism 
+
+    Downloads settlement bid-offer stacks from the Elexon Balancing Mechanism
     Reporting Service (BMRS) for BMU units associated with CfD contracts.
     The data covers the calibration period and provides actual curtailment
     volumes to be added onto the metered generation data for model validation.
@@ -763,21 +763,26 @@ class BOVDataDownloader(ElexonDataDownloader):
 
             dfs = []
 
-            for date in dates:
-                for period in range(1, 51):
-                    params = {
-                        "format": "json"
-                    }
+            for bid_offer in ['bid','offer']:
+                for date in dates:
+                    for period in range(1, 51):
+                        params = {
+                            "format": "json"
+                        }
 
-                    df = self._download_data(params=params, columns=["settlementDate", "settlementPeriod", "id", "volume"], date_period = (date, period))
-                    
-                    if not df.empty:
-                        df = df[df["id"].isin(self.bmu_ids)]
-                        dfs.append(df)
+                        url = f"{self._api.url}/{bid_offer}/{date}/{period}"
+
+                        df = self._download_data(params=params, columns=["settlementDate", "settlementPeriod", "id", "volume"], override_url=url)
+
+                        if not df.empty:
+                            df = df[df["id"].isin(self.bmu_ids)]
+                            dfs.append(df)
 
             result = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
             result = result.rename(columns={"id": "bmUnit"})
+
+            result = result.groupby(["settlementDate","settlementPeriod", "bmUnit"], as_index=False).agg({"volume": "sum"})
 
             self.logger.info("Loaded %s records into dataframe memory.", len(result))
 
@@ -805,6 +810,7 @@ class BOVDataDownloader(ElexonDataDownloader):
 
         bmu_bov_df = self._download_bov_data()
         bov_df = self._aggregate_bmu_quantity_to_cfd(cfd_df, bmu_bov_df, quantity_column="volume")
+        bov_df = bov_df[bov_df["volume"] <= 0 ]
         bov_df.to_parquet(output_file, index=False)
         self.logger.info("BOV data saved to %s", output_file)
 

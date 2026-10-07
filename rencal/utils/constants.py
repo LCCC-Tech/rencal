@@ -84,7 +84,7 @@ WIND_TECHNOLOGY_TYPES = {"Onshore Wind", "Offshore Wind"}
 ELEXON_GENERATION_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
 GENERATION_DATA_FILE_NAME = "generation_data.parquet"
 
-ELEXON_BOV_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/balancing/settlement/stack/all/bid"
+ELEXON_BOV_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/balancing/settlement/stack/all"
 BOV_DATA_FILE_NAME = "bov_data.parquet"
 
 # Normal Day (n): 48 periods, continuous 30-minute intervals
