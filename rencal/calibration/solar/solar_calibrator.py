@@ -73,7 +73,7 @@ class SolarCalibrator(Calibrator):
         self.plant_irradiance: pd.DataFrame
         self.historical_load_factors: pd.DataFrame
         self.historical_load_factor_distributions: pd.DataFrame
-        
+
     @staticmethod
     def solar_regression_model(x_data, gamma, noct):
         T = x_data[:, 0]  # temperature
@@ -112,7 +112,7 @@ class SolarCalibrator(Calibrator):
         elif "expver" in self.resource.data.coords:
             logger.info("Resource data pre-merged by CDS; dropping expver label.")
             self.resource.data = self.resource.data.drop_vars("expver")
-        
+
         # Convert SSRD from J/m^2 to W/m^2Fsolar
         ssrd_var = ERA5_VARIABLE_MAPPING["surface_solar_radiation_downwards"]
         self.resource.data["irradiance"] = self.resource.data[ssrd_var] / 3600
@@ -230,7 +230,7 @@ class SolarCalibrator(Calibrator):
         # solar_irradiance_generation_merged["load_factor"] = (
         #     solar_irradiance_generation_merged["quantity"].fillna(0)
         #     / solar_irradiance_generation_merged["capacity"]
-        # )    
+        # )
         solar_irradiance_generation_merged = solar_irradiance_generation_merged[
             solar_irradiance_generation_merged["quantity"].notna()
         ]
@@ -276,7 +276,7 @@ class SolarCalibrator(Calibrator):
         )
 
         return plant_id, hist, bin_edges
-    
+
     @staticmethod
     def _drop_invalid_rows(solar_data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -291,7 +291,6 @@ class SolarCalibrator(Calibrator):
         return solar_data.replace([np.inf, -np.inf], np.nan).dropna(
             subset=["irradiance", "temperature", "load_factor"]
         )
-
 
     def fit_historical_load_factor_distribution(self) -> pd.DataFrame:
         """Fits an empirical irradiance histogram for each plant."""
@@ -314,10 +313,7 @@ class SolarCalibrator(Calibrator):
                     lambda item: self._fit_irradiance_histogram_to_plant(item), irradiance_arrays
                 )
             )
-        hist_df = pd.DataFrame(
-            fits,
-            columns=[INTERNAL_PLANT_ID, "histogram", "bin_edges"]
-        )
+        hist_df = pd.DataFrame(fits, columns=[INTERNAL_PLANT_ID, "histogram", "bin_edges"])
         result = irradiance_statistics.reset_index().merge(
             hist_df, on=INTERNAL_PLANT_ID, sort=False
         )
@@ -342,10 +338,7 @@ class SolarCalibrator(Calibrator):
                 logger.warning("Skipping %s (no valid irradiance data).", plant_id)
                 continue
 
-            x_data = np.column_stack([
-                lf_data["temperature"].values,
-                lf_data["irradiance"].values
-            ])
+            x_data = np.column_stack([lf_data["temperature"].values, lf_data["irradiance"].values])
 
             try:
                 (gamma, noct), _ = curve_fit(
@@ -391,7 +384,7 @@ class SolarCalibrator(Calibrator):
             0,
         ]
 
-    def generate_resource_streams(self) -> pd.DataFrame: 
+    def generate_resource_streams(self) -> pd.DataFrame:
         logger.info("Generating solar streams for plants...")
 
         plant_solar_irradiance_and_params = self.plant_irradiance.merge(
@@ -402,8 +395,8 @@ class SolarCalibrator(Calibrator):
         ).drop(columns=PLANT_ID_OUTPUT)
 
         missing_mask = (
-            plant_solar_irradiance_and_params["Gamma"].isna() |
-            plant_solar_irradiance_and_params["NOCT"].isna()
+            plant_solar_irradiance_and_params["Gamma"].isna()
+            | plant_solar_irradiance_and_params["NOCT"].isna()
         )
         if missing_mask.any():
             generic = self.summary[self.summary[PLANT_ID_OUTPUT] == "Generic Solar"].iloc[0]
