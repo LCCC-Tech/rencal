@@ -49,6 +49,10 @@ WIND_NPY_BASEPATH: str = run_config.get("WIND_NPY_BASEPATH", "Wind Streams.npy")
 WIND_NPY_HISTOGRAMS_BASEPATH: str = run_config.get(
     "WIND_NPY_HISTOGRAMS_BASEPATH", "Wind Streams.histograms.npy"
 )
+SOLAR_NPY_BASEPATH: str = run_config.get("SOLAR_NPY_BASEPATH", "Solar Streams.npy")
+SOLAR_NPY_HISTOGRAMS_BASEPATH: str = run_config.get(
+    "SOLAR_NPY_HISTOGRAMS_BASEPATH", "Solar Streams.histograms.npy"
+)
 
 # Runtime timestamp
 RUNTIME_DATE = datetime.datetime.today()
@@ -74,11 +78,27 @@ ERA5_VARIABLE_MAPPING = {
     "2m_temperature": "t2m",
 }
 
-# CFD API
-CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?format=json"
 PLANT_DATA_FILE_NAME = "plant_data.csv"
 WIND_TECHNOLOGY_TYPES = {"Onshore Wind", "Offshore Wind"}
+SOLAR_TECHNOLOGY_TYPES = {"Solar PV"}
+
+# Solar irradiance bounds
+SOLAR_IRRADIANCE_LBOUND = 0
+SOLAR_IRRADIANCE_HBOUND = 1200
+
+# Default curve_fit initial
+DEFAULT_SOLAR_CURVE_GAMMA = 0.004
+DEFAULT_SOLAR_CURVE_NOCT = 40.0
+
+# Curve_fit parameter bounds
+SOLAR_CURVE_GAMMA_LBOUND = 0.0
+SOLAR_CURVE_GAMMA_HBOUND = 1.0
+
+SOLAR_CURVE_NOCT_LBOUND = 0.0
+SOLAR_CURVE_NOCT_HBOUND = 100.0
+
 # LCCC Data Portal (CKAN action API)
+CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?format=json"
 CFD_BMU_DATASET_NAME = "cfd-to-bm-unit-mapping"
 CFD_BMU_RESOURCE_FORMAT = "CSV"
 CFD_BMU_RESOURCE_FILE_NAME = "cfd_to_bm_unit_mapping.csv"
