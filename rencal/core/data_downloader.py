@@ -780,11 +780,15 @@ class BOVDataDownloader(ElexonDataDownloader):
 
             result = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
-            result = result.rename(columns={"id": "bmUnit"})
+            if not result.empty:
 
-            result = result.groupby(
-                ["settlementDate", "settlementPeriod", "bmUnit"], as_index=False
-            ).agg({"volume": "sum"})
+                result = result.rename(columns={"id": "bmUnit"})
+
+                result = pd.DataFrame(
+                    result.groupby(
+                        ["settlementDate", "settlementPeriod", "bmUnit"], as_index=False
+                    ).agg({"volume": "sum"})
+                )
 
             self.logger.info("Loaded %s records into dataframe memory.", len(result))
 
