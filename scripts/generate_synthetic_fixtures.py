@@ -39,8 +39,8 @@ def generate_plant_data() -> pd.DataFrame:
     )
 
 
-def generate_generation_data() -> pd.DataFrame:
-    """Create synthetic hourly generation for 35 synthetic plant identifiers."""
+def generate_generation_and_bov_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Create synthetic metered generation and sparse negative curtailment volumes."""
     plant_ids = [f"SYN-WIND-{index:03d}" for index in range(1, PLANT_COUNT + 1)]
     plant_ids.extend(
         f"SYN-GENERATOR-{index:03d}" for index in range(PLANT_COUNT + 1, GENERATION_PLANT_COUNT + 1)
@@ -58,7 +58,36 @@ def generate_generation_data() -> pd.DataFrame:
             {"cfd_id": plant_id, "time": time, "quantity": quantity}
             for time, quantity in zip(times, quantity, strict=True)
         )
-    return pd.DataFrame(rows)
+
+    generation_df = pd.DataFrame(rows)
+
+    bov_df = generate_bov_data(generation_df)
+    generation_df.loc[bov_df.index, "quantity"] += bov_df["volume"]
+
+    return generation_df, bov_df
+
+
+def generate_bov_data(generation_df: pd.DataFrame) -> pd.DataFrame:
+    """Create sparse deterministic negative BOV capped at available generation."""
+
+    hour_indices = np.tile(np.arange(GENERATION_HOURS), GENERATION_PLANT_COUNT)
+    plant_indices = np.repeat(np.arange(GENERATION_PLANT_COUNT), GENERATION_HOURS)
+
+    event_mask = ((hour_indices + plant_indices * 7) % 37 < 3) & (
+        generation_df["quantity"].to_numpy() > 0
+    )
+
+    bov_df = generation_df.loc[event_mask, ["cfd_id", "time"]].copy()
+
+    event_hours = hour_indices[event_mask]
+    event_plants = plant_indices[event_mask]
+    volumes = 2.0 + ((event_hours * 3 + event_plants * 5) % 19)
+
+    bov_df["volume"] = -np.minimum(
+        volumes.astype(float), generation_df.loc[event_mask, "quantity"].to_numpy()
+    )
+
+    return bov_df
 
 
 def generate_era5_data() -> xr.Dataset:
@@ -94,12 +123,14 @@ def write_fixtures(output_dir: Path) -> None:
     """Write all synthetic fixtures below ``output_dir``."""
     (output_dir / "plant").mkdir(parents=True, exist_ok=True)
     (output_dir / "generation").mkdir(parents=True, exist_ok=True)
+    (output_dir / "bov").mkdir(parents=True, exist_ok=True)
     (output_dir / "era5").mkdir(parents=True, exist_ok=True)
 
     generate_plant_data().to_csv(output_dir / "plant" / "plant_data.csv", index=False)
-    generate_generation_data().to_parquet(
-        output_dir / "generation" / "generation_data.parquet", index=False
-    )
+
+    generation_df, bov_df = generate_generation_and_bov_data()
+    generation_df.to_parquet(output_dir / "generation" / "generation_data.parquet", index=False)
+    bov_df.to_parquet(output_dir / "bov" / "bov_data.parquet", index=False)
     generate_era5_data().to_netcdf(output_dir / "era5" / "era5_data.nc", engine="scipy")
 
 
