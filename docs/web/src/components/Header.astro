@@ -15,13 +15,27 @@ import config from '../../config';
     <div class="search-container color-text">
       <Search />
     </div>
-    <a class="github-link" href={config.github} target="_blank">
+    <a
+      class="github-link"
+      href={config.github}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="GitHub (opens in a new window)"
+    >
       <Icon name="github" size="1rem" />
     </a>
     <ThemeSelect />
   </div>
 </div>
 
+<script>
+  const searchButton = document.querySelector<HTMLButtonElement>('button[data-open-modal]');
+
+  if (searchButton) {
+    const visibleLabel = searchButton.textContent?.replace(/\s+/g, ' ').trim();
+    if (visibleLabel) searchButton.setAttribute('aria-label', visibleLabel);
+  }
+</script>
 
 <style>
 .header {

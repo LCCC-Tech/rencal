@@ -1,0 +1,127 @@
+---
+// Site-wide corporate footer, matching the schemes-register app's Footer
+// component (frontend/src/components/layouts/main/Footer.jsx): a
+// copyright + privacy link row, a divider, then the two company
+// registration numbers. Rendered as a sibling of `.main-frame` in
+// PageFrame.astro (not inside it) so it spans the full page width below
+// the sidebar/content columns, rather than being confined to the content
+// column like Starlight's own per-page Footer override.
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="row row-top">
+      <p class="copyright">&copy; <span id="footer-year">{year}</span> Low Carbon Contracts Company Ltd.</p>
+      <div class="links">
+        <a class="cookie-policy-link" href="#">Privacy and Cookies</a>
+        <a class="accessibility-link" href="#">Accessibility</a>
+      </div>
+    </div>
+    <hr class="divider" />
+    <div class="row row-bottom">
+      <p>LCCC Company registration no: 08818711</p>
+      <p>ESC Company registration no: 08961281</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // The build-time year (above) only updates on redeploy. Bump it
+  // client-side if the visitor's real year has moved on since the last
+  // build, so the footer never shows a stale year on a long-lived,
+  // unrebuilt deployment.
+  const footerYearEl = document.getElementById("footer-year");
+  if (footerYearEl) {
+    const realYear = new Date().getFullYear();
+    const buildYear = Number(footerYearEl.textContent);
+    if (realYear > buildYear) {
+      footerYearEl.textContent = String(realYear);
+    }
+  }
+</script>
+
+<style>
+  .site-footer {
+    position: relative;
+    /* The sidebar is `position: fixed` and spans the full viewport height
+       (var(--sl-z-index-menu) = 5), so without a higher stacking order the
+       footer's left portion would be hidden behind it at every scroll
+       position. */
+    z-index: 6;
+    background-color: #141414;
+    color: #ffffff;
+  }
+
+  :global(html[data-theme="light"]) .site-footer {
+    background-color: #f6f6f6;
+    color: #252525;
+  }
+
+  .site-footer-inner {
+    max-width: 75rem;
+    margin: 0 auto;
+    padding: 20px 2rem;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .row p,
+  .links a {
+    margin: 0;
+    font-size: 1rem;
+    color: inherit;
+  }
+
+  .links {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .links a {
+    text-decoration: none;
+  }
+
+  .links a:hover {
+    text-decoration: underline;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid currentColor;
+    opacity: 0.3;
+    margin: 1rem 0;
+  }
+
+  .row-bottom {
+    justify-content: flex-start;
+    gap: 1rem;
+  }
+
+  @media (max-width: 37.5rem) {
+    .row-top {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    /* Links row appears above the copyright line on small screens,
+       matching the schemes-register footer's mobile ordering. */
+    .row-top .links {
+      order: 1;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .row-top .copyright {
+      order: 2;
+    }
+    .row-bottom {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
