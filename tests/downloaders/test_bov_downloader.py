@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
-from rencal.core.data_downloader import BOVDataDownloader
+from rencal.core.data_downloader import BOVDataDownloader, DownloadManager
 
 
 @pytest.fixture
@@ -39,6 +39,27 @@ def sparse_bov_df() -> pd.DataFrame:
 
 
 class TestBOVDataDownloader:
+    @pytest.mark.parametrize(
+        ("include_bov_data", "expected"),
+        [(None, False), (False, False), (True, True)],
+    )
+    def test_download_manager_honors_bov_option(
+        self, include_bov_data: bool | None, expected: bool, monkeypatch
+    ) -> None:
+        """Use the config default unless the caller explicitly selects a value."""
+        monkeypatch.setattr("rencal.core.data_downloader.INCLUDE_BOV_DATA", False)
+        manager = DownloadManager(include_bov_data=include_bov_data)
+        with (
+            patch.object(manager, "download_cfd"),
+            patch.object(manager, "download_generation_data"),
+            patch.object(manager, "download_bov_data") as download_bov,
+            patch.object(manager, "download_era5"),
+        ):
+            manager.download_all()
+
+        assert manager.include_bov_data is expected
+        assert download_bov.called is expected
+
     @pytest.mark.parametrize(
         ("date", "periods", "expected_times", "expected_volumes"),
         [

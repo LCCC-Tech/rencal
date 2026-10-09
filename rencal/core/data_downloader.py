@@ -919,13 +919,21 @@ class DownloadManager:
         era5 (ERA5DataDownloader): Downloader for ERA5 weather data.
     """
 
-    def __init__(self, cds_api_key: str | None = None, cds_api_url: str | None = None):
+    def __init__(
+        self,
+        cds_api_key: str | None = None,
+        cds_api_url: str | None = None,
+        include_bov_data: bool | None = None,
+    ):
         """Initialize download manager with all data source downloaders.
 
         Args:
             cds_api_key: Optional CDS API key for ERA5 downloads.
             cds_api_url: Optional CDS API URL override for ERA5 downloads.
+            include_bov_data: Whether to download BOV data. When ``None``, uses the
+                ``INCLUDE_BOV_DATA`` configuration value.
         """
+        self.include_bov_data = INCLUDE_BOV_DATA if include_bov_data is None else include_bov_data
         self.cfd = CfDDataDownloader()
         self.generation = GenerationDataDownloader()
         self.bov = BOVDataDownloader()
@@ -984,6 +992,6 @@ class DownloadManager:
         """
         self.download_cfd()
         self.download_generation_data()
-        if INCLUDE_BOV_DATA:
+        if self.include_bov_data:
             self.download_bov_data()
         self.download_era5()
