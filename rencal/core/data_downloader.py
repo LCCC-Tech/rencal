@@ -781,7 +781,6 @@ class BOVDataDownloader(ElexonDataDownloader):
             result = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
             if not result.empty:
-
                 result = result.rename(columns={"id": "bmUnit"})
 
                 result = pd.DataFrame(
