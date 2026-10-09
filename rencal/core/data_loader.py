@@ -10,8 +10,14 @@ import xarray as xr
 from numpy import float32, float64
 from numpy.typing import NDArray
 
-from rencal.models import ERA5DatasetModel, GenerationDatasetModel, PlantDatasetModel
+from rencal.models import (
+    BOVDatasetModel,
+    ERA5DatasetModel,
+    GenerationDatasetModel,
+    PlantDatasetModel,
+)
 from rencal.utils.constants import (
+    BOV_DATA_FILE_NAME,
     DEFAULT_SOLAR_VARIABLES,
     DEFAULT_WIND_VARIABLES,
     DOWNLOAD_DATA_DIR,
@@ -44,6 +50,11 @@ class DataLoader(ABC):
     @abstractmethod
     def load_era5_data(self) -> ERA5DatasetModel:
         """Load ERA5 weather data using standard wind and solar variables"""
+        pass
+
+    @abstractmethod
+    def load_bov_data(self, id_column: str = PLANT_ID_COLUMN) -> BOVDatasetModel:
+        """Load BOV time series"""
         pass
 
 
@@ -98,6 +109,35 @@ class LocalDataLoader(DataLoader):
         logger.info("Generation data loaded: %s records, %s plants", total_records, unique_plants)
 
         return GenerationDatasetModel(
+            data=df,
+            metadata={
+                "source": "elexon_api",
+                "aggregated": True,
+            },
+        )
+
+    def load_bov_data(self, id_column: str = PLANT_ID_COLUMN) -> BOVDatasetModel:
+        """Load BOV time series from CSV file
+
+        Args:
+            id_column (str): Column name for plant ID in the generation dataset
+        Returns:
+            BOVDatasetModel: Dataset containing BOV time series
+        """
+        file_path = self._base_path / "bov" / BOV_DATA_FILE_NAME
+        if not file_path.exists():
+            raise FileNotFoundError(f"bov data file not found at {file_path}")
+
+        df = pd.read_parquet(file_path)
+        df = df.rename(columns={id_column: INTERNAL_PLANT_ID})
+
+        # Log summary info
+        total_records = len(df)
+        unique_plants = df[INTERNAL_PLANT_ID].nunique() if INTERNAL_PLANT_ID in df.columns else 0
+
+        logger.info("bov data loaded: %s records, %s plants", total_records, unique_plants)
+
+        return BOVDatasetModel(
             data=df,
             metadata={
                 "source": "elexon_api",

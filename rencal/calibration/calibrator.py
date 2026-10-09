@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 
 from ..core.data_loader import DataLoader, LocalDataLoader
+from ..models.generation_model import GenerationDatasetModel
+from ..utils.constants import INCLUDE_BOV_DATA
 
 
 class Calibrator(ABC):
@@ -11,6 +13,7 @@ class Calibrator(ABC):
         data_path: str = None,
         plant_id_col: str = None,
         loader: DataLoader | None = None,
+        include_bov_data: bool | None = None,
     ):
         """
         Initialise a calibrator instance.
@@ -26,7 +29,10 @@ class Calibrator(ABC):
                 is used as-is (overriding ``data_path``), allowing inputs to be read from
                 non-default locations or sources (e.g. a cloud loader reading directly from
                 Blob storage) instead of the default ``LocalDataLoader`` layout.
+            include_bov_data (bool | None): Whether to load and apply BOV data. When ``None``,
+                uses the ``INCLUDE_BOV_DATA`` configuration value.
         """
+        self.include_bov_data = INCLUDE_BOV_DATA if include_bov_data is None else include_bov_data
         if loader is not None:
             self.loader = loader
         else:
@@ -41,6 +47,15 @@ class Calibrator(ABC):
             if plant_id_col
             else self.loader.load_generation_data()
         )
+        if self.include_bov_data:
+            self.bov = (
+                self.loader.load_bov_data(plant_id_col)
+                if plant_id_col
+                else self.loader.load_bov_data()
+            )
+
+            self.generation = self.backfill_generation_with_bov()
+
         self.resource = self.loader.load_era5_data()
 
     @abstractmethod
@@ -97,3 +112,19 @@ class Calibrator(ABC):
     def output_estimated_load_factors_visual(self) -> None:
         """Outputs a series of plots of estimated load factors and calibrated curves."""
         pass
+
+    def backfill_generation_with_bov(self) -> GenerationDatasetModel:
+        """Backfills generation data by subtracting accepted bov volumes."""
+        merged = self.generation.data.merge(
+            self.bov.data[["plant_id", "time", "volume"]],
+            on=["plant_id", "time"],
+            how="left",
+        )
+        merged["volume"] = merged["volume"].fillna(0)
+        merged["quantity"] = merged["quantity"] - merged["volume"]
+        merged = merged.drop(columns=["volume"])
+
+        new_metadata = self.generation.metadata.copy()
+        new_metadata["bov_adjusted"] = True
+
+        return GenerationDatasetModel(data=merged, metadata=new_metadata)

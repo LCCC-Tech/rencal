@@ -50,6 +50,7 @@ class WindCalibrator(Calibrator):
         visual_output: bool = False,
         stream_npy_output: bool = False,
         loader: DataLoader | None = None,
+        include_bov_data: bool | None = None,
     ) -> None:
         """
         Constructor for the WindCalibrator class.
@@ -63,6 +64,8 @@ class WindCalibrator(Calibrator):
             loader (DataLoader | None): Optional pre-configured data loader used instead of the
                 default ``LocalDataLoader`` (e.g. a cloud loader reading inputs directly from
                 their original Blob locations). When provided it overrides ``data_path``.
+            include_bov_data (bool | None): Whether to load and apply BOV data. When ``None``,
+                uses the ``INCLUDE_BOV_DATA`` configuration value.
 
         """
         super_args = {}
@@ -70,6 +73,7 @@ class WindCalibrator(Calibrator):
             super_args["data_path"] = data_path
         if loader is not None:
             super_args["loader"] = loader
+        super_args["include_bov_data"] = include_bov_data
         if plant_id_col:
             super_args["plant_id_col"] = plant_id_col
             logger.debug("Runtime-specified plant id column: %s", plant_id_col)
