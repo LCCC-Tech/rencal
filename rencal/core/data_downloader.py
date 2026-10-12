@@ -667,13 +667,15 @@ class ElexonDataDownloader(DataDownloader):
             .round(2)
         )
 
-        unique_periods = df[["settlement_date","settlement_period"]].drop_duplicates()
+        unique_periods = df[["settlement_date", "settlement_period"]].drop_duplicates()
 
         # create datetimes for the aggregated unique periods
         unique_periods["time"] = self._create_hourly_utc_datetime(unique_periods)
 
         # join the unique periods with the aggregated data to include the UTC time
-        aggregated_df = aggregated_df.merge(unique_periods, on=["settlement_date", "settlement_period"], how="left")
+        aggregated_df = aggregated_df.merge(
+            unique_periods, on=["settlement_date", "settlement_period"], how="left"
+        )
 
         # Final aggregation to hourly by summing periods within each UTC hour
         result = (
