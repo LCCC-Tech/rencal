@@ -76,9 +76,14 @@ ERA5_VARIABLE_MAPPING = {
 
 # CFD API
 CFD_REGISTER_API_URL = "https://register.lowcarboncontracts.uk/api/v1/contracts?format=json"
-CFD_BMU_CSV_URL = "https://dp.lowcarboncontracts.uk/dataset/8743291b-3646-4a69-a599-364cc6ae9d6e/resource/26fc2b66-7c92-45d4-9a70-acbd1631f4c3/download/cfd_to_bm_unit_mapping.csv"
 PLANT_DATA_FILE_NAME = "plant_data.csv"
 WIND_TECHNOLOGY_TYPES = {"Onshore Wind", "Offshore Wind"}
+# LCCC Data Portal (CKAN action API)
+CFD_BMU_DATASET_NAME = "cfd-to-bm-unit-mapping"
+CFD_BMU_RESOURCE_FORMAT = "CSV"
+CFD_BMU_RESOURCE_FILE_NAME = "cfd_to_bm_unit_mapping.csv"
+CFD_DATA_PORTAL_API_URL = "https://dp.lowcarboncontracts.uk/api/3/action"
+CFD_DATA_PORTAL_TIMEOUT = 60
 
 # Elexon API
 ELEXON_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
