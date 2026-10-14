@@ -10,6 +10,7 @@
 * **docs:** allow wasm-unsafe-eval in CSP for Pagefind ([700bb71](https://github.com/LCCC-Tech/rencal/commit/700bb71f2b6086a60d972abcbf924af34a48b125))
 * **docs:** allow wasm-unsafe-eval in CSP for Pagefind ([#90](https://github.com/LCCC-Tech/rencal/issues/90)) ([61e299c](https://github.com/LCCC-Tech/rencal/commit/61e299cbd5929b61431c3ace10089f1e8abb382c))
 * **docs:** Fixes broken internal documentation site links ([#85](https://github.com/LCCC-Tech/rencal/issues/85)) ([bb31245](https://github.com/LCCC-Tech/rencal/commit/bb3124518a975d09c4a7b71ebc176db46fc7a8d7)), closes [#84](https://github.com/LCCC-Tech/rencal/issues/84)
+* **download:** CKAN API adopted in downloading CfD to BMU mapping ([#92](https://github.com/LCCC-Tech/rencal/issues/92)) ([305f25d](https://github.com/LCCC-Tech/rencal/commit/305f25df8a9cf066cae5450fd7b09edfe4dfcbf5))
 * preserve release version marker in uv lock ([c7b28a4](https://github.com/LCCC-Tech/rencal/commit/c7b28a42134cae821b3e0f6b342e9b92c02c21a5))
 * preserve release version marker in uv lock ([#91](https://github.com/LCCC-Tech/rencal/issues/91)) ([66940b0](https://github.com/LCCC-Tech/rencal/commit/66940b04b4bee974dd91784780a0cf3db107a304))
 * validate documentation links ([#84](https://github.com/LCCC-Tech/rencal/issues/84)) ([c3e50bf](https://github.com/LCCC-Tech/rencal/commit/c3e50bf34671f8b7bef553549d9ac325df67f5f3))
