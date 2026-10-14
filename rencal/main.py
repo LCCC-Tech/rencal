@@ -17,6 +17,9 @@ def main():
     generation_ds = loader.load_generation_data()
     logger.info(generation_ds)
 
+    bov_ds = loader.load_bov_data()
+    logger.info(bov_ds)
+
     weather_ds = loader.load_era5_data()
     logger.info(weather_ds)
 

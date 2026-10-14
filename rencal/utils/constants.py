@@ -86,8 +86,11 @@ CFD_DATA_PORTAL_API_URL = "https://dp.lowcarboncontracts.uk/api/3/action"
 CFD_DATA_PORTAL_TIMEOUT = 60
 
 # Elexon API
-ELEXON_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
+ELEXON_GENERATION_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream"
 GENERATION_DATA_FILE_NAME = "generation_data.parquet"
+
+ELEXON_BOV_API_URL = "https://data.elexon.co.uk/bmrs/api/v1/balancing/settlement/stack/all"
+BOV_DATA_FILE_NAME = "bov_data.parquet"
 
 # Normal Day (n): 48 periods, continuous 30-minute intervals
 NORMAL_DAY_MINUTES = [i * 30 for i in range(50)]  # [0, 30, 60, 90, ...] up to period 50
@@ -131,3 +134,6 @@ WIND_SPEED_HBOUND = 40
 INTERNAL_PLANT_ID = "plant_id"  # for easier maintenance of internal calculations
 
 PLANT_ID_OUTPUT = run_config.get("PLANT_ID_OUTPUT", "CFD ID")
+
+# Flag to backfill generation data with bov data
+INCLUDE_BOV_DATA: bool = run_config.get("INCLUDE_BOV_DATA", True)

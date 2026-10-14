@@ -4,6 +4,7 @@ CALIBRATION_START_YEAR: 2023
 # Data
 PLANT_ID_COLUMN: "cfd_id"
 PLANT_ID_OUTPUT: "PLANT ID"
+INCLUDE_BOV_DATA: true
 
 # Logging Configuration
 QUIET_MODE: false

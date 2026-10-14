@@ -60,6 +60,29 @@ class TestWindCalibrator:
         """Test visual wind calibrator."""
         assert visual_calibrator.visual_output is True
 
+    def test_wind_calibrator_can_disable_bov_data(self, temp_output_dir, data_dir):
+        """Explicitly disabling BOV skips loading and adjusting generation data."""
+        calibrator = WindCalibrator(
+            output_path=temp_output_dir,
+            data_path=data_dir,
+            include_bov_data=False,
+        )
+
+        assert calibrator.include_bov_data is False
+        assert not hasattr(calibrator, "bov")
+        assert "bov_adjusted" not in calibrator.generation.metadata
+
+    def test_wind_calibrator_uses_configured_bov_default(
+        self, temp_output_dir, data_dir, monkeypatch
+    ):
+        """Omitting the option preserves the configured BOV behavior."""
+        monkeypatch.setattr("rencal.calibration.calibrator.INCLUDE_BOV_DATA", False)
+
+        calibrator = WindCalibrator(output_path=temp_output_dir, data_path=data_dir)
+
+        assert calibrator.include_bov_data is False
+        assert not hasattr(calibrator, "bov")
+
     def test_wind_calibrator_default_extract_resource_timeseries_for_plants(
         self, default_calibrator
     ):
