@@ -160,18 +160,18 @@
   .cookies-toast {
     position: fixed;
     bottom: 34px;
-    height: 67px;
     left: 20px;
     right: 20px;
     z-index: 400;
     background-color: var(--lcc-feedback-bg);
     color: var(--lcc-contract-white);
-    padding: 24px;
+    padding: 12px 24px;
     border-radius: var(--lcc-btn-radius);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
   }
 
   :global(html[data-theme="light"]) .cookies-toast {
@@ -185,7 +185,6 @@
   @media (max-width: 500px) {
     .cookies-toast {
       flex-direction: column;
-      height: unset;
     }
   }
 
