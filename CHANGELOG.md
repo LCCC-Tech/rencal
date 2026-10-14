@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/LCCC-Tech/rencal/compare/v0.2.1...v0.3.0) (2026-10-14)
+
+
+### Features
+
+* Harden AI documentation automation and separate generation, validation, and publishing ([#93](https://github.com/LCCC-Tech/rencal/issues/93)) ([bdfb925](https://github.com/LCCC-Tech/rencal/commit/bdfb9259082fef34dcbd5d261f67c99ee78d0373))
+
 ## [0.2.1](https://github.com/LCCC-Tech/rencal/compare/v0.2.0...v0.2.1) (2026-10-14)
 
 
