@@ -102,7 +102,7 @@ class SolarCalibrator(Calibrator):
         self.output_resource_streams()
         logger.info("Calibration finished!")
 
-    def extract_resource_timeseries_for_plants(self):
+    def extract_resource_timeseries_for_plants(self) -> pd.DataFrame:
         """Extracts resource data for plants into a dataframe."""
         if "expver" in self.resource.data.dims:
             logger.info("Combining final and initial release data for resource...")
@@ -253,7 +253,7 @@ class SolarCalibrator(Calibrator):
     def _fit_irradiance_histogram_to_plant(
         item: tuple[str, np.ndarray],
         bins: int = 50,
-    ) -> tuple[str, float | None, float | None]:
+    ) -> tuple[str, np.ndarray, np.ndarray]:
         """Fits an empirical histogram distribution to a plant's irradiance values.
         Args:
             item (tuple[str, np.ndarray]): (plant_id, irradiance_array)
