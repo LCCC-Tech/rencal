@@ -139,10 +139,11 @@ class SolarCalibrator(Calibrator):
         if "temperature" in plant_irradiance:
             keep_cols.append("temperature")
 
-        plant_irradiance_res = plant_irradiance_res[keep_cols]
+        plant_irradiance_res = cast(pd.DataFrame, plant_irradiance_res[keep_cols])
         plant_irradiance_res["time"] = pd.to_datetime(plant_irradiance_res["time"], utc=True)
 
-        plant_irradiance_res["irradiance"] = plant_irradiance_res["irradiance"].clip(
+        irradiance = cast(pd.Series, plant_irradiance_res["irradiance"])
+        plant_irradiance_res["irradiance"] = irradiance.clip(
             lower=SOLAR_IRRADIANCE_LBOUND,
             upper=SOLAR_IRRADIANCE_HBOUND,
         )
