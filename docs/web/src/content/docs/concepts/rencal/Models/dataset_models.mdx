@@ -52,7 +52,8 @@ RenCal models are structured as a small inheritance hierarchy:
 DatasetModel (abstract, Pydantic)
 ├── PandasDatasetModel (tabular validation rules)
 │   ├── PlantDatasetModel
-│   └── GenerationDatasetModel
+│   ├── GenerationDatasetModel
+│   └── BOVDatasetModel
 └── XArrayDatasetModel (multidimensional validation rules)
     └── ERA5DatasetModel
 ```
@@ -113,6 +114,16 @@ Notable features:
 - time column enforcement and filtering by date,
 - filtering by individual plant IDs and compact summaries.
 
+### `BOVDatasetModel`
+
+Represents plant-level accepted Bid Offer Volume (BOV) settlement time series.
+
+Notable features:
+
+- required columns: `plant_id`, `time`, and `volume`,
+- time-column validation and filtering by plant or date range,
+- conversion to pandas or xarray.
+
 ### `ERA5DatasetModel`
 
 Represents weather data as an `xarray.Dataset`.
@@ -131,6 +142,7 @@ The data loader contract returns these model types directly:
 | :-- | :-- |
 | `load_plant_data()` | `PlantDatasetModel` |
 | `load_generation_data()` | `GenerationDatasetModel` |
+| `load_bov_data()` | `BOVDatasetModel` |
 | `load_era5_data()` | `ERA5DatasetModel` |
 
 This means ingestion backends can change while preserving the same typed interface for the rest of RenCal.
@@ -146,4 +158,5 @@ This means ingestion backends can change while preserving the same typed interfa
 - [DatasetModel Base Reference](/reference/RenCal/Models/rencal.models.base/)
 - [PlantDatasetModel Reference](/reference/RenCal/Models/rencal.models.plant_model/)
 - [GenerationDatasetModel Reference](/reference/RenCal/Models/rencal.models.generation_model/)
+- [BOVDatasetModel Reference](/reference/RenCal/Models/rencal.models.bov_model/)
 - [ERA5DatasetModel Reference](/reference/RenCal/Models/rencal.models.era5_model/)

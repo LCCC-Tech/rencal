@@ -10,7 +10,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <div class="pydoc">
 
 <Section type="about">
-`rencal.core.data_loader` defines dataset loading interfaces and local implementations for plant, generation, ERA5, and calibrated weather artifacts.
+`rencal.core.data_loader` defines dataset loading interfaces and local implementations for plant, generation, BOV, ERA5, and calibrated weather artifacts.
 
 For conceptual guidance, see:
 
@@ -25,6 +25,7 @@ loader = LocalDataLoader()
 plant = loader.load_plant_data()
 generation = loader.load_generation_data()
 era5 = loader.load_era5_data()
+bov = loader.load_bov_data()
 ```
 </Section>
 
@@ -39,7 +40,7 @@ class DataLoader(ABC): DataLoader
 ```
 </Section>
 
-Abstract loading contract for plant, generation, and ERA5 datasets.
+Abstract loading contract for plant, generation, BOV, and ERA5 datasets.
 
 <InlineSection>
 **Returns** [<code class="type">DataLoader</code>](#DataLoader)
@@ -61,7 +62,7 @@ Local filesystem-backed implementation.
 #### Parameters
 
 - <p><code class="key">data_path</code> <code class="primitive">str</code></p>
-  Base path containing `plant/`, `generation/`, `era5/`, and `calibrated/` artifacts.
+  Base path containing `plant/`, `generation/`, optional `bov/`, `era5/`, and `calibrated/` artifacts.
 </Section>
 
 <InlineSection>
@@ -116,6 +117,29 @@ Load ERA5 weather data using standard variables.
 
 <InlineSection>
 **Returns** [<code class="type">ERA5DatasetModel</code>](/reference/RenCal/Models/rencalmodelsera5_model/#era5datasetmodel)
+</InlineSection>
+</Segment>
+
+### DataLoader.load_bov_data
+
+<Segment>
+<Section type="signature">
+```python
+load_bov_data(id_column: str = PLANT_ID_COLUMN) -> BOVDatasetModel
+```
+</Section>
+
+Loads BOV settlement time series.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">id_column</code> <code class="primitive">str</code></p>
+  Source column containing plant identifiers.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">BOVDatasetModel</code>](/reference/RenCal/Models/rencal.models.bov_model/#bovdatasetmodel)
 </InlineSection>
 </Segment>
 
@@ -194,6 +218,34 @@ Loads ERA5 NetCDF files from the configured local ERA5 directory, combines them 
 **Raises**
 - <code class="type">FileNotFoundError</code>: If no ERA5 files are found.
 - <code class="type">ValueError</code>: If no files can be loaded successfully, no valid time dimension is present, concatenation fails, or no standard ERA5 variables are available.
+</InlineSection>
+</Segment>
+
+### LocalDataLoader.load_bov_data
+
+<Segment>
+<Section type="signature">
+```python
+load_bov_data(id_column: str = PLANT_ID_COLUMN) -> BOVDatasetModel
+```
+</Section>
+
+Loads `bov/bov_data.parquet` and normalizes the source plant-ID column to `plant_id`.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">id_column</code> <code class="primitive">str</code></p>
+  Source column containing plant identifiers in the BOV dataset.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">BOVDatasetModel</code>](/reference/RenCal/Models/rencal.models.bov_model/#bovdatasetmodel)
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">FileNotFoundError</code>: If the BOV data file is missing.
 </InlineSection>
 </Segment>
 

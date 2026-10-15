@@ -15,7 +15,7 @@ RenCal depends on multiple external data providers with different protocols and 
 
 - **Copernicus CDS API** for ERA5 weather (`.nc`),
 - **LCCC APIs/CSV** for CfD register and BMU mapping (`.csv`),
-- **Elexon BMRS API** for generation settlement data (JSON -> parquet).
+- **Elexon BMRS API** for generation and BOV settlement data (JSON -> parquet).
 
 `data_downloader.py` centralises this acquisition logic behind shared abstractions so ingestion remains reproducible and easier to operate.
 
@@ -71,20 +71,28 @@ Responsibilities:
 
 This stage converts operational market settlement records into model-ready time series.
 
+### `BOVDataDownloader`
+
+Downloads settled bid and offer volumes for BMUs associated with CfD plants, aggregates them to plant-level settlement periods, and writes `bov/bov_data.parquet`. Accepted bid volumes are stored as non-positive values; during calibration, subtracting them from metered generation backfills curtailed volume.
+
 ## Orchestration: `DownloadManager`
 
 `DownloadManager` composes the three concrete downloaders and exposes:
 
 - `download_cfd()`
 - `download_generation_data()`
+- `download_bov_data()`
 - `download_era5()`
 - `download_all()`
 
-`download_all()` enforces dependency order:
+`download_all()` downloads BOV only when `include_bov_data` is enabled (by default, the `INCLUDE_BOV_DATA` configuration value is `true`). It follows this order:
 
 1. CfD register + BMU mapping,
 2. generation data (depends on BMUs from CfD data),
-3. ERA5 weather data.
+3. BOV data when enabled (also depends on CfD/BMU data),
+4. ERA5 weather data.
+
+Set `DownloadManager(include_bov_data=False)` to skip BOV for one download run, or pass `True` to enable it regardless of the configured default.
 
 ## Downloader vs loader boundary
 
@@ -103,6 +111,7 @@ The downloader does not directly instantiate model classes, but it produces the 
 
 - `PlantDatasetModel`
 - `GenerationDatasetModel`
+- `BOVDatasetModel` (when BOV is loaded)
 - `ERA5DatasetModel`
 
 For model-layer details and validation behavior, see [Dataset Models](../Models/dataset_models/).

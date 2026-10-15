@@ -10,7 +10,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <div class="pydoc">
 
 <Section type="about">
-`rencal.core.data_downloader` defines downloaders for CfD register/mapping, generation data, and ERA5 weather data, plus a coordinating download manager.
+`rencal.core.data_downloader` defines downloaders for CfD register/mapping, generation data, Bid Offer Volume (BOV) data, and ERA5 weather data, plus a coordinating download manager.
 
 #### Implementation Overview
 
@@ -20,6 +20,7 @@ The data downloaders handle:
 - ERA5 retrieval and metadata verification
 - CfD register and BMU mapping enrichment
 - Generation data aggregation to hourly UTC
+- BOV accepted bid-volume aggregation to plant-level time series
 - A unified [`DownloadManager`](/reference/RenCal/Core/rencalcoredata_downloader/#downloadmanager) API for running all steps
 
 #### Prerequisites
@@ -44,7 +45,7 @@ from rencal.core.data_downloader import DownloadManager
 
 os.environ["CDS_API_KEY"] = "uid:token"
 
-downloader = DownloadManager()
+downloader = DownloadManager(include_bov_data=True)
 downloader.download_era5()
 ```
 </Section>
@@ -137,12 +138,38 @@ This constructor does not take any parameters.
 </InlineSection>
 </Segment>
 
+### BOVDataDownloader
+
+<Segment>
+<Section type="signature">
+```python
+class BOVDataDownloader(): BOVDataDownloader
+```
+</Section>
+
+Downloads Elexon BMRS settlement bid-offer volumes for CfD-associated BMUs, aggregates them to plant-level data, and writes `bov/bov_data.parquet`. The saved data contains non-positive accepted bid volumes for the calibration period.
+
+<Section type="parameters">
+#### Parameters
+
+This constructor does not take any parameters.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">BOVDataDownloader</code>](#BOVDataDownloader)
+</InlineSection>
+</Segment>
+
 ### DownloadManager
 
 <Segment>
 <Section type="signature">
 ```python
-class DownloadManager(cds_api_key: str | None = None, cds_api_url: str | None = None): DownloadManager
+class DownloadManager(
+    cds_api_key: str | None = None,
+    cds_api_url: str | None = None,
+    include_bov_data: bool | None = None,
+): DownloadManager
 ```
 </Section>
 
@@ -156,6 +183,9 @@ Facade class orchestrating all download flows.
 
 - <p><code class="key">cds_api_url</code> <code class="primitive">str</code> | <code class="primitive">None</code></p>
   Optional CDS API URL override forwarded to [`ERA5DataDownloader`](/reference/RenCal/Core/rencalcoredata_downloader/#era5datadownloader).
+
+- <p><code class="key">include_bov_data</code> <code class="primitive">bool | None</code></p>
+  Whether `download_all()` downloads BOV data. When `None`, uses the `INCLUDE_BOV_DATA` configuration value (default: `True`). This option controls downloading only; it does not change an existing BOV file.
 </Section>
 
 <InlineSection>
@@ -261,6 +291,22 @@ Runs generation downloader.
 </InlineSection>
 </Segment>
 
+### DownloadManager.download_bov_data
+
+<Segment>
+<Section type="signature">
+```python
+download_bov_data() -> None
+```
+</Section>
+
+Downloads Elexon BOV settlement data for CfD-associated BMUs and writes the plant-level Parquet dataset. `download_all()` calls this method only when `include_bov_data` is enabled.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
 ### DownloadManager.download_era5
 
 <Segment>
@@ -286,7 +332,7 @@ download_all() -> None
 ```
 </Section>
 
-Runs all download flows in sequence.
+Runs the CfD, generation, and ERA5 download flows in sequence, and downloads BOV data when `include_bov_data` is enabled.
 
 <InlineSection>
 **Returns** None

@@ -5,7 +5,7 @@ description: How RenCal separates abstract data-loading contracts from concrete 
 
 # Data Loader Architecture
 
-The `rencal.core.data_loader` module defines how RenCal ingests plant, generation, and weather data.
+The `rencal.core.data_loader` module defines how RenCal ingests plant, generation, BOV, and weather data.
 Its main design goal is to separate:
 
 - **what** the rest of the system needs (`DataLoader` interface), from
@@ -26,11 +26,12 @@ With `DataLoader`, consumers ask for typed datasets and do not care whether the 
 
 ## Abstract contract: `DataLoader`
 
-`DataLoader` is an abstract base class with three required methods:
+`DataLoader` is an abstract base class with four required methods:
 
 - `load_plant_data() -> PlantDatasetModel`
 - `load_generation_data() -> GenerationDatasetModel`
 - `load_era5_data() -> ERA5DatasetModel`
+- `load_bov_data() -> BOVDatasetModel`
 
 This defines RenCal's ingestion contract for all implementations.
 
@@ -42,6 +43,7 @@ This defines RenCal's ingestion contract for all implementations.
 
 - **Plant data:** reads CSV, standardises ID column, returns `PlantDatasetModel`.
 - **Generation data:** reads Parquet, standardises ID column, returns `GenerationDatasetModel`.
+- **BOV data:** reads `bov/bov_data.parquet`, standardises the plant ID column, and returns `BOVDatasetModel`.
 - **ERA5 data:** discovers `.nc` files, normalises time dimension to `time`, casts weather variables to `float32`, concatenates/sorts, filters to standard variables, returns `ERA5DatasetModel`.
 
 ### Reliability helpers
@@ -64,6 +66,7 @@ The loader layer returns validated model objects from `rencal.models` rather tha
 | `load_plant_data()` | `PlantDatasetModel` | `pandas.DataFrame` |
 | `load_generation_data()` | `GenerationDatasetModel` | `pandas.DataFrame` |
 | `load_era5_data()` | `ERA5DatasetModel` | `xarray.Dataset` |
+| `load_bov_data()` | `BOVDatasetModel` | `pandas.DataFrame` |
 
 This creates a stable handoff boundary:
 
@@ -80,6 +83,7 @@ class S3DataLoader(DataLoader):
     def load_plant_data(self) -> PlantDatasetModel: ...
     def load_generation_data(self) -> GenerationDatasetModel: ...
     def load_era5_data(self) -> ERA5DatasetModel: ...
+    def load_bov_data(self) -> BOVDatasetModel: ...
 ```
 
 As long as the contract is preserved, downstream code remains unchanged.
@@ -95,4 +99,5 @@ As long as the contract is preserved, downstream code remains unchanged.
 - [DatasetModel Base Reference](/reference/RenCal/Models/rencal.models.base/)
 - [PlantDatasetModel Reference](/reference/RenCal/Models/rencal.models.plant_model/)
 - [GenerationDatasetModel Reference](/reference/RenCal/Models/rencal.models.generation_model/)
+- [BOVDatasetModel Reference](/reference/RenCal/Models/rencal.models.bov_model/)
 - [ERA5DatasetModel Reference](/reference/RenCal/Models/rencal.models.era5_model/)

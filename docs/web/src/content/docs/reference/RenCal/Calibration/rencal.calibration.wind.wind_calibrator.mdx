@@ -56,6 +56,7 @@ class WindCalibrator(
     visual_output: bool = False,
     stream_npy_output: bool = False,
     loader: DataLoader | None = None,
+    include_bov_data: bool | None = None,
 ): WindCalibrator
 ```
 </Section>
@@ -82,6 +83,9 @@ Calibrates wind power curves for a set of timestamps and CFD IDs.
 
 - <p><code class="key">loader</code> <code class="primitive">DataLoader | None</code></p>
   Optional pre-configured data loader used instead of the default `LocalDataLoader` (e.g. a cloud loader reading inputs directly from their original Blob locations). When provided it overrides `data_path`.
+
+- <p><code class="key">include_bov_data</code> <code class="primitive">bool | None</code></p>
+  Whether to load BOV data and adjust generation before calibration. When `None`, uses the `INCLUDE_BOV_DATA` configuration value (default: `True`). Set to `False` to skip BOV loading and adjustment.
 </Section>
 
 <InlineSection>

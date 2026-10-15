@@ -43,6 +43,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 - `PLANT_ID_OUTPUT`
 - `PLANT_DATA_FILE_NAME`
 - `GENERATION_DATA_FILE_NAME`
+- `BOV_DATA_FILE_NAME`
 - `WIND_NPY_BASEPATH`
 - `WIND_NPY_HISTOGRAMS_BASEPATH`
 </Segment>
@@ -59,7 +60,8 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 - `ERA5_VARIABLE_MAPPING`
 - `CFD_REGISTER_API_URL`
 - `CFD_BMU_CSV_URL`
-- `ELEXON_API_URL`
+- `ELEXON_GENERATION_API_URL`
+- `ELEXON_BOV_API_URL`
 </Segment>
 
 ### Settlement period mappings
@@ -75,6 +77,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <Segment>
 - `QUIET_MODE`
 - `VERBOSE_MODE`
+- `INCLUDE_BOV_DATA`
 - `DEFAULT_LOGISTIC_FN_XLOC`
 - `DEFAULT_LOGISTIC_FN_ASYMMETRY`
 - `DEFAULT_LOGISTIC_FN_STEEPNESS`
@@ -87,7 +90,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 </Segment>
 
 <InlineSection>
-**Note** Values are loaded from `config.yml` with default fallbacks when absent.
+**Note** Values are loaded from `config.yml` with default fallbacks when absent. `INCLUDE_BOV_DATA` defaults to `true` and controls whether BOV data is included by default in downloads and calibration; `DownloadManager` and `WindCalibrator` can override it per run.
 </InlineSection>
 
 </div>

@@ -24,16 +24,19 @@ Before running:
 data/
   plant/plant_data.csv
   generation/generation_data.parquet
+  bov/bov_data.parquet        # required when BOV adjustment is enabled
   era5/*.nc
 ```
 
 ## 3. Downloading Calibration Inputs
 
-Three input datasets are required:
+Three input datasets are required for the core calibration workflow:
 
 1. **Plant data** — plant metadata and CfD/BMU mapping, downloaded via `CfDDataDownloader` from the LCCC API.
 2. **Generation data** — historical generation per plant, downloaded via `GenerationDataDownloader` from Elexon BMRS.
 3. **ERA5 weather data** — hourly reanalysis weather in NetCDF format, downloaded via `ERA5DataDownloader` from the Copernicus Climate Data Store (requires a valid `CDS_API_KEY` in `.env`).
+
+Bid Offer Volume (BOV) data from Elexon is also downloaded and applied by default. It adjusts metered generation for accepted bid volumes when fitting calibration curves. When BOV is enabled, `bov/bov_data.parquet` must be present; the download examples below create it.
 
 Use `DownloadManager` to fetch all inputs at once:
 
@@ -50,8 +53,11 @@ Or download step-by-step:
 dm = DownloadManager()
 dm.download_cfd()
 dm.download_generation_data()
+dm.download_bov_data()  # needed when BOV adjustment is enabled
 dm.download_era5()
 ```
+
+`INCLUDE_BOV_DATA` in RenCal's configuration controls the default. Override it for one download run with `DownloadManager(include_bov_data=False)` to skip BOV, or `DownloadManager(include_bov_data=True)` to request it regardless of the configured default. `download_all()` downloads BOV only when enabled.
 
 ## 4. Configure `WindCalibrator`
 
@@ -64,6 +70,7 @@ wc = WindCalibrator(
     output_path=Path("outputs/wind_calibration"),
     visual_output=True,       # save power curve PNG plots
     stream_npy_output=True,   # save Wind Streams.npy
+    include_bov_data=True,    # apply BOV adjustment to generation
 )
 ```
 
@@ -71,10 +78,13 @@ Key constructor arguments:
 
 | Argument | Type | Description |
 |---|---|---|
-| `data_path` | `str` | Base folder containing `plant/`, `generation/`, `era5/` |
+| `data_path` | `str` | Base folder containing `plant/`, `generation/`, `era5/`, and `bov/` when BOV is enabled |
 | `output_path` | `Path \| str` | Directory where calibration outputs are written |
 | `visual_output` | `bool` | Save `PowerCurveFit_*.png` plots when `True` |
 | `stream_npy_output` | `bool` | Also save `Wind Streams.npy` when `True` |
+| `include_bov_data` | `bool \| None` | Load BOV data and adjust generation for this calibration run. `None` uses `INCLUDE_BOV_DATA` from the configuration (default: `True`). Set to `False` to calibrate without BOV; the BOV file is then not required. |
+
+When enabled, RenCal subtracts the accepted BOV volume from matching plant generation at each time period before calculating historical load factors. The BOV dataset stores accepted bid volumes as non-positive values, so subtracting them restores curtailed volume for calibration. Keep download and calibration settings consistent: if BOV is enabled, download and provide the BOV data file first.
 
 ## 5. Run Calibration
 

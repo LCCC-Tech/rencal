@@ -41,6 +41,7 @@ class Calibrator(
     data_path: str = None,
     plant_id_col: str = None,
     loader: DataLoader | None = None,
+    include_bov_data: bool | None = None,
 ): Calibrator
 ```
 </Section>
@@ -58,6 +59,9 @@ Initializes a local loader ([`LocalDataLoader`](/reference/RenCal/Core/rencalcor
 
 - <p><code class="key">loader</code> <code class="primitive">DataLoader | None</code></p>
   Optional pre-configured data loader. When supplied it is used as-is (overriding `data_path`), allowing inputs to be read from non-default locations or sources (e.g. a cloud loader reading directly from Blob storage) instead of the default `LocalDataLoader` layout.
+
+- <p><code class="key">include_bov_data</code> <code class="primitive">bool | None</code></p>
+  Whether to load BOV data and backfill generation with accepted bid volumes. When `None`, uses the `INCLUDE_BOV_DATA` configuration value (default: `True`).
 </Section>
 
 <InlineSection>
@@ -80,6 +84,22 @@ Triggers calibration workflow.
 
 <InlineSection>
 **Returns** None
+</InlineSection>
+</Segment>
+
+### Calibrator.backfill_generation_with_bov
+
+<Segment>
+<Section type="signature">
+```python
+backfill_generation_with_bov() -> GenerationDatasetModel
+```
+</Section>
+
+Returns generation data adjusted by subtracting matched accepted BOV volumes from metered quantities. This method is used during initialization when BOV data is enabled.
+
+<InlineSection>
+**Returns** [<code class="type">GenerationDatasetModel</code>](/reference/RenCal/Models/rencal.models.generation_model/#generationdatasetmodel)
 </InlineSection>
 </Segment>
 

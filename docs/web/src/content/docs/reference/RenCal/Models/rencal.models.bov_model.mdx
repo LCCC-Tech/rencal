@@ -1,0 +1,161 @@
+---
+title: rencal.models.bov_model
+description: Reference documentation for rencal.models.bov_model.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.models.bov_model` defines the validated dataset model for plant-level Bid Offer Volume (BOV) settlement time series.
+</Section>
+
+## Constructor
+
+### BOVDatasetModel
+
+<Segment>
+<Section type="signature">
+```python
+class BOVDatasetModel(PandasDatasetModel): BOVDatasetModel
+```
+</Section>
+
+Dataset model for BOV settlement time series.
+
+<InlineSection>
+**Required Columns** <code class="primitive">plant_id</code>, <code class="primitive">time</code>, <code class="primitive">volume</code>
+</InlineSection>
+
+<InlineSection>
+**Returns** [<code class="type">BOVDatasetModel</code>](#BOVDatasetModel)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### BOVDatasetModel.validate_data
+
+<Segment>
+<Section type="signature">
+```python
+validate_data(data: pd.DataFrame) -> pd.DataFrame
+```
+</Section>
+
+Validates the required columns, dtypes, and time column.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### BOVDatasetModel.get_plant_ids
+
+<Segment>
+<Section type="signature">
+```python
+get_plant_ids() -> list[str]
+```
+</Section>
+
+Returns unique plant IDs.
+
+<InlineSection>
+**Returns** <code class="primitive">list[str]</code>
+</InlineSection>
+</Segment>
+
+### BOVDatasetModel.get_time_range
+
+<Segment>
+<Section type="signature">
+```python
+get_time_range() -> dict[str, Any] | None
+```
+</Section>
+
+Returns the start, end, and unique-period count for the time column.
+
+<InlineSection>
+**Returns** <code class="primitive">dict[str, Any] | None</code>
+</InlineSection>
+</Segment>
+
+### BOVDatasetModel.filter_by_plant_id
+
+<Segment>
+<Section type="signature">
+```python
+filter_by_plant_id(plant_id: str) -> BOVDatasetModel
+```
+</Section>
+
+Returns a model containing rows for one plant ID.
+
+<InlineSection>
+**Returns** [<code class="type">BOVDatasetModel</code>](#BOVDatasetModel)
+</InlineSection>
+</Segment>
+
+### BOVDatasetModel.filter_by_date_range
+
+<Segment>
+<Section type="signature">
+```python
+filter_by_date_range(
+    start_date: str,
+    end_date: str,
+    date_col: str | None = None,
+) -> BOVDatasetModel
+```
+</Section>
+
+Returns a model containing rows in the inclusive date range. By default, filters on the `time` column.
+
+<InlineSection>
+**Returns** [<code class="type">BOVDatasetModel</code>](#BOVDatasetModel)
+</InlineSection>
+
+<InlineSection>
+**Raises**
+- <code class="type">ValueError</code>: If the requested date column is not present.
+</InlineSection>
+</Segment>
+
+### BOVDatasetModel.to_pandas
+
+<Segment>
+<Section type="signature">
+```python
+to_pandas() -> pd.DataFrame
+```
+</Section>
+
+Returns a copy of the dataset as a DataFrame.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### BOVDatasetModel.to_xarray
+
+<Segment>
+<Section type="signature">
+```python
+to_xarray() -> xr.Dataset
+```
+</Section>
+
+Converts the dataset to an xarray Dataset.
+
+<InlineSection>
+**Returns** <code class="primitive">xr.Dataset</code>
+</InlineSection>
+</Segment>
+
+</div>
