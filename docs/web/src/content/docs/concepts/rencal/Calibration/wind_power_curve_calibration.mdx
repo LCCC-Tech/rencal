@@ -88,14 +88,14 @@ To calibrate the power curve for the CFD wind farm the following data are needed
 
 Wind calibration in rencal uses two model components:
 
-- a [logistic power curve](./logistic_power_curve/) to map wind speed to expected load factor;
-- a [Weibull wind-speed distribution](./weibull_wind_speed_distribution/) to describe how frequently wind speeds occur at each plant location.
+- a [logistic power curve](/concepts/rencal/calibration/logistic_power_curve/) to map wind speed to expected load factor;
+- a [Weibull wind-speed distribution](/concepts/rencal/calibration/weibull_wind_speed_distribution/) to describe how frequently wind speeds occur at each plant location.
 
 Among available models for plant output conversion, the five-parameter logistic function (5PL) has been chosen because it combines a single analytical expression with good empirical fit once calibrated.
-For deeper mathematical detail, see [Logistic Power Curve](./logistic_power_curve/).
+For deeper mathematical detail, see [Logistic Power Curve](/concepts/rencal/calibration/logistic_power_curve/).
 
 The Weibull component is then used with the logistic curve to estimate long-term expected load factor by probability-weighting wind speeds.
-For details, see [Weibull Wind-Speed Distribution](./weibull_wind_speed_distribution/).
+For details, see [Weibull Wind-Speed Distribution](/concepts/rencal/calibration/weibull_wind_speed_distribution/).
 
 To use the 5PL function to forecast wind energy output it is necessary beforehand to define the five parameters through a calibration process run over actual wind speed and generation data.
 
@@ -121,7 +121,6 @@ e.g. model (yellow line) below approximates the actual data (blue dots).
 
 ## Related Pages
 
-- [Wind Calibration Components](./weibull_and_logistic_curve/)
-- [Logistic Power Curve](./logistic_power_curve/)
-- [Weibull Wind-Speed Distribution](./weibull_wind_speed_distribution/)
-- [WindCalibrator Reference](/reference/RenCal/Calibration/rencalcalibrationwindwind_calibrator/)
+- [Logistic Power Curve](/concepts/rencal/calibration/logistic_power_curve/)
+- [Weibull Wind-Speed Distribution](/concepts/rencal/calibration/weibull_wind_speed_distribution/)
+- [WindCalibrator Reference](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/)

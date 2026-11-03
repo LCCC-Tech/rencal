@@ -27,25 +27,25 @@ RenCal downloads source data from CDS, LCCC, and Elexon, then stores normalized 
 - plant + BMU mappings (`.csv`)
 - generation time series (`.parquet`)
 
-See [Data Downloader Architecture](./Core/data_downloader_architecture/).
+See [Data Downloader Architecture](/concepts/rencal/core/data_downloader_architecture/).
 
 ## Stage 2: Data loading and normalization
 
-`LocalDataLoader` reads local artifacts and applies ingestion-time normalization (for example plant ID alignment and ERA5 variable selection).
+[`LocalDataLoader`](/reference/rencal/core/rencalcoredata_loader/#localdataloader) reads local artifacts and applies ingestion-time normalization (for example plant ID alignment and ERA5 variable selection).
 
-See [Data Loader Architecture](./Core/data_loader_architecture/).
+See [Data Loader Architecture](/concepts/rencal/core/data_loader_architecture/).
 
 ## Stage 3: Dataset validation boundary
 
 Loader methods return typed model objects:
 
-- `PlantDatasetModel`
-- `GenerationDatasetModel`
-- `ERA5DatasetModel`
+- [`PlantDatasetModel`](/reference/rencal/models/rencalmodelsplant_model/#plantdatasetmodel)
+- [`GenerationDatasetModel`](/reference/rencal/models/rencalmodelsgeneration_model/#generationdatasetmodel)
+- [`ERA5DatasetModel`](/reference/rencal/models/rencalmodelsera5_model/#era5datasetmodel)
 
 These models enforce schema and type checks (via Pydantic + model validators), creating a fail-fast boundary before calibration and simulation.
 
-See [Dataset Models](./Models/dataset_models/).
+See [Dataset Models](/concepts/rencal/models/dataset_models/).
 
 ## Stage 4: Calibration
 
@@ -53,9 +53,9 @@ Calibration modules fit plant/technology relationships between weather drivers a
 
 Start here:
 
-- [Wind Power Curve Calibration](./Calibration/wind_power_curve_calibration/)
-- [Logistic Power Curve](./Calibration/logistic_power_curve/)
-- [Weibull Wind-Speed Distribution](./Calibration/weibull_wind_speed_distribution/)
+- [Wind Power Curve Calibration](/concepts/rencal/calibration/wind_power_curve_calibration/)
+- [Logistic Power Curve](/concepts/rencal/calibration/logistic_power_curve/)
+- [Weibull Wind-Speed Distribution](/concepts/rencal/calibration/weibull_wind_speed_distribution/)
 
 ## Stage 5: Simulation and sampling
 
@@ -63,19 +63,19 @@ Simulation uses calibrated/historical artifacts to sample future periods while p
 
 In code terms, this stage combines:
 
-- `IntermittentBucketer` (`draw_period` block selection by seasonal bucket),
-- `WeatherData` (historical slicing + optional average overrides),
-- `BucketedData` utilities (histograms and optimized distribution transforms),
-- `VersionedColumnsNDArray` output (canonical streams plus transformed versions).
+- [`IntermittentBucketer`](/reference/rencal/simulation/rencalsimulationintermittent_bucketer/#intermittentbucketer) (`draw_period` block selection by seasonal bucket),
+- [`WeatherData`](/reference/rencal/simulation/rencalsimulationweather_data/#weatherdata) (historical slicing + optional average overrides),
+- [`BucketedData`](/reference/rencal/core/rencalcorebucketed_data/#bucketeddata) utilities (histograms and optimized distribution transforms),
+- [`VersionedColumnsNDArray`](/reference/rencal/core/rencalcorebucketed_data/#versionedcolumnsndarray) output (canonical streams plus transformed versions).
 
-Start with [Weather Data Sampling](./Simulation/weather_data_sampling/).
-For bucket design details, see [Bucketing Strategy](./Simulation/bucketing_strategy/).
+Start with [Weather Data Sampling](/concepts/rencal/simulation/weather_data_sampling/).
+For bucket design details, see [Bucketing Strategy](/concepts/rencal/simulation/bucketing_strategy/).
 
 ## Reference map
 
-- [Data Downloader Reference](/reference/RenCal/Core/rencal.core.data_downloader/)
-- [Data Loader Reference](/reference/RenCal/Core/rencal.core.data_loader/)
-- [Model Base Reference](/reference/RenCal/Models/rencal.models.base/)
-- [Calibrator Reference](/reference/RenCal/Calibration/rencal.calibration.calibrator/)
-- [Weather Data Reference](/reference/RenCal/Simulation/rencal.simulation.weather_data/)
-- [Intermittent Bucketer Reference](/reference/RenCal/Simulation/rencal.simulation.intermittent_bucketer/)
+- [Data Downloader Reference](/reference/rencal/core/rencalcoredata_downloader/)
+- [Data Loader Reference](/reference/rencal/core/rencalcoredata_loader/)
+- [Model Base Reference](/reference/rencal/models/rencalmodelsbase/)
+- [Calibrator Reference](/reference/rencal/calibration/rencalcalibrationcalibrator/)
+- [Weather Data Reference](/reference/rencal/simulation/rencalsimulationweather_data/)
+- [Intermittent Bucketer Reference](/reference/rencal/simulation/rencalsimulationintermittent_bucketer/)

@@ -3,7 +3,7 @@ title: Wind Calibration Tutorial
 description: End-to-end walkthrough for running wind calibration locally with WindCalibrator.
 ---
 
-This tutorial walks through the full workflow for running wind calibration locally using `WindCalibrator`, from downloading inputs to inspecting the generated outputs.
+This tutorial walks through the full workflow for running wind calibration locally using [`WindCalibrator`](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/#windcalibrator), from downloading inputs to inspecting the generated outputs. The downloader classes and [`DownloadManager`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanager) are documented in the [`rencal.core.data_downloader` module](/reference/rencal/core/rencalcoredata_downloader/); the calibrator is documented in [`rencal.calibration.wind.wind_calibrator`](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/).
 
 ## 1. Environment and Setup
 
@@ -18,7 +18,7 @@ Before running:
 
 ## 2. Required Input Folder Structure
 
-`WindCalibrator` expects a base `data_path` with these subdirectories:
+[`WindCalibrator`](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/#windcalibrator) expects a base `data_path` with these subdirectories:
 
 ```
 data/
@@ -31,11 +31,11 @@ data/
 
 Three input datasets are required:
 
-1. **Plant data** — plant metadata and CfD/BMU mapping, downloaded via `CfDDataDownloader` from the LCCC API.
-2. **Generation data** — historical generation per plant, downloaded via `GenerationDataDownloader` from Elexon BMRS.
-3. **ERA5 weather data** — hourly reanalysis weather in NetCDF format, downloaded via `ERA5DataDownloader` from the Copernicus Climate Data Store (requires a valid `CDS_API_KEY` in `.env`).
+1. **Plant data** — plant metadata and CfD/BMU mapping, downloaded via [`CfDDataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#cfddatadownloader) from the LCCC API.
+2. **Generation data** — historical generation per plant, downloaded via [`GenerationDataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#generationdatadownloader) from Elexon BMRS.
+3. **ERA5 weather data** — hourly reanalysis weather in NetCDF format, downloaded via [`ERA5DataDownloader`](/reference/rencal/core/rencalcoredata_downloader/#era5datadownloader) from the Copernicus Climate Data Store (requires a valid `CDS_API_KEY` in `.env`).
 
-Use `DownloadManager` to fetch all inputs at once:
+Use [`DownloadManager`](/reference/rencal/core/rencalcoredata_downloader/#downloadmanager) to fetch all inputs at once:
 
 ```python
 from rencal.core.data_downloader import DownloadManager
@@ -53,7 +53,7 @@ dm.download_generation_data()
 dm.download_era5()
 ```
 
-## 4. Configure `WindCalibrator`
+## 4. Configure [`WindCalibrator`](/reference/rencal/calibration/rencalcalibrationwindwind_calibrator/#windcalibrator)
 
 ```python
 from pathlib import Path

@@ -14,7 +14,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 
 For conceptual guidance, see:
 
-- [Data Loader Architecture](/concepts/RenCal/Core/data_loader_architecture/)
+- [Data Loader Architecture](/concepts/rencal/core/data_loader_architecture/)
 
 #### Example
 
@@ -42,7 +42,7 @@ class DataLoader(ABC): DataLoader
 Abstract loading contract for plant, generation, and ERA5 datasets.
 
 <InlineSection>
-**Returns** [<code class="type">DataLoader</code>](#DataLoader)
+**Returns** [<code class="type">DataLoader</code>](#dataloader)
 </InlineSection>
 </Segment>
 
@@ -65,7 +65,7 @@ Local filesystem-backed implementation.
 </Section>
 
 <InlineSection>
-**Returns** [<code class="type">LocalDataLoader</code>](#LocalDataLoader)
+**Returns** [<code class="type">LocalDataLoader</code>](#localdataloader)
 </InlineSection>
 </Segment>
 
@@ -83,7 +83,7 @@ load_plant_data() -> PlantDatasetModel
 Load CfD plant/location/capacity data.
 
 <InlineSection>
-**Returns** [<code class="type">PlantDatasetModel</code>](/reference/RenCal/Models/rencalmodelsplant_model/#plantdatasetmodel)
+**Returns** [<code class="type">PlantDatasetModel</code>](/reference/rencal/models/rencalmodelsplant_model/#plantdatasetmodel)
 </InlineSection>
 </Segment>
 
@@ -99,7 +99,7 @@ load_generation_data() -> GenerationDatasetModel
 Load generation/settlement time series.
 
 <InlineSection>
-**Returns** [<code class="type">GenerationDatasetModel</code>](/reference/RenCal/Models/rencalmodelsgeneration_model/#generationdatasetmodel)
+**Returns** [<code class="type">GenerationDatasetModel</code>](/reference/rencal/models/rencalmodelsgeneration_model/#generationdatasetmodel)
 </InlineSection>
 </Segment>
 
@@ -115,7 +115,7 @@ load_era5_data() -> ERA5DatasetModel
 Load ERA5 weather data using standard variables.
 
 <InlineSection>
-**Returns** [<code class="type">ERA5DatasetModel</code>](/reference/RenCal/Models/rencalmodelsera5_model/#era5datasetmodel)
+**Returns** [<code class="type">ERA5DatasetModel</code>](/reference/rencal/models/rencalmodelsera5_model/#era5datasetmodel)
 </InlineSection>
 </Segment>
 
@@ -138,7 +138,7 @@ Loads plant data from the configured local plant file and normalizes the plant I
 </Section>
 
 <InlineSection>
-**Returns** [<code class="type">PlantDatasetModel</code>](/reference/RenCal/Models/rencalmodelsplant_model/#plantdatasetmodel)
+**Returns** [<code class="type">PlantDatasetModel</code>](/reference/rencal/models/rencalmodelsplant_model/#plantdatasetmodel)
 </InlineSection>
 
 <InlineSection>
@@ -166,7 +166,7 @@ Loads generation data from the configured local generation file and normalizes t
 </Section>
 
 <InlineSection>
-**Returns** [<code class="type">GenerationDatasetModel</code>](/reference/RenCal/Models/rencalmodelsgeneration_model/#generationdatasetmodel)
+**Returns** [<code class="type">GenerationDatasetModel</code>](/reference/rencal/models/rencalmodelsgeneration_model/#generationdatasetmodel)
 </InlineSection>
 
 <InlineSection>
@@ -187,7 +187,7 @@ load_era5_data() -> ERA5DatasetModel
 Loads ERA5 NetCDF files from the configured local ERA5 directory, combines them on the time dimension, and filters to standard wind/solar variables.
 
 <InlineSection>
-**Returns** [<code class="type">ERA5DatasetModel</code>](/reference/RenCal/Models/rencalmodelsera5_model/#era5datasetmodel)
+**Returns** [<code class="type">ERA5DatasetModel</code>](/reference/rencal/models/rencalmodelsera5_model/#era5datasetmodel)
 </InlineSection>
 
 <InlineSection>

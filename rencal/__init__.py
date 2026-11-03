@@ -6,8 +6,11 @@ modules for generating probabilistic load factor time series forecasts using res
 historical ERA5 weather data.
 """
 
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
-__version__ = version("rencal")
+try:
+    __version__ = version("rencal")
+except PackageNotFoundError:
+    __version__ = "0+unknown"
 __author__ = "Low Carbon Contracts Company Ltd"
 __email__ = "analytics@lowcarboncontracts.uk"

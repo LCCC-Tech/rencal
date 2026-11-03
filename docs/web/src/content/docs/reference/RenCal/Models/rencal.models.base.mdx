@@ -12,7 +12,7 @@ import InlineSection from '@/components/pydoc/InlineSection.astro';
 <Section type="about">
 `rencal.models.base` defines abstract and concrete base classes for pandas/xarray-backed dataset models and schema validation.
 
-These Pydantic-backed models are the primary typed data contract returned by [`LocalDataLoader`](/reference/RenCal/Core/rencalcoredata_loader/#localdataloader).
+These Pydantic-backed models are the primary typed data contract returned by [`LocalDataLoader`](/reference/rencal/core/rencalcoredata_loader/#localdataloader).
 </Section>
 
 ## Constructor
@@ -29,7 +29,7 @@ class DatasetModel(BaseModel, ABC): DatasetModel
 Abstract base model for shared metadata and conversion/validation contracts.
 
 <InlineSection>
-**Returns** [<code class="type">DatasetModel</code>](#DatasetModel)
+**Returns** [<code class="type">DatasetModel</code>](#datasetmodel)
 </InlineSection>
 </Segment>
 
@@ -45,7 +45,7 @@ class PandasDatasetModel(DatasetModel): PandasDatasetModel
 Concrete validation mixin for pandas DataFrame-backed models.
 
 <InlineSection>
-**Returns** [<code class="type">PandasDatasetModel</code>](#PandasDatasetModel)
+**Returns** [<code class="type">PandasDatasetModel</code>](#pandasdatasetmodel)
 </InlineSection>
 </Segment>
 
@@ -61,7 +61,7 @@ class XArrayDatasetModel(DatasetModel): XArrayDatasetModel
 Concrete validation mixin for xarray Dataset-backed models.
 
 <InlineSection>
-**Returns** [<code class="type">XArrayDatasetModel</code>](#XArrayDatasetModel)
+**Returns** [<code class="type">XArrayDatasetModel</code>](#xarraydatasetmodel)
 </InlineSection>
 </Segment>
 
