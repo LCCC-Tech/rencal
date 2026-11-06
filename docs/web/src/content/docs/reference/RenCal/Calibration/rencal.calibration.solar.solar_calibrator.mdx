@@ -1,0 +1,209 @@
+---
+title: rencal.calibration.solar.solar_calibrator
+description: Reference documentation for rencal.calibration.solar.solar_calibrator.
+---
+
+import Segment from '@/components/pydoc/Segment.astro';
+import Section from '@/components/pydoc/Section.astro';
+import InlineSection from '@/components/pydoc/InlineSection.astro';
+
+<div class="pydoc">
+
+<Section type="about">
+`rencal.calibration.solar.solar_calibrator` defines the concrete solar calibration workflow for converting ERA5 solar resource data and historical generation into fitted PV curves and long-term load-factor streams.
+
+[`SolarCalibrator`](/reference/rencal/calibration/rencalcalibrationsolarsolar_calibrator/#solarcalibrator) extends [`Calibrator`](/reference/rencal/calibration/rencalcalibrationcalibrator/) for solar technologies, estimates plant-specific `gamma` and `NOCT` parameters, and writes tabular calibration outputs plus stream artifacts for downstream simulation.
+
+#### Example
+
+```python
+from pathlib import Path
+
+from rencal.calibration.solar.solar_calibrator import SolarCalibrator
+
+calibrator = SolarCalibrator(
+    data_path="data",
+    plant_id_col="plant_id",
+    output_path=Path("outputs"),
+    visual_output=False,
+    stream_npy_output=True,
+)
+calibrator.calibrate()
+```
+</Section>
+
+---
+
+## Constructor
+
+### SolarCalibrator
+
+<Segment>
+<Section type="signature">
+```python
+class SolarCalibrator(
+    data_path: str = None,
+    plant_id_col: str = None,
+    output_path: str | Path = Path.cwd(),
+    visual_output: bool = False,
+    stream_npy_output: bool = False,
+): SolarCalibrator
+```
+</Section>
+
+Calibrates solar power curves for a set of timestamps and plant IDs.
+
+<Section type="parameters">
+#### Parameters
+
+- <p><code class="key">data_path</code> <code class="primitive">str</code></p>
+  Path to the folder containing plant information, generation, and resource data.
+
+- <p><code class="key">plant_id_col</code> <code class="primitive">str</code></p>
+  Name of the plant identifier column.
+
+- <p><code class="key">output_path</code> <code class="primitive">str</code> | <code class="primitive">Path</code></p>
+  Location to write the output files to.
+
+- <p><code class="key">visual_output</code> <code class="primitive">bool</code></p>
+  If True, each calibrated plant's PV curve is plotted to the output folder.
+
+- <p><code class="key">stream_npy_output</code> <code class="primitive">bool</code></p>
+  If True, solar streams are written in NPY format alongside PARQUET.
+</Section>
+
+<InlineSection>
+**Returns** [<code class="type">SolarCalibrator</code>](#solarcalibrator)
+</InlineSection>
+</Segment>
+
+## Methods
+
+### SolarCalibrator.calibrate
+
+<Segment>
+<Section type="signature">
+```python
+calibrate() -> None
+```
+</Section>
+
+Triggers the full solar calibration workflow.
+
+This workflow extracts plant-level irradiance and temperature data, calculates historical load factors, fits a NOCT-based PV curve for each plant, writes calibration summary artifacts, generates solar streams, and writes the resulting outputs.
+
+<InlineSection>
+**Returns** None
+</InlineSection>
+</Segment>
+
+### SolarCalibrator.solar_regression_model
+
+<Segment>
+<Section type="signature">
+```python
+solar_regression_model(
+    x_data,
+    gamma,
+    noct,
+) -> np.ndarray
+```
+</Section>
+
+Defines the NOCT-style solar regression used to map irradiance and temperature to expected plant output.
+
+The model is:
+
+```python
+T_cell = T + (NOCT - 20) * G / 800
+return (1 - gamma * (T_cell - 25)) * G / 1000
+```
+
+where `G` is irradiance and `T` is temperature. This gives a physically plausible PV response that decreases with elevated cell temperature while scaling with available irradiance.
+
+<InlineSection>
+**Returns** <code class="primitive">np.ndarray</code>
+</InlineSection>
+</Segment>
+
+### SolarCalibrator.extract_resource_timeseries_for_plants
+
+<Segment>
+<Section type="signature">
+```python
+extract_resource_timeseries_for_plants() -> pd.DataFrame
+```
+</Section>
+
+Extracts solar irradiance and temperature data for plants into a DataFrame.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### SolarCalibrator.calculate_historical_load_factors
+
+<Segment>
+<Section type="signature">
+```python
+calculate_historical_load_factors() -> pd.DataFrame
+```
+</Section>
+
+Calculates historical solar load factors from generation, capacity, and aligned irradiance/temperature data for each plant.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### SolarCalibrator.fit_historical_load_factor_distribution
+
+<Segment>
+<Section type="signature">
+```python
+fit_historical_load_factor_distribution() -> pd.DataFrame
+```
+</Section>
+
+Fits an empirical irradiance histogram for each plant and stores distribution summary statistics.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### SolarCalibrator.estimate_load_factors_for_resource
+
+<Segment>
+<Section type="signature">
+```python
+estimate_load_factors_for_resource() -> pd.DataFrame
+```
+</Section>
+
+Fits the plant-specific NOCT curve parameters using `curve_fit`, then stores the resulting `gamma`, `NOCT`, and mean estimated load factor.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+### SolarCalibrator.generate_resource_streams
+
+<Segment>
+<Section type="signature">
+```python
+generate_resource_streams() -> pd.DataFrame
+```
+</Section>
+
+Applies the fitted PV curves to the full historical irradiance and temperature records to create plant-level solar load-factor streams.
+
+<InlineSection>
+**Returns** <code class="primitive">pd.DataFrame</code>
+</InlineSection>
+</Segment>
+
+</div>

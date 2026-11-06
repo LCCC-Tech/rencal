@@ -125,6 +125,29 @@ RenCal will run the wind calibration workflow and write outputs to your configur
 
 ---
 
+## Run a solar calibration
+
+Use [`SolarCalibrator`](/reference/rencal/calibration/rencalcalibrationsolarsolar_calibrator/#solarcalibrator) when your renewable asset mix includes solar PV generation and you want to estimate plant-level `gamma`/`NOCT` parameters from irradiance, temperature, and historical output.
+
+```python
+from pathlib import Path
+
+from rencal.calibration.solar.solar_calibrator import SolarCalibrator
+
+solar_calibrator = SolarCalibrator(
+    data_path="data",
+    output_path=Path("outputs/solar_calibration"),
+    visual_output=True,
+    stream_npy_output=True,
+)
+
+solar_calibrator.calibrate()
+```
+
+RenCal writes plantwise solar resource tables plus the calibrated PV-curve summary and long-term load-factor streams.
+
+---
+
 ## Inspect the outputs
 
 After calibration, you should see outputs similar to:
@@ -157,4 +180,5 @@ streams = pd.read_parquet("outputs/wind_calibration/Wind Streams.parquet")
 
 1. Learn the full [RenCal data and simulation pipeline](/concepts/rencal/data_and_simulation_pipeline/).
 2. Follow the [Wind Calibration Tutorial](/tutorials/windcalibrationtutorial/).
-3. Explore the [RenCal API reference](/reference/rencal/rencalmain/).
+3. Work through the [Solar Calibration Tutorial](/tutorials/solarcalibrationtutorial/).
+4. Explore the [RenCal API reference](/reference/rencal/rencalmain/).
