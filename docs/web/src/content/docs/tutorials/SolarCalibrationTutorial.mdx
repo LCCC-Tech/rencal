@@ -1,0 +1,143 @@
+---
+title: Solar Calibration Tutorial
+description: End-to-end walkthrough for running solar calibration locally with SolarCalibrator.
+---
+
+This tutorial walks through the workflow for running solar calibration locally using [`SolarCalibrator`](/reference/rencal/calibration/rencalcalibrationsolarsolar_calibrator/#solarcalibrator). It covers the required input layout, the calibration run itself, and the output files generated for downstream simulation and forecasting.
+
+## 1. Environment and setup
+
+Before running:
+
+- Use **Python 3.12**.
+- Install project dependencies (including notebook extras):
+  ```bash
+  uv sync --group notebook
+  ```
+- Ensure ERA5 NetCDF support is available (`xarray` + `netCDF4`), because the calibrator loads hourly solar irradiance and temperature files from the local `era5/` directory.
+
+## 2. Required input folder structure
+
+[`SolarCalibrator`](/reference/rencal/calibration/rencalcalibrationsolarsolar_calibrator/#solarcalibrator) expects a base `data_path` with these subdirectories:
+
+```text
+data/
+  plant/plant_data.csv
+  generation/generation_data.parquet
+  era5/*.nc
+```
+
+The required ERA5 variables are the same irradiation and temperature fields used by the standard RenCal solar workflow:
+
+- `surface_solar_radiation_downwards` (`ssrd` in NetCDF)
+- `2m_temperature` (`t2m` in NetCDF)
+
+## 3. Configure `SolarCalibrator`
+
+```python
+from pathlib import Path
+
+from rencal.calibration.solar.solar_calibrator import SolarCalibrator
+
+sc = SolarCalibrator(
+    data_path="data",
+    output_path=Path("outputs/solar_calibration"),
+    visual_output=True,
+    stream_npy_output=True,
+)
+```
+
+Key constructor arguments:
+
+| Argument | Type | Description |
+|---|---|---|
+| `data_path` | `str` | Base folder containing `plant/`, `generation/`, and `era5/` |
+| `output_path` | `Path \| str` | Directory where calibration outputs are written |
+| `visual_output` | `bool` | Save per-plant PV curve fit PNGs when `True` |
+| `stream_npy_output` | `bool` | Also save `Solar Streams.npy` when `True` |
+
+## 4. Run calibration
+
+```python
+sc.calibrate()
+```
+
+The calibration executes these steps in sequence:
+
+1. **Resource extraction** — loads solar irradiance and temperature data for each plant from the nearest ERA5 grid cell.
+2. **Historical load-factor generation** — merges plant generation with capacity and resource data to calculate historical solar output ratios.
+3. **Distribution fitting** — fits an empirical irradiance histogram for each plant to understand the distribution of observed conditions.
+4. **NOCT fitting** — estimates the solar curve parameters `gamma` and `NOCT` using the observed temperature and irradiance relationship.
+5. **Stream generation** — applies the fitted PV curve to the full historical resource record to create long-term solar load-factor streams.
+
+> **Note:** If a plant cannot be fit reliably, the module falls back to a generic solar curve derived from median fitted parameters.
+
+## 5. Inspect outputs
+
+After calibration, the following files are written to `output_path`:
+
+| File | Description |
+|---|---|
+| `Solar Resource.csv` | Plant-wise irradiance and temperature time series |
+| `Solar Distribution Params.csv` | Empirical irradiance histogram metadata per plant |
+| `Solar Calibration Summary.csv` | Fitted `Gamma`, `NOCT`, and estimated load-factor summaries |
+| `Solar Streams.parquet` | Hourly solar load-factor streams per plant |
+| `PV_Curve_Fit_*.png` | Per-plant PV curve fit plots (if `visual_output=True`) |
+| `Solar Streams.npy` | Binary solar stream array (if `stream_npy_output=True`) |
+
+```python
+import pandas as pd
+
+summary = pd.read_csv("outputs/solar_calibration/Solar Calibration Summary.csv")
+streams = pd.read_parquet("outputs/solar_calibration/Solar Streams.parquet")
+resource = pd.read_csv("outputs/solar_calibration/Solar Resource.csv")
+```
+
+## 6. How the solar curve is modeled
+
+The fitted relationship follows a NOCT-style PV model:
+
+```python
+T_cell = T + (NOCT - 20) * G / 800
+load_factor = (1 - gamma * (T_cell - 25)) * G / 1000
+```
+
+Where:
+
+- `T` is the plant temperature time series,
+- `G` is irradiance in `W/m²`,
+- `gamma` is the temperature coefficient,
+- `NOCT` is the nominal operating cell temperature.
+
+This structure lets RenCal estimate expected solar output for each plant using observed resource conditions rather than assuming a fixed capacity factor.
+
+## 7. Troubleshooting
+
+### Missing or invalid ERA5 fields
+
+If the fit fails or the resource table is empty, check that the local NetCDF files include the expected variables:
+
+```python
+import xarray as xr
+
+ds = xr.open_dataset("data/era5/example.nc")
+print(sorted(ds.data_vars))
+```
+
+For solar calibration, the loader expects `ssrd` and `t2m` (or the equivalent mapped names in your local NetCDF files).
+
+### Calibration fit failures
+
+If a plant shows no valid calibration summary row, the most common causes are:
+
+- too little generation history for that plant,
+- missing temperature or irradiance rows in the aligned resource frame,
+- unrealistic or noisy historical load factors.
+
+In those cases, RenCal automatically falls back to a generic solar curve for the missing plant.
+
+## Related reading
+
+- [`rencal.calibration.solar.solar_calibrator`](/reference/rencal/calibration/rencalcalibrationsolarsolar_calibrator/)
+- [Wind Calibration Tutorial](/tutorials/windcalibrationtutorial/)
+- [RenCal data and simulation pipeline](/concepts/rencal/data_and_simulation_pipeline/)
