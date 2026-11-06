@@ -54,7 +54,7 @@ Key constructor arguments:
 | `data_path` | `str` | Base folder containing `plant/`, `generation/`, and `era5/` |
 | `output_path` | `Path \| str` | Directory where calibration outputs are written |
 | `visual_output` | `bool` | Save per-plant PV curve fit PNGs when `True` |
-| `stream_npy_output` | `bool` | Also save `Solar Streams.npy` when `True` |
+| `stream_npy_output` | `bool` | Also save `solar_streams.npy` when `True` |
 
 ## 4. Run calibration
 
@@ -78,19 +78,21 @@ After calibration, the following files are written to `output_path`:
 
 | File | Description |
 |---|---|
-| `Solar Resource.csv` | Plant-wise irradiance and temperature time series |
-| `Solar Distribution Params.csv` | Empirical irradiance histogram metadata per plant |
-| `Solar Calibration Summary.csv` | Fitted `Gamma`, `NOCT`, and estimated load-factor summaries |
-| `Solar Streams.parquet` | Hourly solar load-factor streams per plant |
-| `PV_Curve_Fit_*.png` | Per-plant PV curve fit plots (if `visual_output=True`) |
-| `Solar Streams.npy` | Binary solar stream array (if `stream_npy_output=True`) |
+| `solar_resource.csv` | Plant-wise irradiance and temperature time series |
+| `solar_distribution_params.csv` | Empirical irradiance histogram metadata per plant |
+| `solar_calibration_summary.csv` | Fitted `Gamma`, `NOCT`, and estimated load-factor summaries |
+| `solar_streams.parquet` | Hourly solar load-factor streams per plant |
+| `pv_curve_fit_*.png` | Per-plant PV curve fit plots (if `visual_output=True`) |
+| `solar_streams.npy` | Binary solar stream array (if `stream_npy_output=True`) |
+
+Output filenames use lowercase snake_case prefixes; plot filenames retain the original plant identifier (for example, `pv_curve_fit_AR4-BSP-700.png`). Existing outputs are not renamed automatically: rerun calibration or rename the old files, and update any downstream paths to use the new names. Data column names are unchanged.
 
 ```python
 import pandas as pd
 
-summary = pd.read_csv("outputs/solar_calibration/Solar Calibration Summary.csv")
-streams = pd.read_parquet("outputs/solar_calibration/Solar Streams.parquet")
-resource = pd.read_csv("outputs/solar_calibration/Solar Resource.csv")
+summary = pd.read_csv("outputs/solar_calibration/solar_calibration_summary.csv")
+streams = pd.read_parquet("outputs/solar_calibration/solar_streams.parquet")
+resource = pd.read_csv("outputs/solar_calibration/solar_resource.csv")
 ```
 
 ## 6. How the solar curve is modeled

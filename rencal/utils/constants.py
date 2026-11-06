@@ -49,9 +49,9 @@ WIND_NPY_BASEPATH: str = run_config.get("WIND_NPY_BASEPATH", "Wind Streams.npy")
 WIND_NPY_HISTOGRAMS_BASEPATH: str = run_config.get(
     "WIND_NPY_HISTOGRAMS_BASEPATH", "Wind Streams.histograms.npy"
 )
-SOLAR_NPY_BASEPATH: str = run_config.get("SOLAR_NPY_BASEPATH", "Solar Streams.npy")
+SOLAR_NPY_BASEPATH: str = run_config.get("SOLAR_NPY_BASEPATH", "solar_streams.npy")
 SOLAR_NPY_HISTOGRAMS_BASEPATH: str = run_config.get(
-    "SOLAR_NPY_HISTOGRAMS_BASEPATH", "Solar Streams.histograms.npy"
+    "SOLAR_NPY_HISTOGRAMS_BASEPATH", "solar_streams.histograms.npy"
 )
 
 # Runtime timestamp

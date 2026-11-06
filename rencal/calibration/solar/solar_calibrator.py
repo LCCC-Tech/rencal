@@ -435,19 +435,19 @@ class SolarCalibrator(Calibrator):
 
     def output_historical_load_factor_distribution_parameters(self) -> None:
         """Writes irradiance distribution parameters to a CSV file."""
-        output_path = self.output_path / "Solar Distribution Params.csv"
+        output_path = self.output_path / "solar_distribution_params.csv"
         self.historical_load_factor_distributions.to_csv(output_path, index=False)
         logger.info("Written solar irradiance distribution parameters to %s", output_path)
 
     def output_resource_per_plant(self) -> None:
         """Writes solar irradiance and temperature time series for each plant to a CSV file."""
-        output_path = self.output_path / "Solar Resource.csv"
+        output_path = self.output_path / "solar_resource.csv"
         self.plant_irradiance.to_csv(output_path, index=False)
         logger.info("Written plant‑wise solar resource dataset to %s", output_path)
 
     def output_resource_streams(self) -> None:
         """Writes solar load‑factor streams to a parquet file."""
-        stream_path = self.output_path / "Solar Streams.parquet"
+        stream_path = self.output_path / "solar_streams.parquet"
         self.solar_streams.to_parquet(stream_path, index=False)
         logger.info("Written solar streams to %s", stream_path)
 
@@ -460,7 +460,7 @@ class SolarCalibrator(Calibrator):
 
     def output_estimated_load_factors_tabular(self) -> None:
         """Outputs table of estimated solar load factors for the full history."""
-        summary_path = self.output_path / "Solar Calibration Summary.csv"
+        summary_path = self.output_path / "solar_calibration_summary.csv"
         self.summary.to_csv(summary_path, index=False)
         logger.info("Written solar load factor summary to %s", summary_path)
 
@@ -507,7 +507,7 @@ class SolarCalibrator(Calibrator):
         plt.legend()
         plt.grid(True)
 
-        out_path = self.output_path / f"PV_Curve_Fit_{plant_id}.png"
+        out_path = self.output_path / f"pv_curve_fit_{plant_id}.png"
         plt.savefig(out_path)
         plt.close()
         logger.info("Written PV curve fit plot to %s", out_path)
