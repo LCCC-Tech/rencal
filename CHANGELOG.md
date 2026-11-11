@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/LCCC-Tech/rencal/compare/v0.2.1...v0.3.0) (2026-11-06)
+
+
+### Features
+
+* **calibration:** Adds solar calibrator functionality inheriting from calibrator class ([#66](https://github.com/LCCC-Tech/rencal/issues/66)) ([52b02db](https://github.com/LCCC-Tech/rencal/commit/52b02db112f86bfb09fffb4f22dbafd921916afb))
+* Harden AI documentation automation and separate generation, validation, and publishing ([#93](https://github.com/LCCC-Tech/rencal/issues/93)) ([bdfb925](https://github.com/LCCC-Tech/rencal/commit/bdfb9259082fef34dcbd5d261f67c99ee78d0373))
+
+
+### Bug Fixes
+
+* **solar:** use snake_case calibration output filenames ([d1127f8](https://github.com/LCCC-Tech/rencal/commit/d1127f8f85a244e4166a8e0ae36f8dede53531d5))
+
+
+### Documentation
+
+* update documentation via Copilot ([4109475](https://github.com/LCCC-Tech/rencal/commit/410947512c983f83b95066328afd9522852ff2a1))
+
 ## [0.2.1](https://github.com/LCCC-Tech/rencal/compare/v0.2.0...v0.2.1) (2026-10-14)
 
 
