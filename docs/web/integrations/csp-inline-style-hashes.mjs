@@ -8,7 +8,7 @@ const CSP_META_RE =
     /(<meta http-equiv="content-security-policy" content=")([^"]*)("\s*\/?>)/i;
 
 /**
- * Astro's `experimental.csp` feature (as of Astro 5.16) only ever
+ * Astro's `security.csp` feature only ever
  * auto-hashes `<style>` *element* content — it never sees `style="..."`
  * *attribute* values, and per the CSP3 spec, hash-sources don't apply to
  * style attributes at all unless the `'unsafe-hashes'` keyword is present

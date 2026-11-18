@@ -2,6 +2,10 @@
     "name": "web",
     "type": "module",
     "version": "0.0.1",
+    "engines": {
+        "node": ">=22.23.4",
+        "npm": ">=9.6.5"
+    },
     "scripts": {
         "dev": "astro dev",
         "start": "astro dev",
@@ -11,17 +15,23 @@
         "preview": "astro preview",
         "astro": "astro"
     },
+    "overrides": {
+        "micromark-extension-math": {
+            "katex": "^0.18.2"
+        }
+    },
     "dependencies": {
-        "@astrojs/sitemap": "^3.4.1",
-        "@astrojs/starlight": "^0.37.0",
-        "@astrojs/starlight-tailwind": "^3.0.0",
-        "@astrojs/tailwind": "^5.1.4",
+        "@astrojs/markdown-remark": "^7.3.6",
+        "@astrojs/sitemap": "^3.7.4",
+        "@astrojs/starlight": "^0.42.10",
+        "@astrojs/starlight-tailwind": "^5.0.0",
         "@fontsource/atkinson-hyperlegible": "^5.3.0",
         "@fontsource/ibm-plex-mono": "^5.2.5",
-        "astro": "^5.6.1",
+        "@tailwindcss/vite": "^4.3.5",
+        "astro": "^7.4.8",
         "rehype-mathjax": "^7.1.0",
         "remark-math": "^6.0.0",
-        "sharp": "^0.34.2",
-        "tailwindcss": "^3.4.4"
+        "sharp": "^0.35.5",
+        "tailwindcss": "^4.3.5"
     }
 }

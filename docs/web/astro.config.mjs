@@ -1,7 +1,8 @@
 // @ts-check
 import { defineConfig } from "astro/config";
+import { unified } from "@astrojs/markdown-remark";
 import starlight from "@astrojs/starlight";
-import tailwind from "@astrojs/tailwind";
+import tailwindcss from "@tailwindcss/vite";
 import sitemap from "@astrojs/sitemap";
 import remarkMath from "remark-math";
 import rehypeMathjax from "rehype-mathjax";
@@ -156,7 +157,7 @@ function rehypeLabelMathJaxSvg() {
 // https://astro.build/config
 export default defineConfig({
     site: "https://docs.lowcarboncontracts.uk",
-    experimental: {
+    security: {
         // Emit per-page CSP <meta> tags with hashes for Astro/Starlight's
         // bundled inline scripts so they satisfy a strict `script-src 'self'`
         // policy (e.g. the default security headers applied by AWS Amplify
@@ -212,6 +213,7 @@ export default defineConfig({
         },
     },
     vite: {
+        plugins: [tailwindcss()],
         resolve: {
             alias: {
                 "@": new URL("./src", import.meta.url).pathname,
@@ -219,8 +221,10 @@ export default defineConfig({
         },
     },
     markdown: {
-        remarkPlugins: [remarkMath],
-        rehypePlugins: [rehypeMathjax, rehypeLabelMathJaxSvg],
+        processor: unified({
+            remarkPlugins: [remarkMath],
+            rehypePlugins: [rehypeMathjax, rehypeLabelMathJaxSvg],
+        }),
     },
     integrations: [
         starlight({
@@ -247,31 +251,23 @@ export default defineConfig({
                 },
                 {
                     label: "Concepts",
-                    autogenerate: {
-                        directory: "concepts",
-                        collapsed: true,
-                    },
+                    collapsed: true,
+                    items: [{ autogenerate: { directory: "concepts" } }],
                 },
                 {
                     label: "Guides",
-                    autogenerate: {
-                        directory: "guides",
-                        collapsed: true,
-                    },
+                    collapsed: true,
+                    items: [{ autogenerate: { directory: "guides" } }],
                 },
                 {
                     label: "Tutorials",
-                    autogenerate: {
-                        directory: "tutorials",
-                        collapsed: true,
-                    },
+                    collapsed: true,
+                    items: [{ autogenerate: { directory: "tutorials" } }],
                 },
                 {
                     label: "Reference",
-                    autogenerate: {
-                        directory: "reference",
-                        collapsed: true,
-                    },
+                    collapsed: true,
+                    items: [{ autogenerate: { directory: "reference" } }],
                 },
             ],
             customCss: ["./src/global.css"],
@@ -283,11 +279,10 @@ export default defineConfig({
                 PageFrame: "./src/components/PageFrame.astro",
             },
         }),
-        tailwind({ applyBaseStyles: false }),
         sitemap(),
         // Must run after all other integrations so it patches the final,
         // fully-rendered HTML output. See integrations/csp-inline-style-hashes.mjs
-        // for why this is needed alongside experimental.csp above.
+        // for why this is needed alongside security.csp above.
         cspInlineStyleHashes(),
     ],
 });
