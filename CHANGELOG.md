@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0](https://github.com/LCCC-Tech/rencal/compare/v0.3.0...v0.4.0) (2026-11-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **deps:** Documentation development and builds now require Node.js >=22.23.4 and npm >=9.6.5 with Astro 7 and Tailwind 4. Runtime dependency floors are raised to requests >=2.33.0, python-dotenv >=1.2.2, and pyarrow >=23.0.1. Environments pinned to older dependencies must upgrade.
+* **deps:** Documentation development and builds now require Node.js >=22.23.4 and npm >=9.6.5 with Astro 7 and Tailwind 4. Runtime dependency floors are raised to requests >=2.33.0, python-dotenv >=1.2.2, and pyarrow >=23.0.1. Environments pinned to older dependencies must upgrade.
+* **deps:** Documentation development and builds now require Node.js >=22.23.4 and npm >=9.6.5 with the Astro 7 and Tailwind 4 toolchain. Supported runtime dependency floors are raised to requests >=2.33.0, python-dotenv >=1.2.2, and pyarrow >=23.0.1. Environments pinned to older dependencies must upgrade.
+
+### Bug Fixes
+
+* **deps:** promote dependency remediation from dev ([#100](https://github.com/LCCC-Tech/rencal/issues/100)) ([6be9b81](https://github.com/LCCC-Tech/rencal/commit/6be9b812431b3efd4b94bb96a0e6850cdc673119))
+* **deps:** remediate Wiz dependency vulnerabilities ([906be73](https://github.com/LCCC-Tech/rencal/commit/906be73f23d53f47f5c5700d9a1c8a24103c2d17)), closes [#98](https://github.com/LCCC-Tech/rencal/issues/98)
+* **deps:** remediate Wiz dependency vulnerabilities ([#99](https://github.com/LCCC-Tech/rencal/issues/99)) ([b26921c](https://github.com/LCCC-Tech/rencal/commit/b26921ce3ccf620c654873864cb4ffe2b74aa744))
+
 ## [0.3.0](https://github.com/LCCC-Tech/rencal/compare/v0.2.1...v0.3.0) (2026-11-06)
 
 
